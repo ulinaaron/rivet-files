@@ -404,6 +404,12 @@ impl RivetApp {
             ui.add_space(7.0);
             return;
         }
+        if item == Menu {
+            if !self.s.show_menubar {
+                self.hamburger_menu(ui, ctx);
+            }
+            return;
+        }
         let (icons, fb) = item.icons();
         let (enabled, selected, tip): (bool, bool, String) = match item {
             Back => (!self.tab().back.is_empty(), false, "Go back".into()),
@@ -478,8 +484,28 @@ impl RivetApp {
                 self.s.show_sidebar = !self.s.show_sidebar;
                 self.dirty_settings = true;
             }
-            PathBar | Separator => {}
+            PathBar | Separator | Menu => {}
         }
+    }
+
+    /// With the menu bar hidden, its menus live behind this hamburger button.
+    fn hamburger_menu(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+        let fg = ui.visuals().text_color();
+        let btn = egui::Button::new("").min_size(Vec2::new(34.0, 32.0)).frame_when_inactive(false);
+        let r = egui::containers::menu::MenuButton::from_button(btn).ui(ui, |ui| {
+            if ui.add(egui::Button::new("Show Menubar").shortcut_text("Ctrl+M")).clicked() {
+                self.s.show_menubar = true;
+                self.dirty_settings = true;
+            }
+            ui.separator();
+            self.menus(ui, ctx);
+        });
+        // Drawn as three bars so it looks the same in every icon theme.
+        let c = r.0.rect.center();
+        for dy in [-4.5f32, 0.0, 4.5] {
+            ui.painter().line_segment([c + Vec2::new(-6.5, dy), c + Vec2::new(6.5, dy)], Stroke::new(1.8, fg));
+        }
+        r.0.on_hover_text("Menu — Ctrl+M shows the menu bar again, Alt shows it briefly");
     }
 
     pub(super) fn toolbar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
@@ -508,8 +534,9 @@ impl RivetApp {
                         self.toolbar_item(ui, ctx, *item);
                     }
                     ui.add_space(8.0);
-                    let menu_w = if self.s.show_menubar { 0.0 } else { 45.0 };
-                    let right_w: f32 = right.iter().map(|t| t.width()).sum::<f32>() + menu_w + 14.0;
+                    let menubar = self.s.show_menubar;
+                    let width = |t: &ToolItem| if *t == ToolItem::Menu && menubar { 0.0 } else { t.width() };
+                    let right_w: f32 = right.iter().map(width).sum::<f32>() + 14.0;
                     let path_w = (ui.available_width() - right_w).max(80.0);
                     // The location bar sits on its own raised surface.
                     let v = ui.visuals();
@@ -529,26 +556,6 @@ impl RivetApp {
                         });
                     });
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if !self.s.show_menubar {
-                            // With the menu bar hidden, its menus live behind this button.
-                            // A drawn hamburger (three bars), so it looks the same in every icon theme.
-                            let fg = ui.visuals().text_color();
-                            let btn = egui::Button::new("").min_size(Vec2::new(34.0, 32.0));
-                            let r = egui::containers::menu::MenuButton::from_button(btn).ui(ui, |ui| {
-                                if ui.add(egui::Button::new("Show Menubar").shortcut_text("Ctrl+M")).clicked() {
-                                    self.s.show_menubar = true;
-                                    self.dirty_settings = true;
-                                }
-                                ui.separator();
-                                self.menus(ui, ctx);
-                            });
-                            let c = r.0.rect.center();
-                            for dy in [-4.5f32, 0.0, 4.5] {
-                                ui.painter().line_segment([c + Vec2::new(-6.5, dy), c + Vec2::new(6.5, dy)], Stroke::new(1.8, fg));
-                            }
-                            r.0.on_hover_text("Menu — Ctrl+M shows the menu bar again, Alt shows it briefly");
-                            ui.add_space(6.0);
-                        }
                         // Right-to-left layout: draw in reverse so the saved order reads left to right.
                         for item in right.iter().rev() {
                             self.toolbar_item(ui, ctx, *item);

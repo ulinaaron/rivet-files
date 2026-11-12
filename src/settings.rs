@@ -178,10 +178,12 @@ pub enum ToolItem {
     Bookmark,
     Sidebar,
     Separator,
+    /// The hamburger menu, shown only while the menu bar is hidden.
+    Menu,
 }
 
 impl ToolItem {
-    pub const ALL: [ToolItem; 21] = [
+    pub const ALL: [ToolItem; 22] = [
         ToolItem::Back,
         ToolItem::Forward,
         ToolItem::Up,
@@ -203,12 +205,13 @@ impl ToolItem {
         ToolItem::Bookmark,
         ToolItem::Sidebar,
         ToolItem::Separator,
+        ToolItem::Menu,
     ];
 
     /// The Nemo-like default layout.
     pub fn default_layout() -> Vec<ToolItem> {
         use ToolItem::*;
-        vec![Back, Forward, Up, Separator, Reload, Home, Computer, Separator, EditLocation, PathBar, Search, Separator, ViewIcons, ViewList, ViewCompact]
+        vec![Back, Forward, Up, Separator, Reload, Home, Computer, Separator, EditLocation, PathBar, Search, Separator, ViewIcons, ViewList, ViewCompact, Menu]
     }
 
     pub fn id(self) -> &'static str {
@@ -235,6 +238,7 @@ impl ToolItem {
             Bookmark => "bookmark",
             Sidebar => "sidebar",
             Separator => "separator",
+            Menu => "menu",
         }
     }
 
@@ -262,6 +266,7 @@ impl ToolItem {
             Bookmark => "Bookmark this folder",
             Sidebar => "Show/hide sidebar",
             Separator => "Gap",
+            Menu => "Menu (when the menu bar is hidden)",
         }
     }
 
@@ -290,6 +295,7 @@ impl ToolItem {
             Bookmark => (&["bookmark-new-symbolic", "starred-symbolic", "bookmark-new"], "★"),
             Sidebar => (&["sidebar-show-symbolic", "view-sidebar-symbolic", "view-dual-symbolic"], "◧"),
             Separator => (&[], "|"),
+            Menu => (&[], "≡"),
         }
     }
 
@@ -316,6 +322,10 @@ pub fn parse_toolbar(v: &str) -> Vec<ToolItem> {
     }
     if !out.contains(&ToolItem::PathBar) {
         out.push(ToolItem::PathBar);
+    }
+    // Older layouts had the menu button fixed at the far right.
+    if !out.contains(&ToolItem::Menu) {
+        out.push(ToolItem::Menu);
     }
     out
 }

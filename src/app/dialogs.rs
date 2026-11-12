@@ -571,6 +571,8 @@ impl RivetApp {
                     let fg = ui.visuals().text_color();
                     for (i, item) in self.s.toolbar.clone().into_iter().enumerate() {
                         let path = item == ToolItem::PathBar;
+                        // The location bar and the menu button can be moved but not removed.
+                        let fixed = path || item == ToolItem::Menu;
                         let row_fill = if path { ui.visuals().selection.bg_fill.gamma_multiply(0.18) } else { Color32::TRANSPARENT };
                         egui::Frame::NONE.fill(row_fill).corner_radius(6.0).inner_margin(egui::Margin::symmetric(6, 2)).show(ui, |ui| {
                             ui.horizontal(|ui| {
@@ -581,6 +583,12 @@ impl RivetApp {
                                 let (r, _) = ui.allocate_exact_size(Vec2::splat(18.0), Sense::hover());
                                 match tex {
                                     Some(t) => super::paint_tex(ui.painter(), &t, r.shrink(1.0), fg),
+                                    None if item == ToolItem::Menu => {
+                                        let c = r.center();
+                                        for dy in [-4.0f32, 0.0, 4.0] {
+                                            ui.painter().line_segment([c + Vec2::new(-6.0, dy), c + Vec2::new(6.0, dy)], Stroke::new(1.6, fg));
+                                        }
+                                    }
                                     None if item == ToolItem::Separator => {
                                         let c = r.center();
                                         ui.painter().line_segment([c - Vec2::new(0.0, 7.0), c + Vec2::new(0.0, 7.0)], Stroke::new(1.5, weak));
@@ -593,12 +601,12 @@ impl RivetApp {
                                 ui.label(label);
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                     ui.spacing_mut().item_spacing.x = 4.0;
-                                    if !path {
+                                    if !fixed {
                                         if ui.small_button("Remove").clicked() {
                                             op = Some((i, 0));
                                         }
                                     } else {
-                                        ui.label(egui::RichText::new("always shown").small().color(weak));
+                                        ui.label(egui::RichText::new(if path { "always shown" } else { "keeps menus reachable" }).small().color(weak));
                                     }
                                     if ui.add_enabled(i + 1 < n, egui::Button::new("Down").small()).clicked() {
                                         op = Some((i, 1));
@@ -624,7 +632,7 @@ impl RivetApp {
                     ui.horizontal(|ui| {
                         let missing: Vec<ToolItem> = ToolItem::ALL
                             .into_iter()
-                            .filter(|t| *t == ToolItem::Separator || !self.s.toolbar.contains(t))
+                            .filter(|t| *t == ToolItem::Separator || (*t != ToolItem::Menu && !self.s.toolbar.contains(t)))
                             .collect();
                         egui::ComboBox::from_id_salt("toolbar-add").selected_text("Add a button…").width(200.0).show_ui(ui, |ui| {
                             for t in missing {
