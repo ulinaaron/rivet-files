@@ -38,6 +38,18 @@ fn check_label(ui: &mut egui::Ui, text: &str) {
     ui.label(text);
 }
 
+/// A small flat button with a drawn up / down chevron (looks the same in every icon theme).
+fn arrow_button(ui: &mut egui::Ui, up: bool, enabled: bool) -> egui::Response {
+    let resp = ui.add_enabled(enabled, egui::Button::new("").frame_when_inactive(false).min_size(Vec2::new(24.0, 22.0)));
+    let c = resp.rect.center();
+    let col = if enabled { ui.visuals().text_color() } else { ui.visuals().weak_text_color().gamma_multiply(0.5) };
+    let (dy, tip) = if up { (-2.5, 2.5) } else { (2.5, -2.5) };
+    let stroke = Stroke::new(1.8, col);
+    ui.painter().line_segment([c + Vec2::new(-4.5, tip), c + Vec2::new(0.0, dy)], stroke);
+    ui.painter().line_segment([c + Vec2::new(0.0, dy), c + Vec2::new(4.5, tip)], stroke);
+    resp
+}
+
 fn danger_button(ui: &mut egui::Ui, label: &str) -> bool {
     ui.add(egui::Button::new(egui::RichText::new(label).color(Color32::WHITE)).fill(Color32::from_rgb(0xc0, 0x1c, 0x28))).clicked()
 }
@@ -560,8 +572,14 @@ impl RivetApp {
         let chrome = self.window_chrome("Preferences", &["preferences-system-symbolic", "emblem-system-symbolic", "preferences-system"], ctx);
         let area = self.window_area(ctx);
         let mut win = std::mem::replace(&mut self.prefs_win, super::windows::WinState::new(0, Vec2::ZERO));
+        // Test hook: RIVET_PREFS_SCROLL=PX opens Preferences scrolled down (for screenshots).
+        let scroll_to = std::env::var("RIVET_PREFS_SCROLL").ok().and_then(|v| v.parse::<f32>().ok());
         let shown = super::windows::show(ctx, &mut win, &chrome, area, Vec2::new(460.0, 260.0), |ui| {
-                egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
+                let mut sa = egui::ScrollArea::vertical().auto_shrink([false, false]);
+                if let Some(y) = scroll_to {
+                    sa = sa.vertical_scroll_offset(y);
+                }
+                sa.show(ui, |ui| {
                 ui.set_width((ui.available_width() - 14.0).max(400.0));
                 ui.add_space(6.0);
                 ui.spacing_mut().item_spacing = Vec2::new(10.0, 8.0);
@@ -810,17 +828,21 @@ impl RivetApp {
                                 ui.label(label);
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                     ui.spacing_mut().item_spacing.x = 4.0;
-                                    if !fixed {
-                                        if ui.small_button("Remove").clicked() {
-                                            op = Some((i, 0));
+                                    // A fixed-width slot keeps the arrows lined up in every row.
+                                    ui.allocate_ui_with_layout(Vec2::new(122.0, 22.0), egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                        ui.set_min_width(122.0);
+                                        if !fixed {
+                                            if ui.small_button("Remove").clicked() {
+                                                op = Some((i, 0));
+                                            }
+                                        } else {
+                                            ui.label(egui::RichText::new(if path { "always shown" } else { "keeps menus reachable" }).small().color(weak));
                                         }
-                                    } else {
-                                        ui.label(egui::RichText::new(if path { "always shown" } else { "keeps menus reachable" }).small().color(weak));
-                                    }
-                                    if ui.add_enabled(i + 1 < n, egui::Button::new("Down").small()).clicked() {
+                                    });
+                                    if arrow_button(ui, false, i + 1 < n).on_hover_text("Move down").clicked() {
                                         op = Some((i, 1));
                                     }
-                                    if ui.add_enabled(i > 0, egui::Button::new("Up").small()).clicked() {
+                                    if arrow_button(ui, true, i > 0).on_hover_text("Move up").clicked() {
                                         op = Some((i, -1));
                                     }
                                 });
