@@ -330,6 +330,22 @@ impl RivetApp {
         }
     }
 
+    /// Keep Rivet's own icon set (if chosen) coloured like the rest of the window.
+    fn sync_builtin_icons(&mut self, ctx: &egui::Context) {
+        if !self.s.builtin_icons {
+            self.icons.set_builtin(None);
+            return;
+        }
+        let st = ctx.style_of(ctx.theme());
+        let v = &st.visuals;
+        self.icons.set_builtin(Some(crate::builtin_icons::BuiltinColors {
+            accent: accent_color(&self.s),
+            bg: v.extreme_bg_color,
+            fg: v.text_color(),
+            dark: v.dark_mode,
+        }));
+    }
+
     fn apply_visuals(&mut self, ctx: &egui::Context) {
         let pal = if self.s.follow_desktop_colors { self.palette.clone() } else { None };
         let key = format!("{:?}{:?}{:?}", self.s.theme, self.s.accent, pal);
@@ -1241,6 +1257,7 @@ impl eframe::App for RivetApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
         self.apply_visuals(&ctx);
+        self.sync_builtin_icons(&ctx);
         self.housekeeping(&ctx);
 
         if !self.s.decorations {

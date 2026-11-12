@@ -36,6 +36,9 @@ pub struct IconTheme {
     chain: Vec<Theme>,
     found: HashMap<(String, u32), Option<PathBuf>>,
     textures: HashMap<(String, u32), Option<egui::TextureHandle>>,
+    /// When set, Rivet's own palette-coloured SVG icons answer first.
+    builtin: Option<crate::builtin_icons::BuiltinColors>,
+    builtin_tex: HashMap<(&'static str, u32), egui::TextureHandle>,
 }
 
 pub fn icon_base_dirs() -> Vec<PathBuf> {
@@ -296,7 +299,7 @@ impl IconTheme {
                 }
             }
         }
-        Self { name: name.to_string(), chain, found: HashMap::new(), textures: HashMap::new() }
+        Self { name: name.to_string(), chain, found: HashMap::new(), textures: HashMap::new(), builtin: None, builtin_tex: HashMap::new() }
     }
 
     fn lookup_in(theme: &Theme, name: &str, size: u32) -> Option<PathBuf> {
@@ -366,8 +369,35 @@ impl IconTheme {
         None
     }
 
+    /// Switch the built-in icon set on (with these colours) or off.
+    pub fn set_builtin(&mut self, colors: Option<crate::builtin_icons::BuiltinColors>) {
+        if self.builtin != colors {
+            self.builtin = colors;
+            self.builtin_tex.clear(); // recolour on next draw
+        }
+    }
+
+    pub fn builtin_enabled(&self) -> bool {
+        self.builtin.is_some()
+    }
+
     /// Get a texture for the first available icon name, rendered at `px` pixels.
     pub fn texture(&mut self, ctx: &egui::Context, names: &[&str], px: u32) -> Option<egui::TextureHandle> {
+        if let Some(colors) = self.builtin {
+            for n in names {
+                if let Some((key, _)) = crate::builtin_icons::lookup(n) {
+                    if let Some(t) = self.builtin_tex.get(&(key, px)) {
+                        return Some(t.clone());
+                    }
+                    let svg = crate::builtin_icons::svg(key, &colors);
+                    if let Some(img) = render_svg(svg.as_bytes(), px) {
+                        let t = ctx.load_texture(format!("builtin:{key}:{px}"), img, egui::TextureOptions::LINEAR);
+                        self.builtin_tex.insert((key, px), t.clone());
+                        return Some(t);
+                    }
+                }
+            }
+        }
         let lookup_size = nominal_size(px);
         let (name, path) = self.find(names, lookup_size)?;
         let key = (name.clone(), px);
@@ -432,7 +462,7 @@ pub fn load_image_file(path: &Path, px: u32) -> Option<egui::ColorImage> {
     }
 }
 
-fn render_svg(data: &[u8], px: u32) -> Option<egui::ColorImage> {
+pub(crate) fn render_svg(data: &[u8], px: u32) -> Option<egui::ColorImage> {
     let opt = resvg::usvg::Options::default();
     let tree = resvg::usvg::Tree::from_data(data, &opt).ok()?;
     let size = tree.size();

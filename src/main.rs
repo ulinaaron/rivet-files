@@ -3,6 +3,7 @@
 //! Usage: rivet [FOLDER] [--no-decorations | --decorations] [--screenshot FILE.png]
 
 mod app;
+mod builtin_icons;
 mod fsops;
 mod icons;
 mod launch;
@@ -69,6 +70,9 @@ fn main() -> eframe::Result {
     // Test hook for checks: try a toolbar layout without touching saved settings.
     if let Ok(t) = std::env::var("RIVET_TOOLBAR") {
         settings.toolbar = settings::parse_toolbar(&t);
+    }
+    if std::env::var("RIVET_ICONS").as_deref() == Ok("builtin") {
+        settings.builtin_icons = true;
     }
     if hide_menubar {
         settings.show_menubar = false;

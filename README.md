@@ -13,6 +13,8 @@ No GTK, no Qt — it talks to the desktop through the freedesktop standards dire
 - **System icons**: uses your freedesktop icon theme (follows gtk / KDE / gsettings), SVG and PNG
 - **Live desktop colours**: follows matugen, Noctalia, DankMaterialShell or GTK colour files and restyles
   itself within a second when they change — no restart
+- **Optional built-in icon set** (Preferences → Appearance → Icon theme → *Rivet*): all-SVG folder,
+  file, place and toolbar icons recoloured live from your matugen / desktop palette, used app-wide
 - **Custom toolbar**: pick the buttons and their order in Preferences (or right-click the toolbar)
 - **Optional window decorations**: system title bar, or a built-in one with its own window buttons
 

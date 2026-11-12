@@ -758,13 +758,27 @@ impl RivetApp {
                         ui.end_row();
                         ui.label("Icon theme");
                         let sys = format!("System ({})", self.system_icon_theme);
-                        let current = if self.s.icon_theme.is_empty() { sys.clone() } else { self.s.icon_theme.clone() };
+                        let builtin_label = "Rivet (follows your colours)".to_string();
+                        let current = if self.s.builtin_icons {
+                            builtin_label.clone()
+                        } else if self.s.icon_theme.is_empty() {
+                            sys.clone()
+                        } else {
+                            self.s.icon_theme.clone()
+                        };
                         egui::ComboBox::from_id_salt("icontheme").selected_text(current).width(260.0).show_ui(ui, |ui| {
-                            if ui.selectable_label(self.s.icon_theme.is_empty(), sys).clicked() {
+                            if ui.selectable_label(self.s.builtin_icons, builtin_label).on_hover_text("Rivet's own icons, recoloured from matugen / your desktop colours").clicked() {
+                                self.s.builtin_icons = true;
+                                changed = true;
+                            }
+                            ui.separator();
+                            if ui.selectable_label(!self.s.builtin_icons && self.s.icon_theme.is_empty(), sys).clicked() {
+                                self.s.builtin_icons = false;
                                 new_theme = Some(String::new());
                             }
                             for t in &self.installed_themes {
-                                if ui.selectable_label(self.s.icon_theme == *t, t).clicked() {
+                                if ui.selectable_label(!self.s.builtin_icons && self.s.icon_theme == *t, t).clicked() {
+                                    self.s.builtin_icons = false;
                                     new_theme = Some(t.clone());
                                 }
                             }
