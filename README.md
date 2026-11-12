@@ -4,33 +4,32 @@
 
 [![CI](https://github.com/ulinaaron/rivet-files/actions/workflows/ci.yml/badge.svg)](https://github.com/ulinaaron/rivet-files/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/ulinaaron/rivet-files?label=release)](https://github.com/ulinaaron/rivet-files/releases/latest)
-[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)
-[![Platform: Linux](https://img.shields.io/badge/platform-Linux-informational)](#download)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#-license)
+[![Platform: Linux](https://img.shields.io/badge/platform-Linux-informational)](#-install)
 [![Built with Rust](https://img.shields.io/badge/built%20with-Rust%20%2B%20egui-orange)](https://github.com/emilk/egui)
 ![No GTK or Qt](https://img.shields.io/badge/GTK%20%2F%20Qt-none-success)
 
-A classic Linux file manager in the same family as Nemo, Thunar and Caja — written in Rust with [egui](https://github.com/emilk/egui).
-No GTK, no Qt — it talks to the desktop through the freedesktop standards directly.
+A classic Linux file manager in the same family as Nemo, Thunar and Caja — written in Rust, with no GTK or Qt.
 
-![Rivet Files showing a home folder with the Papirus icon theme](docs/screenshots/icons-wide.png)
+![Rivet Files showing a home folder](docs/screenshots/icons-wide.png)
 
-<table>
-  <tr>
-    <td><img src="docs/screenshots/list-wide.png" alt="List view of a Documents folder"></td>
-    <td><img src="docs/screenshots/rivet-icons-wide.png" alt="Rivet's own icon set, recoloured from the desktop palette"></td>
-    <td><img src="docs/screenshots/preferences-wide.png" alt="Preferences as a window inside the app"></td>
-  </tr>
-  <tr>
-    <td align="center">List view</td>
-    <td align="center">Built-in icons, coloured from your palette</td>
-    <td align="center">Preferences, as an in-app window</td>
-  </tr>
-</table>
+## ✨ Features
 
-### Follows your colours
+- 🗂️ **Icon, list and compact views** with tabs and a clickable path bar
+- 🧭 **Sidebar** — places, bookmarks, drives with usage bars, network, or a folder tree
+- 📋 **Everything you expect** — copy, cut, paste, drag and drop, rename, Trash with restore
+- 🔍 **Instant filter** as you type, plus search through subfolders
+- 🖼️ **Picture thumbnails** and your system icon theme
+- 🎨 **Follows your colours** — matugen, Noctalia and GTK themes, live, no restart
+- 💜 **Built-in icon set** recoloured from your palette (primary, secondary or tertiary)
+- 🧰 **Make it yours** — custom toolbar, fonts, text size, hideable menu bar
+- 🪟 **Optional window decorations** — system title bar or a built-in one
+- ⚡ **Fast** — ~0.2 s to open, ~1 ms per frame, thousands of files without a stutter
+- 🦀 **Light** — one 12 MB program, no toolkit to install
 
-The same window under four matugen-style schemes, with Rivet's built-in icons recoloured to match.
-Change your wallpaper / scheme and Rivet restyles itself within a second — no restart.
+## 🎨 Follows your colours
+
+Change your wallpaper or scheme and Rivet restyles itself within a second.
 
 <table>
   <tr>
@@ -38,82 +37,70 @@ Change your wallpaper / scheme and Rivet restyles itself within a second — no 
     <td><img src="docs/screenshots/theme-moss-wide.png" alt="Moss: green dark scheme"></td>
   </tr>
   <tr>
-    <td align="center">Ember</td>
-    <td align="center">Moss</td>
-  </tr>
-  <tr>
     <td><img src="docs/screenshots/theme-violet-wide.png" alt="Violet: purple dark scheme"></td>
     <td><img src="docs/screenshots/theme-rose-wide.png" alt="Rose: light scheme"></td>
   </tr>
+</table>
+
+<table>
   <tr>
-    <td align="center">Violet</td>
-    <td align="center">Rose (light)</td>
+    <td><img src="docs/screenshots/list-wide.png" alt="List view of a Documents folder"></td>
+    <td><img src="docs/screenshots/rivet-icons-wide.png" alt="Rivet's own icon set"></td>
+    <td><img src="docs/screenshots/preferences-wide.png" alt="Preferences window"></td>
+  </tr>
+  <tr>
+    <td align="center">List view</td>
+    <td align="center">Built-in icons</td>
+    <td align="center">Preferences</td>
   </tr>
 </table>
 
-<sub>Screenshots come from a throwaway sample home folder — run <code>docs/make-screenshots.sh</code> to regenerate them.</sub>
+## 📦 Install
 
-## Features
+Grab the latest from the [Releases page](https://github.com/ulinaaron/rivet-files/releases):
 
-- Icon, list and compact views, tabs, back/forward/up, breadcrumb path bar or typed location (Ctrl+L)
-- Sidebar with My Computer, Bookmarks (shared `gtk-3.0/bookmarks`), Devices with usage bars and eject, Network, plus a folder-tree mode
-- Copy / cut / paste, drag and drop, rename, new folder / document (from Templates), freedesktop Trash with restore
-- Filter-as-you-type and recursive search, picture thumbnails, Properties with permissions
-- Open with the default app (`mimeapps.list`), Open With…, Open in Terminal
-- **System icons**: uses your freedesktop icon theme (follows gtk / KDE / gsettings), SVG and PNG
-- **Live desktop colours**: follows matugen, Noctalia, DankMaterialShell or GTK colour files and restyles
-  itself within a second when they change — no restart
-- **Optional built-in icon set** (Preferences → Appearance → Icon theme → *Rivet*): all-SVG folder,
-  file, place and toolbar icons recoloured live from your matugen / desktop palette, used app-wide
-- **Custom toolbar**: pick the buttons and their order in Preferences (or right-click the toolbar)
-- **Optional window decorations**: system title bar, or a built-in one with its own window buttons
+- **AppImage** — one file: `chmod +x Rivet_Files-*.AppImage` and run it.
+  Preferences → System → *Add Rivet to the app launcher* puts it in your menus.
+- **Archive** — unpack `rivet-files-*-linux.tar.gz` and run `./install.sh`
+  (add `--default` to make Rivet your default file manager).
+- **From source** — `cargo build --release && ./install.sh`
 
-## Build
+## ⌨️ Handy shortcuts
+
+| Keys | Action |
+| --- | --- |
+| `Ctrl+L` | Type a location |
+| `Ctrl+F` or just type | Filter this folder |
+| `Ctrl+T` / `Ctrl+W` | New / close tab |
+| `Ctrl+H` | Show hidden files |
+| `Ctrl+1` `2` `3` | Icon / list / compact view |
+| `F2` · `Delete` | Rename · move to Trash |
+| `Ctrl+M` · `Alt` | Toggle · peek at the menu bar |
+| `F1` | All shortcuts |
+
+## 🛠️ For developers
+
+<details>
+<summary><b>Build, run and options</b></summary>
 
 ```sh
 cargo build --release
 ./target/release/rivet [FOLDER]
 ```
 
-### Download
+Options: `--no-decorations`, `--decorations`, `--view icons|list|compact`, `--tree`,
+`--hide-menubar`, `--home`, `--version`, `--install-desktop-entry`, `--bench [FOLDER…]`,
+`--export-icons DIR`, `--screenshot FILE.png`.
 
-From the [Releases page](https://github.com/ulinaaron/rivet-files/releases):
+A global `rivet` command that always runs your latest build: `./link.sh` (system-wide, asks for
+your password) or `./link.sh --user` (`~/.local/bin`). Preferences → System has the same buttons.
 
-- **AppImage** — `Rivet_Files-…-x86_64.AppImage`: one file, `chmod +x` it and run.
-  Preferences → System → *Add Rivet to the app launcher* adds it to your menus.
-- **Archive** — `rivet-files-…-linux.tar.gz`: unpack it and run `./install.sh`.
+</details>
 
-Build the AppImage yourself with `./appimage.sh` (needs `squashfs-tools`).
+<details>
+<summary><b>Where the colours come from</b></summary>
 
-### Install (adds it to your app launcher)
-
-```sh
-./install.sh            # binary to ~/.local/bin, desktop entry to ~/.local/share/applications
-./install.sh --default  # …and make it the default file manager
-```
-
-Or from inside the app: Preferences → System → *Add Rivet to the app launcher*
-(and *Make Rivet the default file manager*). `rivet --install-desktop-entry` does the same from a terminal.
-The entry file lives in `data/rivet-files.desktop`.
-
-### A global `rivet` command that follows your builds
-
-```sh
-./link.sh          # /usr/bin/rivet -> target/debug/rivet  (asks for your password)
-./link.sh --user   # ~/.local/bin/rivet instead (no password)
-./link.sh --remove [--user]
-```
-
-It is a symlink, so every rebuild is picked up. Preferences → System has the same two buttons
-(the system one asks for your password through the desktop's own dialog). Real packaged files
-are never overwritten.
-
-Options: `--no-decorations`, `--decorations`, `--view icons|list|compact`, `--tree`, `--hide-menubar`, `--home`,
-`--screenshot FILE.png` (draws ~120 frames, saves a picture, exits).
-
-## Theme integration
-
-Rivet reads colours from, in order of priority:
+In order of priority:
 
 1. `~/.config/rivet/colors.css` (`@define-color name #rrggbb;`)
 2. whichever is newer: your matugen outputs (learned by lining each template in
@@ -123,67 +110,39 @@ Rivet reads colours from, in order of priority:
 
 Preferences → *Add Rivet template to matugen* registers a dedicated template if you prefer one.
 
-## Performance
+</details>
 
-Measured on a release build (Fedora, Wayland, Paper icon theme, NVMe SSD):
+<details>
+<summary><b>Performance numbers</b></summary>
+
+Release build on Fedora, Wayland, NVMe SSD:
 
 | | |
 | --- | --- |
 | Start to first drawn frame | ~0.2 s |
-| Peak memory (window open, 2,000-item folder) | ~80 MB, most of it the GPU driver |
-| Drawing a frame afterwards | ~0.8–1 ms (95% under 1.6 ms) |
-| Reading + inspecting a 2,092-item folder | ~19 ms (≈9 µs per item) |
-| Reading an 8,365-item folder | ~52 ms |
-| Sorting 8,365 items by name / by type | ~5 ms / ~9 ms |
-| Indexing the icon themes (once per run) | ~26 ms |
-| Finding icons for 2,092 items | under 1 ms |
+| Peak memory (2,000-item folder) | ~80 MB, mostly the GPU driver |
+| Drawing a frame | ~0.8–1 ms |
+| Reading a 2,092 / 8,365-item folder | ~19 ms / ~52 ms |
+| Sorting 8,365 items by name / type | ~5 ms / ~9 ms |
+| Indexing icon themes (once) | ~26 ms |
 | Binary size (stripped) | ~12 MB |
 
-Reproduce with `rivet --bench [FOLDER…]` (folder timings, no window) and
-`RIVET_FRAME_STATS=1 rivet --screenshot out.png` (startup and frame times).
+Reproduce with `rivet --bench [FOLDER…]` and `RIVET_FRAME_STATS=1 rivet --screenshot out.png`.
 
-## Keyboard shortcuts
+</details>
 
-| Keys | Action |
-| --- | --- |
-| Ctrl+L | Type a location |
-| Ctrl+F or just type | Filter; Enter searches subfolders |
-| Ctrl+T / Ctrl+W | New tab / close tab |
-| Ctrl+H | Show hidden files |
-| Ctrl+1 / 2 / 3 | Icon / list / compact view |
-| Ctrl+C / X / V | Copy / cut / paste |
-| F2 | Rename |
-| Delete / Shift+Delete | Trash / delete permanently |
-| Alt+Left / Right / Up | Back / forward / parent |
-| Ctrl+Shift+N | New folder |
-| Ctrl+D | Bookmark this folder |
-| F9 | Show or hide the sidebar |
-| Ctrl+M or F10 | Show or hide the menu bar |
-| Alt (hold or tap) | Peek at a hidden menu bar |
+<details>
+<summary><b>Screenshots, logo and releases</b></summary>
 
-## Logo
+- **Screenshots** come from a throwaway sample home folder: `docs/make-screenshots.sh`
+- **Logo** master is `data/rivet-files.svg`; regenerate the PNG set with
+  `rivet --export-icons data/icons` and copy the 512 px one to `docs/logo.png`
+- **AppImage**: `./appimage.sh` (needs `squashfs-tools`)
+- **Release**: bump `version` in `Cargo.toml`, add a `CHANGELOG.md` section, commit,
+  then `./release.sh --publish`
 
-The logo is `data/rivet-files.svg` (the master). PNGs at every standard size live in
-`data/icons/hicolor/…/apps/rivet-files.png`, plus `docs/logo.png` (512 px).
-After editing the SVG, regenerate them with:
+</details>
 
-```sh
-cargo build && ./target/debug/rivet --export-icons data/icons
-cp data/icons/hicolor/512x512/apps/rivet-files.png docs/logo.png
-```
+## 📄 License
 
-## Making a release
-
-Bump `version` in `Cargo.toml`, add a section to `CHANGELOG.md`, commit, then run
-`./release.sh` (builds `dist/rivet-files-VERSION-ARCH-linux.tar.gz` and tags it) or
-`./release.sh --publish` (also creates the GitHub release).
-
-## License
-
-Rivet Files is available under either of
-
-- [Apache License, Version 2.0](LICENSE-APACHE)
-- [MIT license](LICENSE-MIT)
-
-at your option. Unless you say otherwise, any contribution you submit is offered under the same terms.
-All of Rivet's library dependencies use compatible permissive licences (MIT, Apache-2.0, BSD, Zlib and similar).
+[MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option.
