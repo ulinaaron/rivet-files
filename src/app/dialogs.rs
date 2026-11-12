@@ -50,6 +50,28 @@ fn arrow_button(ui: &mut egui::Ui, up: bool, enabled: bool) -> egui::Response {
     resp
 }
 
+/// A small flat button with a drawn trash can (red on hover).
+fn trash_button(ui: &mut egui::Ui) -> egui::Response {
+    let resp = ui.add(egui::Button::new("").frame_when_inactive(false).min_size(Vec2::new(24.0, 22.0)));
+    let c = resp.rect.center();
+    let col = if resp.hovered() { Color32::from_rgb(0xe5, 0x5a, 0x5a) } else { ui.visuals().text_color() };
+    let s = Stroke::new(1.5, col);
+    let p = ui.painter();
+    // lid and handle
+    p.line_segment([c + Vec2::new(-5.5, -4.0), c + Vec2::new(5.5, -4.0)], s);
+    p.line_segment([c + Vec2::new(-2.0, -4.0), c + Vec2::new(-2.0, -6.0)], s);
+    p.line_segment([c + Vec2::new(-2.0, -6.0), c + Vec2::new(2.0, -6.0)], s);
+    p.line_segment([c + Vec2::new(2.0, -6.0), c + Vec2::new(2.0, -4.0)], s);
+    // can body
+    p.add(egui::Shape::closed_line(
+        vec![c + Vec2::new(-4.2, -2.0), c + Vec2::new(4.2, -2.0), c + Vec2::new(3.4, 6.0), c + Vec2::new(-3.4, 6.0)],
+        s,
+    ));
+    p.line_segment([c + Vec2::new(-1.3, 0.0), c + Vec2::new(-1.1, 4.0)], Stroke::new(1.1, col));
+    p.line_segment([c + Vec2::new(1.3, 0.0), c + Vec2::new(1.1, 4.0)], Stroke::new(1.1, col));
+    resp
+}
+
 fn danger_button(ui: &mut egui::Ui, label: &str) -> bool {
     ui.add(egui::Button::new(egui::RichText::new(label).color(Color32::WHITE)).fill(Color32::from_rgb(0xc0, 0x1c, 0x28))).clicked()
 }
@@ -831,7 +853,7 @@ impl RivetApp {
                                     ui.allocate_ui_with_layout(Vec2::new(122.0, 22.0), egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                         ui.set_min_width(122.0);
                                         if !fixed {
-                                            if ui.small_button("Remove").clicked() {
+                                            if trash_button(ui).on_hover_text("Remove from the toolbar").clicked() {
                                                 op = Some((i, 0));
                                             }
                                         } else {
