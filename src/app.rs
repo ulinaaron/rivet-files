@@ -114,6 +114,10 @@ pub struct RivetApp {
     pending: Vec<Action>,
     screenshot: Option<PathBuf>,
     frames: u32,
+    /// Time spent building each frame (for RIVET_FRAME_STATS).
+    frame_times: Vec<f64>,
+    first_frame_ms: Option<f64>,
+    stats_printed: bool,
     shot_requested: bool,
     shot_done: Arc<AtomicBool>,
     last_title: String,
@@ -259,6 +263,9 @@ impl RivetApp {
             pending: Vec::new(),
             screenshot,
             frames: 0,
+            frame_times: Vec::new(),
+            first_frame_ms: None,
+            stats_printed: false,
             shot_requested: false,
             shot_done: Arc::new(AtomicBool::new(false)),
             last_title: String::new(),
@@ -1280,6 +1287,17 @@ impl RivetApp {
         // Keep painting even if the compositor reports the window as hidden.
         ctx.send_viewport_cmd(egui::ViewportCommand::RequestPaintWhileHidden);
         if self.shot_done.load(Ordering::Acquire) {
+            if std::env::var_os("RIVET_FRAME_STATS").is_some() && self.frame_times.len() > 10 && !self.stats_printed {
+                self.stats_printed = true;
+                if let Some(f) = self.first_frame_ms {
+                    println!("first frame ready {f:.0} ms after start");
+                }
+                // Skip the first frames (fonts, icons and the folder are loaded then).
+                let mut t: Vec<f64> = self.frame_times[10..].to_vec();
+                t.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                let first: f64 = self.frame_times[..10].iter().sum();
+                println!("first 10 frames: {first:.1} ms total; afterwards median {:.2} ms, 95th percentile {:.2} ms per frame", t[t.len() / 2], t[t.len() * 95 / 100]);
+            }
             if let Some(d) = self.demo_dir.take() {
                 places::remove_demo_dir(&d);
             }
@@ -1327,6 +1345,7 @@ impl eframe::App for RivetApp {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let frame_start = Instant::now();
         let ctx = ui.ctx().clone();
         self.apply_font(&ctx);
         self.apply_visuals(&ctx);
@@ -1374,6 +1393,12 @@ impl eframe::App for RivetApp {
             }
             self.s.save();
             self.dirty_settings = false;
+        }
+        if self.screenshot.is_some() {
+            self.frame_times.push(frame_start.elapsed().as_secs_f64() * 1000.0);
+            if self.first_frame_ms.is_none() {
+                self.first_frame_ms = crate::STARTED.get().map(|t| t.elapsed().as_secs_f64() * 1000.0);
+            }
         }
         self.screenshot_step(&ctx);
     }

@@ -3,6 +3,7 @@
 //! Usage: rivet [FOLDER] [--no-decorations | --decorations] [--screenshot FILE.png]
 
 mod app;
+mod bench;
 mod builtin_icons;
 mod fonts;
 mod fsops;
@@ -19,7 +20,11 @@ mod thumbs;
 use eframe::egui;
 use std::path::PathBuf;
 
+/// When the process started (for RIVET_FRAME_STATS).
+pub static STARTED: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+
 fn main() -> eframe::Result {
+    STARTED.get_or_init(std::time::Instant::now);
     let mut screenshot: Option<PathBuf> = None;
     let mut start: Option<PathBuf> = None;
     let mut decorations: Option<bool> = None;
@@ -36,6 +41,10 @@ fn main() -> eframe::Result {
             "--tree" => tree = true,
             "--hide-menubar" => hide_menubar = true,
             "--home" => start = Some(places::home()),
+            "--bench" => {
+                bench::run(args.by_ref().map(PathBuf::from).collect());
+                return Ok(());
+            }
             "--install-desktop-entry" => {
                 match desktop::install() {
                     Ok(p) => println!("Installed {}", p.display()),

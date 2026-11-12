@@ -29,6 +29,10 @@ struct Theme {
     roots: Vec<PathBuf>,
     dirs: Vec<ThemeDir>,
     inherits: Vec<String>,
+    /// icon name -> where it exists (dir index, root index, extension index).
+    /// Built on first use by listing each theme folder once, so lookups never
+    /// probe the disk file by file.
+    index: Option<HashMap<String, Vec<(u16, u8, u8)>>>,
 }
 
 pub struct IconTheme {
@@ -226,7 +230,7 @@ fn load_theme(name: &str) -> Option<Theme> {
         .get("Inherits")
         .map(|s| s.split(',').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).collect())
         .unwrap_or_default();
-    Some(Theme { roots, dirs, inherits })
+    Some(Theme { roots, dirs, inherits, index: None })
 }
 
 fn dir_matches(d: &ThemeDir, size: u32) -> bool {
@@ -302,36 +306,36 @@ impl IconTheme {
         Self { name: name.to_string(), chain, found: HashMap::new(), textures: HashMap::new(), builtin: None, builtin_tex: HashMap::new() }
     }
 
-    fn lookup_in(theme: &Theme, name: &str, size: u32) -> Option<PathBuf> {
-        // exact match pass
-        for d in theme.dirs.iter().filter(|d| dir_matches(d, size)) {
-            for r in &theme.roots {
-                for ext in EXTS {
-                    let p = r.join(&d.path).join(format!("{name}.{ext}"));
-                    if p.is_file() {
-                        return Some(p);
-                    }
+    fn build_index(theme: &mut Theme) {
+        let mut index: HashMap<String, Vec<(u16, u8, u8)>> = HashMap::new();
+        for (di, d) in theme.dirs.iter().enumerate() {
+            for (ri, r) in theme.roots.iter().enumerate() {
+                let Ok(rd) = std::fs::read_dir(r.join(&d.path)) else { continue };
+                for e in rd.flatten() {
+                    let file = e.file_name();
+                    let file = file.to_string_lossy();
+                    let Some((stem, ext)) = file.rsplit_once('.') else { continue };
+                    let Some(ei) = EXTS.iter().position(|x| *x == ext) else { continue };
+                    index.entry(stem.to_string()).or_default().push((di as u16, ri as u8, ei as u8));
                 }
             }
         }
-        // closest size pass
-        let mut best: Option<(u32, PathBuf)> = None;
-        for d in &theme.dirs {
-            let dist = dir_distance(d, size);
-            if best.as_ref().is_some_and(|(b, _)| *b <= dist) {
-                continue;
-            }
-            for r in &theme.roots {
-                for ext in EXTS {
-                    let p = r.join(&d.path).join(format!("{name}.{ext}"));
-                    if p.is_file() {
-                        best = Some((dist, p));
-                        break;
-                    }
-                }
-            }
+        theme.index = Some(index);
+    }
+
+    fn lookup_in(theme: &mut Theme, name: &str, size: u32) -> Option<PathBuf> {
+        if theme.index.is_none() {
+            Self::build_index(theme);
         }
-        best.map(|b| b.1)
+        let hits = theme.index.as_ref()?.get(name)?;
+        let path = |&(di, ri, ei): &(u16, u8, u8)| {
+            theme.roots[ri as usize].join(&theme.dirs[di as usize].path).join(format!("{name}.{}", EXTS[ei as usize]))
+        };
+        // An exact size match first (in the theme's own directory order), else the closest size.
+        if let Some(h) = hits.iter().filter(|h| dir_matches(&theme.dirs[h.0 as usize], size)).min_by_key(|h| (h.0, h.1, h.2)) {
+            return Some(path(h));
+        }
+        hits.iter().min_by_key(|h| (dir_distance(&theme.dirs[h.0 as usize], size), h.0, h.1, h.2)).map(path)
     }
 
     /// Find the file for the first of `names` that exists in the theme chain.
@@ -344,8 +348,16 @@ impl IconTheme {
                 }
                 continue;
             }
+            // First lookup ever: index every theme in the chain at once, in parallel.
+            if self.chain.iter().any(|t| t.index.is_none()) {
+                std::thread::scope(|s| {
+                    for t in self.chain.iter_mut().filter(|t| t.index.is_none()) {
+                        s.spawn(move || Self::build_index(t));
+                    }
+                });
+            }
             let mut hit = None;
-            for t in &self.chain {
+            for t in &mut self.chain {
                 if let Some(p) = Self::lookup_in(t, n, size) {
                     hit = Some(p);
                     break;

@@ -80,6 +80,25 @@ Rivet reads colours from, in order of priority:
 
 Preferences → *Add Rivet template to matugen* registers a dedicated template if you prefer one.
 
+## Performance
+
+Measured on a release build (Fedora, Wayland, Paper icon theme, NVMe SSD):
+
+| | |
+| --- | --- |
+| Start to first drawn frame | ~0.2 s |
+| Peak memory (window open, 2,000-item folder) | ~80 MB, most of it the GPU driver |
+| Drawing a frame afterwards | ~0.8–1 ms (95% under 1.6 ms) |
+| Reading + inspecting a 2,092-item folder | ~19 ms (≈9 µs per item) |
+| Reading an 8,365-item folder | ~52 ms |
+| Sorting 8,365 items by name / by type | ~5 ms / ~9 ms |
+| Indexing the icon themes (once per run) | ~26 ms |
+| Finding icons for 2,092 items | under 1 ms |
+| Binary size (stripped) | ~12 MB |
+
+Reproduce with `rivet --bench [FOLDER…]` (folder timings, no window) and
+`RIVET_FRAME_STATS=1 rivet --screenshot out.png` (startup and frame times).
+
 ## Keyboard shortcuts
 
 | Keys | Action |
