@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The tests read the desktop's file-type database (shared-mime-info).
+      - name: Install file-type database
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends shared-mime-info
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --locked
+
+      - name: Test
+        run: cargo test --locked
+
+      - name: Release build
+        run: cargo build --release --locked
+
+      - name: Benchmark (folder timings, no window)
+        run: ./target/release/rivet --bench "$GITHUB_WORKSPACE" /usr/share/icons

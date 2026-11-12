@@ -2,6 +2,13 @@
 
 # Rivet Files
 
+[![CI](https://github.com/ulinaaron/rivet-files/actions/workflows/ci.yml/badge.svg)](https://github.com/ulinaaron/rivet-files/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/ulinaaron/rivet-files?label=release)](https://github.com/ulinaaron/rivet-files/releases/latest)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)
+[![Platform: Linux](https://img.shields.io/badge/platform-Linux-informational)](#download)
+[![Built with Rust](https://img.shields.io/badge/built%20with-Rust%20%2B%20egui-orange)](https://github.com/emilk/egui)
+![No GTK or Qt](https://img.shields.io/badge/GTK%20%2F%20Qt-none-success)
+
 A Nemo-style file manager for Linux, written in Rust with [egui](https://github.com/emilk/egui).
 No GTK, no Qt — it talks to the desktop through the freedesktop standards directly.
 
