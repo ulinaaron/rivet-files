@@ -597,6 +597,13 @@ impl RivetApp {
                     resort |= ui.checkbox(&mut self.s.show_hidden, "Show hidden files").changed();
                     resort |= ui.checkbox(&mut self.s.folders_first, "Sort folders before files").changed();
                     changed |= ui.checkbox(&mut self.s.show_thumbnails, "Show picture thumbnails").changed();
+                    ui.horizontal(|ui| {
+                        ui.label("Sidebar icons");
+                        ui.add_space(10.0);
+                        for (size, label) in [(0.0, "Off"), (16.0, "Small"), (20.0, "Medium"), (24.0, "Large")] {
+                            changed |= ui.selectable_value(&mut self.s.sidebar_icon, size, label).changed();
+                        }
+                    });
                 });
 
                 section(ui, "Behaviour", &mut |ui| {

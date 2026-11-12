@@ -45,6 +45,8 @@ pub struct Settings {
     pub icon_color: IconColor,
     pub theme: ThemeChoice,
     pub show_sidebar: bool,
+    /// Sidebar icon size in points; 0 = no icons.
+    pub sidebar_icon: f32,
     pub sidebar_tree: bool,
     pub show_statusbar: bool,
     pub show_menubar: bool,
@@ -80,6 +82,7 @@ impl Default for Settings {
             icon_color: IconColor::Primary,
             theme: ThemeChoice::System,
             show_sidebar: true,
+            sidebar_icon: 16.0,
             sidebar_tree: false,
             show_statusbar: true,
             show_menubar: true,
@@ -126,6 +129,7 @@ impl Settings {
                 "icon_color" => s.icon_color = IconColor::from_id(v),
                 "theme" => s.theme = match v { "light" => ThemeChoice::Light, "dark" => ThemeChoice::Dark, _ => ThemeChoice::System },
                 "show_sidebar" => s.show_sidebar = b,
+                "sidebar_icon" => s.sidebar_icon = match f.unwrap_or(16.0) { x if x <= 0.0 => 0.0, x if x < 18.0 => 16.0, x if x < 22.0 => 20.0, _ => 24.0 },
                 "sidebar_tree" => s.sidebar_tree = b,
                 "show_statusbar" => s.show_statusbar = b,
                 "show_menubar" => s.show_menubar = b,
@@ -156,9 +160,9 @@ impl Settings {
         let sort = match self.sort { SortKey::Name => "name", SortKey::Size => "size", SortKey::Type => "type", SortKey::Modified => "modified" };
         let theme = match self.theme { ThemeChoice::System => "system", ThemeChoice::Light => "light", ThemeChoice::Dark => "dark" };
         let text = format!(
-            "view={view}\nsort={sort}\nsort_desc={}\nfolders_first={}\nshow_hidden={}\nzoom={}\nlist_zoom={}\ndecorations={}\nicon_theme={}\nbuiltin_icons={}\nui_font={}\nui_font_size={}\nicon_color={}\ntheme={theme}\nshow_sidebar={}\nsidebar_tree={}\nshow_statusbar={}\nshow_menubar={}\nshow_thumbnails={}\nsingle_click={}\nconfirm_trash={}\nfollow_desktop_colors={}\naccent=#{:02x}{:02x}{:02x}\nwindow_w={}\nwindow_h={}\nsidebar_width={}\ntoolbar={}\n",
+            "view={view}\nsort={sort}\nsort_desc={}\nfolders_first={}\nshow_hidden={}\nzoom={}\nlist_zoom={}\ndecorations={}\nicon_theme={}\nbuiltin_icons={}\nui_font={}\nui_font_size={}\nicon_color={}\ntheme={theme}\nshow_sidebar={}\nsidebar_icon={}\nsidebar_tree={}\nshow_statusbar={}\nshow_menubar={}\nshow_thumbnails={}\nsingle_click={}\nconfirm_trash={}\nfollow_desktop_colors={}\naccent=#{:02x}{:02x}{:02x}\nwindow_w={}\nwindow_h={}\nsidebar_width={}\ntoolbar={}\n",
             self.sort_desc, self.folders_first, self.show_hidden, self.zoom, self.list_zoom, self.decorations,
-            self.icon_theme, self.builtin_icons, self.ui_font, self.ui_font_size, self.icon_color.id(), self.show_sidebar, self.sidebar_tree, self.show_statusbar, self.show_menubar, self.show_thumbnails,
+            self.icon_theme, self.builtin_icons, self.ui_font, self.ui_font_size, self.icon_color.id(), self.show_sidebar, self.sidebar_icon, self.sidebar_tree, self.show_statusbar, self.show_menubar, self.show_thumbnails,
             self.single_click, self.confirm_trash, self.follow_desktop_colors, self.accent[0], self.accent[1], self.accent[2],
             self.window_w, self.window_h, self.sidebar_width, toolbar_string(&self.toolbar)
         );

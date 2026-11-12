@@ -125,6 +125,9 @@ fn main() -> eframe::Result {
     if std::env::var("RIVET_ICONS").as_deref() == Ok("builtin") {
         settings.builtin_icons = true;
     }
+    if let Some(v) = std::env::var("RIVET_SIDEBAR_ICON").ok().and_then(|v| v.parse::<f32>().ok()) {
+        settings.sidebar_icon = v;
+    }
     if let Ok(f) = std::env::var("RIVET_FONT") {
         settings.ui_font = f;
     }

@@ -9,7 +9,7 @@
 [![Built with Rust](https://img.shields.io/badge/built%20with-Rust%20%2B%20egui-orange)](https://github.com/emilk/egui)
 ![No GTK or Qt](https://img.shields.io/badge/GTK%20%2F%20Qt-none-success)
 
-A classic Linux file manager in the same family as Nemo, Thunar and Caja — written in Rust, with no GTK or Qt.
+A  Linux file manager in the same vein as Nemo, Thunar and Caja — written in Rust. Does not use GTK or Qt.
 
 ![Rivet Files showing a home folder](docs/screenshots/icons-wide.png)
 

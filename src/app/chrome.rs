@@ -974,7 +974,10 @@ impl RivetApp {
         let active = loc.as_ref() == Some(&self.tab().loc);
         // Comfortable rows that grow with the chosen text size.
         let sc = crate::fonts::scale().max(1.0);
-        let h = if usage.is_some() { 38.0 * sc } else { 32.0 * sc };
+        // Icon size from Preferences (0 = no icons); rows grow a little for big icons.
+        let isz = self.s.sidebar_icon;
+        let grow = (isz - 16.0).max(0.0);
+        let h = if usage.is_some() { 38.0 * sc + grow } else { 32.0 * sc + grow };
         let (rect, resp) = ui.allocate_exact_size(Vec2::new(ui.available_width(), h), Sense::click());
         let v = ui.visuals().clone();
         let accent = accent_color(&self.s);
@@ -988,17 +991,26 @@ impl RivetApp {
             ui.painter().rect_stroke(rect, R_MD, Stroke::new(2.0, accent), StrokeKind::Inside);
         }
         let fg = if active { v.selection.stroke.color } else { v.text_color() };
-        let row_mid = if usage.is_some() { rect.top() + 15.0 * sc } else { rect.center().y };
-        let icon_rect = Rect::from_center_size(Pos2::new(rect.left() + 20.0, row_mid), Vec2::splat(16.0));
+        let row_mid = if usage.is_some() { rect.top() + 15.0 * sc + grow / 2.0 } else { rect.center().y };
+        // With icons off the text starts where an icon would have been.
+        let icon_rect = if isz > 0.0 {
+            Rect::from_center_size(Pos2::new(rect.left() + 12.0 + isz / 2.0, row_mid), Vec2::splat(isz))
+        } else {
+            Rect::from_center_size(Pos2::new(rect.left() + 2.0, row_mid), Vec2::new(0.0, 16.0))
+        };
         if active {
             // On the highlight: single-colour icon in the highlight's text colour, or a backdrop.
-            match self.accent_icon(ctx, icon, 16.0) {
-                Some((t, true)) => paint_tex(ui.painter(), &t, icon_rect, fg),
-                Some((t, false)) => paint_tex(ui.painter(), &t, icon_rect, fg),
-                None => {}
+            if isz > 0.0 {
+                match self.accent_icon(ctx, icon, isz) {
+                    Some((t, true)) => paint_tex(ui.painter(), &t, icon_rect, fg),
+                    Some((t, false)) => paint_tex(ui.painter(), &t, icon_rect, fg),
+                    None => {}
+                }
             }
-        } else if let Some(t) = self.icon(ctx, icon, 16.0) {
-            paint_tex(ui.painter(), &t, icon_rect, Color32::WHITE);
+        } else if isz > 0.0 {
+            if let Some(t) = self.icon(ctx, icon, isz) {
+                paint_tex(ui.painter(), &t, icon_rect, Color32::WHITE);
+            }
         }
         let text_right = rect.right() - if eject { 30.0 } else { 10.0 };
         let mut job = egui::text::LayoutJob::simple_singleline(label.to_string(), crate::fonts::ui_font(13.5), fg);
@@ -1177,7 +1189,8 @@ impl RivetApp {
         }
         let accent = accent_color(&self.s);
         for (p, depth) in rows {
-            let (rect, resp) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 30.0 * crate::fonts::scale().max(1.0)), Sense::click());
+            let isz = self.s.sidebar_icon;
+            let (rect, resp) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 30.0 * crate::fonts::scale().max(1.0) + (isz - 16.0).max(0.0)), Sense::click());
             let active = current.as_deref() == Some(p.as_path());
             let v = ui.visuals().clone();
             if active {
@@ -1200,15 +1213,19 @@ impl RivetApp {
                 Some(s) => vec![s, "folder"],
                 None => vec!["folder"],
             };
-            let ir = Rect::from_min_size(Pos2::new(chev.right() + 2.0, rect.center().y - 8.0), Vec2::splat(16.0));
+            let ir = Rect::from_min_size(Pos2::new(chev.right() + 2.0, rect.center().y - isz / 2.0), Vec2::new(isz, isz.max(1.0)));
             if active {
-                match self.accent_icon(ctx, &icon, 16.0) {
-                    Some((t, true)) => paint_tex(ui.painter(), &t, ir, fg),
-                    Some((t, false)) => paint_tex(ui.painter(), &t, ir, fg),
-                    None => {}
+                if isz > 0.0 {
+                    match self.accent_icon(ctx, &icon, isz) {
+                        Some((t, true)) => paint_tex(ui.painter(), &t, ir, fg),
+                        Some((t, false)) => paint_tex(ui.painter(), &t, ir, fg),
+                        None => {}
+                    }
                 }
-            } else if let Some(t) = self.icon(ctx, &icon, 16.0) {
-                paint_tex(ui.painter(), &t, ir, Color32::WHITE);
+            } else if isz > 0.0 {
+                if let Some(t) = self.icon(ctx, &icon, isz) {
+                    paint_tex(ui.painter(), &t, ir, Color32::WHITE);
+                }
             }
             let name = if p == Path::new("/") {
                 "File System".to_string()
