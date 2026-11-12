@@ -537,16 +537,10 @@ impl RivetApp {
         self.icons.texture(ctx, names, (px * ppp).round().max(8.0) as u32)
     }
 
-    /// An icon for a highlighted row: the single-colour (symbolic) version when the theme
-    /// has one, tinted with the highlight's text colour; otherwise the full-colour icon on
-    /// a small backdrop. Returns (texture, is_symbolic).
+    /// An icon for a highlighted row: the very same icon shown when it isn't highlighted,
+    /// recolored into one solid color (tint it with the highlight's text color).
+    /// Returns (texture, is_single_color).
     fn accent_icon(&mut self, ctx: &egui::Context, names: &[&str], px: f32) -> Option<(egui::TextureHandle, bool)> {
-        let sym: Vec<String> = names.iter().map(|n| if n.ends_with("-symbolic") { n.to_string() } else { format!("{n}-symbolic") }).collect();
-        let sym_refs: Vec<&str> = sym.iter().map(|s| s.as_str()).collect();
-        if let Some(t) = self.icon(ctx, &sym_refs, px) {
-            return Some((t, true));
-        }
-        // No single-colour version in the theme: make one from the full-colour icon.
         let ppp = ctx.pixels_per_point();
         self.icons.mask(ctx, names, (px * ppp).round().max(8.0) as u32).map(|t| (t, true))
     }
