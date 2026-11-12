@@ -512,9 +512,11 @@ impl RivetApp {
                     let right_w: f32 = right.iter().map(|t| t.width()).sum::<f32>() + menu_w + 14.0;
                     let path_w = (ui.available_width() - right_w).max(80.0);
                     // The location bar sits on its own raised surface.
-                    let elevated = ui.visuals().window_fill;
+                    let v = ui.visuals();
+                    let elevated = crate::palette::mix(v.window_fill, v.text_color(), 0.04);
+                    let shadow = egui::Shadow { offset: [0, 1], blur: 6, spread: 0, color: Color32::from_black_alpha(if v.dark_mode { 90 } else { 40 }) };
                     ui.allocate_ui_with_layout(Vec2::new(path_w, 32.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                        egui::Frame::NONE.fill(elevated).corner_radius(9.0).inner_margin(egui::Margin::symmetric(6, 3)).show(ui, |ui| {
+                        egui::Frame::NONE.fill(elevated).shadow(shadow).corner_radius(9.0).inner_margin(egui::Margin::symmetric(6, 3)).show(ui, |ui| {
                             ui.set_min_width(ui.available_width());
                             ui.set_min_height(26.0);
                             if self.search_open {
