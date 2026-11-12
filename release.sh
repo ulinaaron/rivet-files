@@ -6,7 +6,7 @@
 #   ./release.sh --publish  …then push the tag and create the GitHub release with that file
 #
 # The version comes from Cargo.toml; the release notes from its section in CHANGELOG.md.
-# For a new release: bump `version` in Cargo.toml, add a CHANGELOG section, commit, run this.
+# For a new release: run ./bump.sh first (sets the version, changelog section, commits), then this.
 set -e
 cd "$(dirname "$0")"
 

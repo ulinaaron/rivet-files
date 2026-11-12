@@ -165,8 +165,8 @@ Preferences → *Add Rivet template to matugen* registers a dedicated template i
 - **Logo** master is `data/rivet-files.svg`; regenerate the PNG set with
   `rivet --export-icons data/icons` and copy the 512 px one to `docs/logo.png`
 - **AppImage**: `./appimage.sh` (needs `squashfs-tools`)
-- **Release**: bump `version` in `Cargo.toml`, add a `CHANGELOG.md` section, commit,
-  then `./release.sh --publish`
+- **Release**: `./bump.sh` (patch, or `minor` / `major` / `X.Y.Z`) sets the version, writes the
+  changelog section and commits; then `./release.sh --publish`
 
 </details>
 
