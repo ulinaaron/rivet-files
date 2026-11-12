@@ -8,7 +8,7 @@ use super::{accent_color, paint_tex, Action, Dialog, DragFiles, RivetApp};
 use crate::fsops;
 use crate::model::{self, Location};
 use crate::places;
-use crate::settings::{SortKey, ViewMode};
+use crate::settings::{SortKey, ToolItem, ViewMode};
 
 impl RivetApp {
     pub(super) fn window_resize_edges(&mut self, ctx: &egui::Context) {
@@ -44,13 +44,62 @@ impl RivetApp {
 
     // -------------------------------------------------------------- menu bar / title bar
 
+    /// Alt shows a hidden menu bar: held, it peeks; a quick tap keeps it open until a
+    /// menu item is chosen, Escape is pressed or you click elsewhere.
+    pub(super) fn update_menu_peek(&mut self, ctx: &egui::Context) {
+        if self.s.show_menubar || self.screenshot.is_some() {
+            self.menu_peek = false;
+            self.alt_was_down = false;
+            return;
+        }
+        let (alt, other_input, esc, press_pos) = ctx.input(|i| {
+            let other = i.events.iter().any(|e| matches!(e, egui::Event::Key { pressed: true, .. } | egui::Event::Text(_)))
+                || i.pointer.any_pressed();
+            let esc = i.key_pressed(egui::Key::Escape);
+            let press = if i.pointer.primary_pressed() { i.pointer.interact_pos() } else { None };
+            (i.modifiers.alt, other, esc, press)
+        });
+        if alt && !self.alt_was_down {
+            self.alt_combo = false;
+        }
+        if alt && other_input {
+            self.alt_combo = true; // Alt+Left etc. are shortcuts, not a menu request
+        }
+        if !alt && self.alt_was_down && !self.alt_combo {
+            self.menu_peek = !self.menu_peek;
+        }
+        self.alt_was_down = alt;
+        let popup_open = egui::Popup::is_any_open(ctx);
+        if self.menu_peek {
+            if esc && !popup_open {
+                self.menu_peek = false;
+            }
+            if let Some(p) = press_pos {
+                if !popup_open && !self.menubar_rect.is_some_and(|r| r.contains(p)) {
+                    self.menu_peek = false;
+                }
+            }
+            // A menu was open and has just closed (an item was chosen): hide again.
+            if self.peek_popup_was_open && !popup_open && !alt {
+                self.menu_peek = false;
+            }
+        }
+        self.peek_popup_was_open = popup_open && self.menu_peek;
+    }
+
+    fn menubar_visible(&self) -> bool {
+        self.s.show_menubar || self.menu_peek || (self.alt_was_down && !self.alt_combo)
+    }
+
     pub(super) fn header(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         let csd = !self.s.decorations;
-        if !self.s.show_menubar && !csd {
+        let show_menu = self.menubar_visible();
+        if !show_menu && !csd {
+            self.menubar_rect = None;
             return;
         }
         let fill = ctx.global_style().visuals.panel_fill;
-        egui::Panel::top("menubar")
+        let panel = egui::Panel::top("menubar")
             .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin::symmetric(6, if csd { 4 } else { 2 })))
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
@@ -59,7 +108,7 @@ impl RivetApp {
                             ui.add(egui::Image::from_texture(&t).fit_to_exact_size(Vec2::splat(18.0)));
                         }
                     }
-                    if self.s.show_menubar {
+                    if show_menu {
                         if csd {
                             // The menu bar takes all the width it is given, so give it just enough.
                             let font = egui::TextStyle::Button.resolve(ui.style());
@@ -101,6 +150,7 @@ impl RivetApp {
                     }
                 });
             });
+        self.menubar_rect = Some(panel.response.rect);
     }
 
     fn window_buttons(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
@@ -218,10 +268,7 @@ impl RivetApp {
             }
             ui.separator();
             if ui.button("Preferences").clicked() {
-                if !self.prefs_open {
-                    self.popup_serial += 1; // a fresh window id re-centres it
-                }
-                self.prefs_open = true;
+                self.open_prefs();
             }
         });
         ui.menu_button("View", |ui| {
@@ -348,46 +395,118 @@ impl RivetApp {
         ui.add_enabled(enabled, btn).on_hover_text(tip).clicked()
     }
 
+    /// Draw one configurable toolbar item.
+    fn toolbar_item(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, item: ToolItem) {
+        use ToolItem::*;
+        if item == Separator {
+            ui.add_space(3.0);
+            return;
+        }
+        let (icons, fb) = item.icons();
+        let (enabled, selected, tip): (bool, bool, String) = match item {
+            Back => (!self.tab().back.is_empty(), false, "Go back".into()),
+            Forward => (!self.tab().forward.is_empty(), false, "Go forward".into()),
+            Up => (true, false, "Open the parent folder".into()),
+            EditLocation => (true, self.path_editing, "Type a location (Ctrl+L)".into()),
+            Search => (true, self.search_open, "Search (Ctrl+F)".into()),
+            ViewIcons => (true, self.s.view == ViewMode::Icons, "Icon view".into()),
+            ViewList => (true, self.s.view == ViewMode::List, "List view".into()),
+            ViewCompact => (true, self.s.view == ViewMode::Compact, "Compact view".into()),
+            NewFolder | Terminal | Bookmark => (self.current_dir().is_some(), false, item.label().into()),
+            ShowHidden => (true, self.s.show_hidden, "Show hidden files (Ctrl+H)".into()),
+            Sidebar => (true, self.s.show_sidebar, "Show or hide the sidebar (F9)".into()),
+            Trash => (true, self.tab().loc == Location::Trash, "Trash".into()),
+            _ => (true, false, item.label().into()),
+        };
+        if !self.tool_button(ui, ctx, icons, fb, &tip, enabled, selected) {
+            return;
+        }
+        match item {
+            Back => self.go_back(),
+            Forward => self.go_forward(),
+            Up => self.go_up(),
+            Reload => self.reload_all(),
+            Home => self.pending.push(Action::Navigate(Location::Dir(places::home()))),
+            Computer => self.pending.push(Action::Navigate(Location::Dir("/".into()))),
+            EditLocation => {
+                self.path_editing = !self.path_editing;
+                if self.path_editing {
+                    self.path_focus = true;
+                    self.path_text = self.current_dir().map(|d| d.display().to_string()).unwrap_or_default();
+                }
+            }
+            Search => {
+                self.search_open = !self.search_open;
+                self.search_focus = self.search_open;
+                if !self.search_open {
+                    self.tab_mut().filter.clear();
+                    self.tabs[self.active].resort(&self.mime, &self.s);
+                }
+            }
+            ViewIcons | ViewList | ViewCompact => {
+                self.s.view = match item {
+                    ViewIcons => ViewMode::Icons,
+                    ViewList => ViewMode::List,
+                    _ => ViewMode::Compact,
+                };
+                self.dirty_settings = true;
+            }
+            NewFolder => self.pending.push(Action::NewFolder),
+            NewTab => self.pending.push(Action::NewTab),
+            Terminal => {
+                if let Some(d) = self.current_dir() {
+                    self.pending.push(Action::Terminal(d));
+                }
+            }
+            ShowHidden => {
+                self.s.show_hidden = !self.s.show_hidden;
+                self.resort_all();
+            }
+            Trash => self.pending.push(Action::Navigate(Location::Trash)),
+            Properties => {
+                let sel = self.tab().selected_paths();
+                self.pending.push(Action::Properties(sel.first().cloned()));
+            }
+            Bookmark => {
+                if let Some(d) = self.current_dir() {
+                    self.pending.push(Action::AddBookmark(d));
+                }
+            }
+            Sidebar => {
+                self.s.show_sidebar = !self.s.show_sidebar;
+                self.dirty_settings = true;
+            }
+            PathBar | Separator => {}
+        }
+    }
+
     pub(super) fn toolbar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         let fill = ctx.global_style().visuals.panel_fill;
+        let layout = self.s.toolbar.clone();
+        let split = layout.iter().position(|t| *t == ToolItem::PathBar).unwrap_or(layout.len());
+        let (left, right) = (layout[..split].to_vec(), layout[(split + 1).min(layout.len())..].to_vec());
         egui::Panel::top("toolbar")
             .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin::symmetric(6, 5)))
             .show(ui, |ui| {
+                // Right-click on empty toolbar space to customise it.
+                let bg = ui.interact(ui.max_rect(), Id::unique("toolbar-bg"), Sense::click());
+                bg.context_menu(|ui| {
+                    if ui.button("Customise Toolbar…").clicked() {
+                        self.open_prefs();
+                    }
+                    if ui.button("Reset Toolbar").clicked() {
+                        self.s.toolbar = ToolItem::default_layout();
+                        self.dirty_settings = true;
+                    }
+                });
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 3.0;
-                    let back = !self.tab().back.is_empty();
-                    let fwd = !self.tab().forward.is_empty();
-                    if self.tool_button(ui, ctx, &["go-previous-symbolic", "go-previous"], "◀", "Go back", back, false) {
-                        self.go_back();
-                    }
-                    if self.tool_button(ui, ctx, &["go-next-symbolic", "go-next"], "▶", "Go forward", fwd, false) {
-                        self.go_forward();
-                    }
-                    if self.tool_button(ui, ctx, &["go-up-symbolic", "go-up"], "▲", "Open the parent folder", true, false) {
-                        self.go_up();
+                    for item in &left {
+                        self.toolbar_item(ui, ctx, *item);
                     }
                     ui.add_space(4.0);
-                    if self.tool_button(ui, ctx, &["view-refresh-symbolic", "view-refresh"], "⟳", "Reload", true, false) {
-                        self.reload_all();
-                    }
-                    if self.tool_button(ui, ctx, &["user-home-symbolic", "go-home-symbolic", "user-home"], "⌂", "Home", true, false) {
-                        self.pending.push(Action::Navigate(Location::Dir(places::home())));
-                    }
-                    if self.tool_button(ui, ctx, &["computer-symbolic", "drive-harddisk-symbolic", "computer"], "/", "File System", true, false) {
-                        self.pending.push(Action::Navigate(Location::Dir("/".into())));
-                    }
-                    ui.add_space(4.0);
-                    let editing = self.path_editing;
-                    if self.tool_button(ui, ctx, &["document-edit-symbolic", "edit-symbolic", "text-editor-symbolic"], "✎", "Type a location (Ctrl+L)", true, editing) {
-                        self.path_editing = !self.path_editing;
-                        if self.path_editing {
-                            self.path_focus = true;
-                            self.path_text = self.current_dir().map(|d| d.display().to_string()).unwrap_or_default();
-                        }
-                    }
-                    ui.add_space(4.0);
-
-                    let right_w = if self.s.show_menubar { 4.0 * 33.0 + 14.0 } else { 5.0 * 33.0 + 20.0 };
+                    let menu_w = if self.s.show_menubar { 0.0 } else { 39.0 };
+                    let right_w: f32 = right.iter().map(|t| t.width()).sum::<f32>() + menu_w + 8.0;
                     let path_w = (ui.available_width() - right_w).max(80.0);
                     ui.allocate_ui_with_layout(Vec2::new(path_w, 28.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
                         ui.set_min_width(path_w);
@@ -417,29 +536,12 @@ impl RivetApp {
                                 ui.separator();
                                 self.menus(ui, ctx);
                             });
-                            r.0.on_hover_text("Menu — Ctrl+M shows the menu bar again");
+                            r.0.on_hover_text("Menu — Ctrl+M shows the menu bar again, Alt shows it briefly");
                             ui.add_space(6.0);
                         }
-                        let views: [(ViewMode, [&str; 2], &str, &str); 3] = [
-                            (ViewMode::Compact, ["view-compact-symbolic", "view-more-horizontal-symbolic"], "▥", "Compact view"),
-                            (ViewMode::List, ["view-list-symbolic", "view-list"], "☰", "List view"),
-                            (ViewMode::Icons, ["view-grid-symbolic", "view-app-grid-symbolic"], "▦", "Icon view"),
-                        ];
-                        for (v, icons, fb, tip) in views {
-                            if self.tool_button(ui, ctx, &icons, fb, tip, true, self.s.view == v) {
-                                self.s.view = v;
-                                self.dirty_settings = true;
-                            }
-                        }
-                        ui.add_space(6.0);
-                        let so = self.search_open;
-                        if self.tool_button(ui, ctx, &["edit-find-symbolic", "system-search-symbolic", "edit-find"], "🔍", "Search (Ctrl+F)", true, so) {
-                            self.search_open = !self.search_open;
-                            self.search_focus = self.search_open;
-                            if !self.search_open {
-                                self.tab_mut().filter.clear();
-                                self.tabs[self.active].resort(&self.mime, &self.s);
-                            }
+                        // Right-to-left layout: draw in reverse so the saved order reads left to right.
+                        for item in right.iter().rev() {
+                            self.toolbar_item(ui, ctx, *item);
                         }
                     });
                 });

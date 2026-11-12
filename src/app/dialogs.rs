@@ -9,7 +9,7 @@ use crate::icons;
 use crate::palette;
 use crate::launch;
 use crate::places;
-use crate::settings::{ThemeChoice, ViewMode};
+use crate::settings::{ThemeChoice, ToolItem, ViewMode};
 
 fn select_stem(ctx: &egui::Context, id: Id, text: &str, is_dir: bool) {
     let (stem, _) = fsops::split_name(text, is_dir);
@@ -483,6 +483,8 @@ impl RivetApp {
             .resizable(false)
             .open(&mut open)
             .show(ctx, |ui| {
+                let max_h = (ctx.content_rect().height() - 140.0).max(240.0);
+                egui::ScrollArea::vertical().max_height(max_h).min_scrolled_height(max_h).auto_shrink([false, true]).show(ui, |ui| {
                 ui.set_width(520.0);
                 ui.add_space(6.0);
                 ui.spacing_mut().item_spacing = Vec2::new(10.0, 8.0);
@@ -528,6 +530,85 @@ impl RivetApp {
                 section(ui, "Window", &mut |ui| {
                     changed |= ui.checkbox(&mut self.s.decorations, "Use the system title bar and borders").changed();
                     hint(ui, "When off, Rivet draws its own title bar with minimise, maximise and close buttons.");
+                });
+
+                section(ui, "Toolbar", &mut |ui| {
+                    hint(ui, "Choose the buttons and their order. Items above the location bar sit on its left, items below it on its right.");
+                    ui.add_space(2.0);
+                    let mut op: Option<(usize, i32)> = None; // (index, -1 up / +1 down / 0 remove)
+                    let n = self.s.toolbar.len();
+                    let fg = ui.visuals().text_color();
+                    for (i, item) in self.s.toolbar.clone().into_iter().enumerate() {
+                        let path = item == ToolItem::PathBar;
+                        let row_fill = if path { ui.visuals().selection.bg_fill.gamma_multiply(0.18) } else { Color32::TRANSPARENT };
+                        egui::Frame::NONE.fill(row_fill).corner_radius(6.0).inner_margin(egui::Margin::symmetric(6, 2)).show(ui, |ui| {
+                            ui.horizontal(|ui| {
+                                ui.set_width(ui.available_width());
+                                let (icons, fb) = item.icons();
+                                let px = (16.0 * ui.ctx().pixels_per_point()) as u32;
+                                let tex = if icons.is_empty() { None } else { self.icons.texture(ui.ctx(), icons, px) };
+                                let (r, _) = ui.allocate_exact_size(Vec2::splat(18.0), Sense::hover());
+                                match tex {
+                                    Some(t) => super::paint_tex(ui.painter(), &t, r.shrink(1.0), fg),
+                                    None if item == ToolItem::Separator => {
+                                        let c = r.center();
+                                        ui.painter().line_segment([c - Vec2::new(0.0, 7.0), c + Vec2::new(0.0, 7.0)], Stroke::new(1.5, weak));
+                                    }
+                                    None => {
+                                        ui.painter().text(r.center(), egui::Align2::CENTER_CENTER, fb, egui::FontId::proportional(12.0), fg);
+                                    }
+                                }
+                                let label = if path { egui::RichText::new(item.label()).strong() } else { egui::RichText::new(item.label()) };
+                                ui.label(label);
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                    ui.spacing_mut().item_spacing.x = 4.0;
+                                    if !path {
+                                        if ui.small_button("Remove").clicked() {
+                                            op = Some((i, 0));
+                                        }
+                                    } else {
+                                        ui.label(egui::RichText::new("always shown").small().color(weak));
+                                    }
+                                    if ui.add_enabled(i + 1 < n, egui::Button::new("Down").small()).clicked() {
+                                        op = Some((i, 1));
+                                    }
+                                    if ui.add_enabled(i > 0, egui::Button::new("Up").small()).clicked() {
+                                        op = Some((i, -1));
+                                    }
+                                });
+                            });
+                        });
+                    }
+                    if let Some((i, d)) = op {
+                        match d {
+                            0 => {
+                                self.s.toolbar.remove(i);
+                            }
+                            -1 => self.s.toolbar.swap(i, i - 1),
+                            _ => self.s.toolbar.swap(i, i + 1),
+                        }
+                        changed = true;
+                    }
+                    ui.add_space(6.0);
+                    ui.horizontal(|ui| {
+                        let missing: Vec<ToolItem> = ToolItem::ALL
+                            .into_iter()
+                            .filter(|t| *t == ToolItem::Separator || !self.s.toolbar.contains(t))
+                            .collect();
+                        egui::ComboBox::from_id_salt("toolbar-add").selected_text("Add a button…").width(200.0).show_ui(ui, |ui| {
+                            for t in missing {
+                                if ui.selectable_label(false, t.label()).clicked() {
+                                    // New buttons go just left of the location bar's right side, at the end.
+                                    self.s.toolbar.push(t);
+                                    changed = true;
+                                }
+                            }
+                        });
+                        if ui.button("Reset to default").clicked() {
+                            self.s.toolbar = ToolItem::default_layout();
+                            changed = true;
+                        }
+                    });
                 });
 
                 section(ui, "Appearance", &mut |ui| {
@@ -612,6 +693,7 @@ impl RivetApp {
                     if !manual {
                         hint(ui, "Style and accent come from your desktop colours while following them.");
                     }
+                });
                 });
             });
         if let Some(t) = new_theme {

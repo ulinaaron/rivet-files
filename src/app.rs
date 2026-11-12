@@ -116,6 +116,11 @@ pub struct RivetApp {
     sidebar_fill: Option<Color32>,
     /// Bumped whenever a movable window opens so it starts centred again.
     popup_serial: u64,
+    menu_peek: bool,
+    alt_was_down: bool,
+    alt_combo: bool,
+    peek_popup_was_open: bool,
+    menubar_rect: Option<Rect>,
     last_decorations: bool,
     collapsed: std::collections::HashSet<String>,
     tree_expanded: std::collections::HashSet<PathBuf>,
@@ -270,6 +275,11 @@ impl RivetApp {
             color_watch: palette::Watcher::new(watched),
             sidebar_fill: None,
             popup_serial: 0,
+            menu_peek: false,
+            alt_was_down: false,
+            alt_combo: false,
+            peek_popup_was_open: false,
+            menubar_rect: None,
             last_decorations,
             collapsed: Default::default(),
             tree_expanded: [places::home()].into_iter().collect(),
@@ -773,6 +783,13 @@ impl RivetApp {
         }
     }
 
+    fn open_prefs(&mut self) {
+        if !self.prefs_open {
+            self.popup_serial += 1; // a fresh window id re-centres it
+        }
+        self.prefs_open = true;
+    }
+
     fn open_properties(&mut self, p: PathBuf) {
         self.popup_serial += 1;
         use std::os::unix::fs::MetadataExt;
@@ -1211,6 +1228,7 @@ impl eframe::App for RivetApp {
         if !self.s.decorations {
             self.window_resize_edges(&ctx);
         }
+        self.update_menu_peek(&ctx);
         self.header(ui, &ctx);
         self.toolbar(ui, &ctx);
         if self.tabs.len() > 1 {

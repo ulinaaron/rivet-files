@@ -51,6 +51,7 @@ pub struct Settings {
     pub window_w: f32,
     pub window_h: f32,
     pub sidebar_width: f32,
+    pub toolbar: Vec<ToolItem>,
 }
 
 impl Default for Settings {
@@ -79,6 +80,7 @@ impl Default for Settings {
             window_w: 1000.0,
             window_h: 640.0,
             sidebar_width: 190.0,
+            toolbar: ToolItem::default_layout(),
         }
     }
 }
@@ -125,6 +127,7 @@ impl Settings {
                 }
                 "window_w" => s.window_w = f.unwrap_or(s.window_w).max(400.0),
                 "window_h" => s.window_h = f.unwrap_or(s.window_h).max(300.0),
+                "toolbar" => s.toolbar = parse_toolbar(v),
                 "sidebar_width" => s.sidebar_width = f.unwrap_or(s.sidebar_width).clamp(120.0, 500.0),
                 _ => {}
             }
@@ -137,11 +140,11 @@ impl Settings {
         let sort = match self.sort { SortKey::Name => "name", SortKey::Size => "size", SortKey::Type => "type", SortKey::Modified => "modified" };
         let theme = match self.theme { ThemeChoice::System => "system", ThemeChoice::Light => "light", ThemeChoice::Dark => "dark" };
         let text = format!(
-            "view={view}\nsort={sort}\nsort_desc={}\nfolders_first={}\nshow_hidden={}\nzoom={}\nlist_zoom={}\ndecorations={}\nicon_theme={}\ntheme={theme}\nshow_sidebar={}\nsidebar_tree={}\nshow_statusbar={}\nshow_menubar={}\nshow_thumbnails={}\nsingle_click={}\nconfirm_trash={}\nfollow_desktop_colors={}\naccent=#{:02x}{:02x}{:02x}\nwindow_w={}\nwindow_h={}\nsidebar_width={}\n",
+            "view={view}\nsort={sort}\nsort_desc={}\nfolders_first={}\nshow_hidden={}\nzoom={}\nlist_zoom={}\ndecorations={}\nicon_theme={}\ntheme={theme}\nshow_sidebar={}\nsidebar_tree={}\nshow_statusbar={}\nshow_menubar={}\nshow_thumbnails={}\nsingle_click={}\nconfirm_trash={}\nfollow_desktop_colors={}\naccent=#{:02x}{:02x}{:02x}\nwindow_w={}\nwindow_h={}\nsidebar_width={}\ntoolbar={}\n",
             self.sort_desc, self.folders_first, self.show_hidden, self.zoom, self.list_zoom, self.decorations,
             self.icon_theme, self.show_sidebar, self.sidebar_tree, self.show_statusbar, self.show_menubar, self.show_thumbnails,
             self.single_click, self.confirm_trash, self.follow_desktop_colors, self.accent[0], self.accent[1], self.accent[2],
-            self.window_w, self.window_h, self.sidebar_width
+            self.window_w, self.window_h, self.sidebar_width, toolbar_string(&self.toolbar)
         );
         let p = path();
         if let Some(d) = p.parent() {
@@ -149,4 +152,174 @@ impl Settings {
         }
         let _ = std::fs::write(p, text);
     }
+}
+
+/// Something that can be placed on the toolbar.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ToolItem {
+    Back,
+    Forward,
+    Up,
+    Reload,
+    Home,
+    Computer,
+    EditLocation,
+    PathBar,
+    Search,
+    ViewIcons,
+    ViewList,
+    ViewCompact,
+    NewFolder,
+    NewTab,
+    Terminal,
+    ShowHidden,
+    Trash,
+    Properties,
+    Bookmark,
+    Sidebar,
+    Separator,
+}
+
+impl ToolItem {
+    pub const ALL: [ToolItem; 21] = [
+        ToolItem::Back,
+        ToolItem::Forward,
+        ToolItem::Up,
+        ToolItem::Reload,
+        ToolItem::Home,
+        ToolItem::Computer,
+        ToolItem::EditLocation,
+        ToolItem::PathBar,
+        ToolItem::Search,
+        ToolItem::ViewIcons,
+        ToolItem::ViewList,
+        ToolItem::ViewCompact,
+        ToolItem::NewFolder,
+        ToolItem::NewTab,
+        ToolItem::Terminal,
+        ToolItem::ShowHidden,
+        ToolItem::Trash,
+        ToolItem::Properties,
+        ToolItem::Bookmark,
+        ToolItem::Sidebar,
+        ToolItem::Separator,
+    ];
+
+    /// The Nemo-like default layout.
+    pub fn default_layout() -> Vec<ToolItem> {
+        use ToolItem::*;
+        vec![Back, Forward, Up, Separator, Reload, Home, Computer, Separator, EditLocation, PathBar, Search, Separator, ViewIcons, ViewList, ViewCompact]
+    }
+
+    pub fn id(self) -> &'static str {
+        use ToolItem::*;
+        match self {
+            Back => "back",
+            Forward => "forward",
+            Up => "up",
+            Reload => "reload",
+            Home => "home",
+            Computer => "computer",
+            EditLocation => "edit-location",
+            PathBar => "path",
+            Search => "search",
+            ViewIcons => "view-icons",
+            ViewList => "view-list",
+            ViewCompact => "view-compact",
+            NewFolder => "new-folder",
+            NewTab => "new-tab",
+            Terminal => "terminal",
+            ShowHidden => "show-hidden",
+            Trash => "trash",
+            Properties => "properties",
+            Bookmark => "bookmark",
+            Sidebar => "sidebar",
+            Separator => "separator",
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        use ToolItem::*;
+        match self {
+            Back => "Back",
+            Forward => "Forward",
+            Up => "Parent folder",
+            Reload => "Reload",
+            Home => "Home",
+            Computer => "File System",
+            EditLocation => "Type a location",
+            PathBar => "Location bar",
+            Search => "Search",
+            ViewIcons => "Icon view",
+            ViewList => "List view",
+            ViewCompact => "Compact view",
+            NewFolder => "New folder",
+            NewTab => "New tab",
+            Terminal => "Open in terminal",
+            ShowHidden => "Show hidden files",
+            Trash => "Trash",
+            Properties => "Properties",
+            Bookmark => "Bookmark this folder",
+            Sidebar => "Show/hide sidebar",
+            Separator => "Gap",
+        }
+    }
+
+    /// Icon names to try, plus a text fallback.
+    pub fn icons(self) -> (&'static [&'static str], &'static str) {
+        use ToolItem::*;
+        match self {
+            Back => (&["go-previous-symbolic", "go-previous"], "◀"),
+            Forward => (&["go-next-symbolic", "go-next"], "▶"),
+            Up => (&["go-up-symbolic", "go-up"], "▲"),
+            Reload => (&["view-refresh-symbolic", "view-refresh"], "⟳"),
+            Home => (&["user-home-symbolic", "go-home-symbolic", "user-home"], "⌂"),
+            Computer => (&["computer-symbolic", "drive-harddisk-symbolic", "computer"], "/"),
+            EditLocation => (&["document-edit-symbolic", "edit-symbolic", "text-editor-symbolic"], "✎"),
+            PathBar => (&["folder-symbolic", "folder"], "…"),
+            Search => (&["edit-find-symbolic", "system-search-symbolic", "edit-find"], "🔍"),
+            ViewIcons => (&["view-grid-symbolic", "view-app-grid-symbolic"], "▦"),
+            ViewList => (&["view-list-symbolic", "view-list"], "☰"),
+            ViewCompact => (&["view-compact-symbolic", "view-more-horizontal-symbolic"], "▥"),
+            NewFolder => (&["folder-new-symbolic", "folder-new"], "+"),
+            NewTab => (&["tab-new-symbolic", "tab-new", "list-add-symbolic"], "+"),
+            Terminal => (&["utilities-terminal-symbolic", "terminal-symbolic", "utilities-terminal"], ">_"),
+            ShowHidden => (&["view-reveal-symbolic", "view-visible-symbolic", "eye-open-symbolic"], "👁"),
+            Trash => (&["user-trash-symbolic", "user-trash"], "🗑"),
+            Properties => (&["document-properties-symbolic", "dialog-information-symbolic", "document-properties"], "i"),
+            Bookmark => (&["bookmark-new-symbolic", "starred-symbolic", "bookmark-new"], "★"),
+            Sidebar => (&["sidebar-show-symbolic", "view-sidebar-symbolic", "view-dual-symbolic"], "◧"),
+            Separator => (&[], "|"),
+        }
+    }
+
+    pub fn from_id(s: &str) -> Option<ToolItem> {
+        ToolItem::ALL.into_iter().find(|t| t.id() == s)
+    }
+
+    /// Approximate width on the toolbar, used to size the location bar.
+    pub fn width(self) -> f32 {
+        match self {
+            ToolItem::Separator => 9.0,
+            ToolItem::PathBar => 0.0,
+            _ => 33.0,
+        }
+    }
+}
+
+pub fn parse_toolbar(v: &str) -> Vec<ToolItem> {
+    let mut out: Vec<ToolItem> = Vec::new();
+    for t in v.split(',').filter_map(|x| ToolItem::from_id(x.trim())) {
+        if t == ToolItem::Separator || !out.contains(&t) {
+            out.push(t);
+        }
+    }
+    if !out.contains(&ToolItem::PathBar) {
+        out.push(ToolItem::PathBar);
+    }
+    out
+}
+
+pub fn toolbar_string(v: &[ToolItem]) -> String {
+    v.iter().map(|t| t.id()).collect::<Vec<_>>().join(",")
 }

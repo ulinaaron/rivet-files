@@ -49,6 +49,10 @@ fn main() -> eframe::Result {
     if let Some(d) = decorations {
         settings.decorations = d;
     }
+    // Test hook for checks: try a toolbar layout without touching saved settings.
+    if let Ok(t) = std::env::var("RIVET_TOOLBAR") {
+        settings.toolbar = settings::parse_toolbar(&t);
+    }
     if hide_menubar {
         settings.show_menubar = false;
     }

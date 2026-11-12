@@ -13,6 +13,7 @@ No GTK, no Qt — it talks to the desktop through the freedesktop standards dire
 - **System icons**: uses your freedesktop icon theme (follows gtk / KDE / gsettings), SVG and PNG
 - **Live desktop colours**: follows matugen, Noctalia, DankMaterialShell or GTK colour files and restyles
   itself within a second when they change — no restart
+- **Custom toolbar**: pick the buttons and their order in Preferences (or right-click the toolbar)
 - **Optional window decorations**: system title bar, or a built-in one with its own window buttons
 
 ## Build
@@ -54,3 +55,4 @@ Preferences → *Add Rivet template to matugen* registers a dedicated template i
 | Ctrl+D | Bookmark this folder |
 | F9 | Show or hide the sidebar |
 | Ctrl+M or F10 | Show or hide the menu bar |
+| Alt (hold or tap) | Peek at a hidden menu bar |
