@@ -54,10 +54,10 @@ cat > "$XDG_CONFIG_HOME/rivet/colors.css" <<'EOF'
 EOF
 
 BIN=./target/debug/rivet
-RIVET_ICON_THEME=Papirus "$BIN" "$H" --screenshot "$OUT/icons.png"
-RIVET_ICON_THEME=Papirus "$BIN" "$H/Documents" --view list --screenshot "$OUT/list.png"
-RIVET_ICONS=builtin RIVET_ICON_COLOR=tertiary "$BIN" "$H" --screenshot "$OUT/rivet-icons.png"
-RIVET_ICON_THEME=Papirus RIVET_OPEN_PREFS=1 "$BIN" "$H" --screenshot "$OUT/preferences.png"
+RIVET_ICON_THEME=Papirus "$BIN" "$H" --screenshot "$OUT/icons-wide.png"
+RIVET_ICON_THEME=Papirus "$BIN" "$H/Documents" --view list --screenshot "$OUT/list-wide.png"
+RIVET_ICONS=builtin RIVET_ICON_COLOR=tertiary "$BIN" "$H" --screenshot "$OUT/rivet-icons-wide.png"
+RIVET_ICON_THEME=Papirus RIVET_OPEN_PREFS=1 "$BIN" "$H" --screenshot "$OUT/preferences-wide.png"
 
 # Keep the repository light: scale to 1100 px wide.
 python3 -I - "$OUT" <<'EOF'
