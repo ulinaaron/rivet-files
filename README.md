@@ -1,4 +1,4 @@
-<img src="data/rivet-files.svg" width="96" alt="Rivet Files icon" align="right">
+<img src="data/rivet-files.svg" width="96" alt="Rivet Files icon">
 
 # Rivet Files
 
