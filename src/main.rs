@@ -41,6 +41,23 @@ fn main() -> eframe::Result {
             "--tree" => tree = true,
             "--hide-menubar" => hide_menubar = true,
             "--home" => start = Some(places::home()),
+            "--export-icons" => {
+                // Render the logo to PNGs in the freedesktop layout: DIR/hicolor/NxN/apps/rivet-files.png
+                let dir = PathBuf::from(args.next().unwrap_or_else(|| "data/icons".into()));
+                for px in [16u32, 24, 32, 48, 64, 128, 256, 512] {
+                    let img = icons::render_svg(desktop::ICON_SVG.as_bytes(), px).expect("logo renders");
+                    let rgba: Vec<u8> = img.pixels.iter().flat_map(|c| c.to_srgba_unmultiplied()).collect();
+                    let out = dir.join(format!("hicolor/{px}x{px}/apps/rivet-files.png"));
+                    std::fs::create_dir_all(out.parent().unwrap()).expect("create icon folder");
+                    image::save_buffer(&out, &rgba, px, px, image::ExtendedColorType::Rgba8).expect("write png");
+                    println!("{}", out.display());
+                }
+                let svg = dir.join("hicolor/scalable/apps/rivet-files.svg");
+                std::fs::create_dir_all(svg.parent().unwrap()).expect("create icon folder");
+                std::fs::write(&svg, desktop::ICON_SVG).expect("write svg");
+                println!("{}", svg.display());
+                return Ok(());
+            }
             "--bench" => {
                 bench::run(args.by_ref().map(PathBuf::from).collect());
                 return Ok(());

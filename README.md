@@ -154,6 +154,17 @@ Reproduce with `rivet --bench [FOLDER…]` (folder timings, no window) and
 | Ctrl+M or F10 | Show or hide the menu bar |
 | Alt (hold or tap) | Peek at a hidden menu bar |
 
+## Logo
+
+The logo is `data/rivet-files.svg` (the master). PNGs at every standard size live in
+`data/icons/hicolor/…/apps/rivet-files.png`, plus `docs/logo.png` (512 px).
+After editing the SVG, regenerate them with:
+
+```sh
+cargo build && ./target/debug/rivet --export-icons data/icons
+cp data/icons/hicolor/512x512/apps/rivet-files.png docs/logo.png
+```
+
 ## Making a release
 
 Bump `version` in `Cargo.toml`, add a section to `CHANGELOG.md`, commit, then run

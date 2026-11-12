@@ -28,13 +28,13 @@ fi
 cargo build --release
 APPDIR="dist/AppDir"
 rm -rf "$APPDIR"
-mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons/hicolor/scalable/apps"
+mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons"
 strip -o "$APPDIR/usr/bin/rivet" target/release/rivet
 cp data/rivet-files.desktop "$APPDIR/rivet-files.desktop"
 cp data/rivet-files.desktop "$APPDIR/usr/share/applications/"
 cp data/rivet-files.svg "$APPDIR/rivet-files.svg"
-cp data/rivet-files.svg "$APPDIR/usr/share/icons/hicolor/scalable/apps/"
-ln -s rivet-files.svg "$APPDIR/.DirIcon"
+cp -r data/icons/hicolor "$APPDIR/usr/share/icons/"
+cp data/icons/hicolor/256x256/apps/rivet-files.png "$APPDIR/.DirIcon"
 cat > "$APPDIR/AppRun" <<'EOF'
 #!/bin/sh
 HERE="$(dirname "$(readlink -f "$0")")"

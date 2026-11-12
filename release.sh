@@ -40,6 +40,7 @@ rm -rf "$STAGE"
 mkdir -p "$STAGE"
 strip -o "$STAGE/rivet" target/release/rivet
 cp data/rivet-files.desktop data/rivet-files.svg install.sh README.md CHANGELOG.md LICENSE-MIT LICENSE-APACHE "$STAGE/"
+cp -r data/icons "$STAGE/icons"
 tar -C dist -czf "dist/$NAME.tar.gz" "$NAME"
 rm -rf "$STAGE"
 (cd dist && sha256sum "$NAME.tar.gz" > "$NAME.tar.gz.sha256")
