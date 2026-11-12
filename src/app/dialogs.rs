@@ -3,7 +3,7 @@
 use eframe::egui::{self, Color32, Id, Key, Sense, Stroke, Vec2};
 use std::path::Path;
 
-use super::{Action, Dialog, RivetApp, ACCENTS};
+use super::{Action, Dialog, PropsState, RivetApp, ACCENTS};
 use crate::fsops::{self, OpKind};
 use crate::desktop;
 use crate::icons;
@@ -213,9 +213,6 @@ impl RivetApp {
             Dialog::OpenWith { .. } => {
                 close = self.open_with_dialog(ctx);
             }
-            Dialog::Properties(_) => {
-                close = self.properties_window(ctx);
-            }
             Dialog::About => {
                 let theme = self.icons.name.clone();
                 let r = egui::Modal::new(Id::unique("about")).show(ctx, |ui| {
@@ -323,9 +320,18 @@ impl RivetApp {
         r.inner || r.should_close()
     }
 
-    fn properties_window(&mut self, ctx: &egui::Context) -> bool {
+    /// All open Properties windows.
+    pub(super) fn properties_windows(&mut self, ctx: &egui::Context) {
+        let mut list = std::mem::take(&mut self.props);
+        list.retain_mut(|(win, st)| self.properties_window(ctx, win, st));
+        // Windows opened meanwhile (none normally) go after the existing ones.
+        list.append(&mut self.props);
+        self.props = list;
+    }
+
+    /// One Properties window; returns false once it is closed.
+    fn properties_window(&mut self, ctx: &egui::Context, win: &mut super::windows::WinState, st: &mut PropsState) -> bool {
         let tex = {
-            let Dialog::Properties(st) = &self.dialog else { return true };
             st.entry.clone().and_then(|e| {
                 let names = if e.is_dir {
                     let s = places::special_folder_icon(&e.path, &self.user_dirs).unwrap_or("folder");
@@ -338,14 +344,16 @@ impl RivetApp {
                 self.icons.texture(ctx, &refs, (64.0 * ppp) as u32)
             })
         };
-        let Dialog::Properties(st) = &mut self.dialog else { return true };
         let desc = st.entry.as_ref().map(|e| self.mime.describe(&e.mime)).unwrap_or_default();
-        let mut open = true;
         let mut apply_mode: Option<u32> = None;
         let mut rename: Option<String> = None;
-        let (serial, centre) = (self.popup_serial, ctx.content_rect().center());
         let title = format!("{} — Properties", st.path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "/".into()));
-        egui::Window::new(window_title(&title)).id(Id::unique(("props", serial))).pivot(egui::Align2::CENTER_CENTER).default_pos(centre).collapsible(false).resizable(false).open(&mut open).default_width(400.0).show(ctx, |ui| {
+        let mut chrome = self.window_chrome(&title, &["document-properties-symbolic", "dialog-information-symbolic"], ctx);
+        if let Some(t) = &tex {
+            chrome.icon = Some(t.clone());
+        }
+        let area = self.window_area(ctx);
+        let shown = super::windows::show(ctx, win, &chrome, area, Vec2::new(380.0, 240.0), |ui| {
             ui.horizontal(|ui| {
                 ui.selectable_value(&mut st.tab, 0, "Basic");
                 ui.selectable_value(&mut st.tab, 1, "Permissions");
@@ -440,12 +448,16 @@ impl RivetApp {
                 ui.label(egui::RichText::new(format!("Mode: {:04o}", st.mode & 0o7777)).small().weak());
             }
         });
+        if let Some(r) = shown.rect {
+            self.window_rects.push(r);
+        }
+        let open = shown.open;
         let path = st.path.clone();
         if let Some(m) = apply_mode {
             use std::os::unix::fs::PermissionsExt;
             if let Err(e) = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(m & 0o7777)) {
                 self.message("Could not change permissions", &e.to_string());
-                return false;
+                return open;
             }
             self.reload_all();
         }
@@ -456,24 +468,22 @@ impl RivetApp {
                 if target != path {
                     if target.exists() {
                         self.message("Name already used", &format!("“{n}” already exists."));
-                        return false;
+                        return open;
                     }
                     match std::fs::rename(&path, &target) {
                         Ok(()) => {
-                            if let Dialog::Properties(st) = &mut self.dialog {
-                                st.path = target;
-                            }
+                            st.path = target;
                             self.reload_all();
                         }
                         Err(e) => {
                             self.message("Could not rename", &e.to_string());
-                            return false;
+                            return open;
                         }
                     }
                 }
             }
         }
-        !open
+        open
     }
 
     pub(super) fn prefs_window(&mut self, ctx: &egui::Context) {
@@ -490,18 +500,12 @@ impl RivetApp {
         let mut link_result: Option<Result<String, String>> = None;
         let mut changed = false;
         let mut resort = false;
-        let (serial, centre) = (self.popup_serial, ctx.content_rect().center());
-        egui::Window::new(window_title("Preferences"))
-            .id(Id::unique(("prefs", serial)))
-            .pivot(egui::Align2::CENTER_CENTER)
-            .default_pos(centre)
-            .collapsible(false)
-            .resizable(false)
-            .open(&mut open)
-            .show(ctx, |ui| {
-                let max_h = (ctx.content_rect().height() - 140.0).max(240.0);
-                egui::ScrollArea::vertical().max_height(max_h).min_scrolled_height(max_h).auto_shrink([false, true]).show(ui, |ui| {
-                ui.set_width(520.0);
+        let chrome = self.window_chrome("Preferences", &["preferences-system-symbolic", "emblem-system-symbolic", "preferences-system"], ctx);
+        let area = self.window_area(ctx);
+        let mut win = std::mem::replace(&mut self.prefs_win, super::windows::WinState::new(0, Vec2::ZERO));
+        let shown = super::windows::show(ctx, &mut win, &chrome, area, Vec2::new(460.0, 260.0), |ui| {
+                egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
+                ui.set_width((ui.available_width() - 14.0).max(400.0));
                 ui.add_space(6.0);
                 ui.spacing_mut().item_spacing = Vec2::new(10.0, 8.0);
                 ui.spacing_mut().button_padding = Vec2::new(10.0, 4.0);
@@ -852,6 +856,13 @@ impl RivetApp {
                 });
                 });
             });
+        self.prefs_win = win;
+        if let Some(r) = shown.rect {
+            self.window_rects.push(r);
+        }
+        if !shown.open {
+            open = false;
+        }
         if let Some(t) = new_theme {
             self.set_theme_name(t);
         }

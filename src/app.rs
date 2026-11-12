@@ -20,6 +20,7 @@ use crate::thumbs::{self, Thumbnailer};
 mod chrome;
 mod dialogs;
 mod views;
+mod windows;
 
 #[derive(Clone)]
 struct DragFiles(Vec<PathBuf>);
@@ -61,7 +62,6 @@ enum Dialog {
     ConfirmDelete(Vec<PathBuf>),
     ConfirmEmptyTrash,
     OpenWith { paths: Vec<PathBuf>, mime: String, show_all: bool, filter: String },
-    Properties(Box<PropsState>),
     RenameBookmark { idx: usize, text: String },
     Message(String, String),
     About,
@@ -93,6 +93,13 @@ pub struct RivetApp {
     ops: Vec<Arc<Progress>>,
     dialog: Dialog,
     prefs_open: bool,
+    prefs_win: windows::WinState,
+    /// Open Properties windows (several at once are fine).
+    props: Vec<(windows::WinState, PropsState)>,
+    next_win_id: u64,
+    /// Where in-app windows are this frame, and whether one has the keyboard.
+    window_rects: Vec<Rect>,
+    window_focus: bool,
     path_editing: bool,
     path_text: String,
     path_focus: bool,
@@ -228,6 +235,11 @@ impl RivetApp {
             ops: Vec::new(),
             dialog: Dialog::None,
             prefs_open: false,
+            prefs_win: windows::WinState::new(1, Vec2::new(580.0, 720.0)),
+            props: Vec::new(),
+            next_win_id: 10,
+            window_rects: Vec::new(),
+            window_focus: false,
             path_editing: false,
             path_text: String::new(),
             path_focus: false,
@@ -283,8 +295,18 @@ impl RivetApp {
         if std::env::var_os("RIVET_EDIT_PATH").is_some() {
             app.start_path_editing();
         }
-        if let Some(p) = std::env::var_os("RIVET_OPEN_PROPERTIES") {
-            app.open_properties(PathBuf::from(p));
+        if let Ok(list) = std::env::var("RIVET_OPEN_PROPERTIES") {
+            for p in list.split(':').filter(|p| !p.is_empty()) {
+                app.open_properties(PathBuf::from(p));
+            }
+        }
+        if std::env::var_os("RIVET_PREFS_MAX").is_some() {
+            app.prefs_win.maximized = true;
+        }
+        if std::env::var_os("RIVET_PROPS_ROLLED").is_some() {
+            for (w, _) in &mut app.props {
+                w.shaded = true;
+            }
         }
         app
     }
@@ -832,6 +854,22 @@ impl RivetApp {
         }
     }
 
+    /// Where in-app windows may live: the whole app minus a small margin.
+    fn window_area(&self, ctx: &egui::Context) -> Rect {
+        ctx.content_rect().shrink(6.0)
+    }
+
+    /// Title bar textures for an in-app window.
+    fn window_chrome(&mut self, title: &str, icon: &[&str], ctx: &egui::Context) -> windows::Chrome {
+        windows::Chrome {
+            title: title.to_string(),
+            icon: self.icon(ctx, icon, 16.0),
+            shade: self.icon(ctx, &["window-minimize-symbolic", "go-up-symbolic"], 14.0),
+            max: self.icon(ctx, &["window-maximize-symbolic"], 14.0),
+            close: self.icon(ctx, &["window-close-symbolic"], 14.0),
+        }
+    }
+
     fn open_prefs(&mut self) {
         if !self.prefs_open {
             self.popup_serial += 1; // a fresh window id re-centres it
@@ -840,7 +878,11 @@ impl RivetApp {
     }
 
     fn open_properties(&mut self, p: PathBuf) {
-        self.popup_serial += 1;
+        // Already open? Just bring it back up.
+        if let Some((w, _)) = self.props.iter_mut().find(|(_, s)| s.path == p) {
+            w.shaded = false;
+            return;
+        }
         use std::os::unix::fs::MetadataExt;
         let entry = Entry::from_path(p.clone(), &self.mime);
         let meta = std::fs::metadata(&p).ok();
@@ -851,7 +893,11 @@ impl RivetApp {
             None
         };
         let name = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "/".into());
-        self.dialog = Dialog::Properties(Box::new(PropsState {
+        self.next_win_id += 1;
+        let mut win = windows::WinState::new(self.next_win_id, Vec2::new(440.0, 420.0));
+        // Cascade new windows a little so they don't sit exactly on top of each other.
+        win.cascade = Vec2::splat(32.0 * (self.props.len() % 6) as f32);
+        self.props.push((win, PropsState {
             owner: meta.as_ref().map(|m| user_name(m.uid())).unwrap_or_default(),
             group: meta.as_ref().map(|m| group_name(m.gid())).unwrap_or_default(),
             path: p,
@@ -966,7 +1012,8 @@ impl RivetApp {
             return;
         }
         let typing = ctx.egui_wants_keyboard_input();
-        let modal = !matches!(self.dialog, Dialog::None) || self.prefs_open;
+        // Dialogs block shortcuts; in-app windows only while you're working in one.
+        let modal = !matches!(self.dialog, Dialog::None) || self.window_focus;
         let (events, m) = ctx.input(|i| (i.events.clone(), i.modifiers));
         let pressed = |k: Key| events.iter().any(|e| matches!(e, egui::Event::Key { key, pressed: true, .. } if *key == k));
         let cmd = m.command;
@@ -1294,8 +1341,17 @@ impl eframe::App for RivetApp {
         }
         let cols = self.file_area(ui, &ctx);
         self.dialogs(&ctx);
+        self.window_rects.clear();
         if self.prefs_open {
             self.prefs_window(&ctx);
+        }
+        self.properties_windows(&ctx);
+        // The last click decides whether the keyboard belongs to a window or the file view.
+        if let Some(p) = ctx.input(|i| if i.pointer.any_pressed() { i.pointer.interact_pos() } else { None }) {
+            self.window_focus = self.window_rects.iter().any(|r| r.contains(p));
+        }
+        if self.window_rects.is_empty() {
+            self.window_focus = false;
         }
         self.keyboard(&ctx, cols);
         self.drag_overlay(&ctx);
