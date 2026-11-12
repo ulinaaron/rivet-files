@@ -3,6 +3,23 @@
 A Nemo-style file manager for Linux, written in Rust with [egui](https://github.com/emilk/egui).
 No GTK, no Qt — it talks to the desktop through the freedesktop standards directly.
 
+![Rivet Files showing a home folder with the Papirus icon theme](docs/screenshots/icons.png)
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/list.png" alt="List view of a Documents folder"></td>
+    <td><img src="docs/screenshots/rivet-icons.png" alt="Rivet's own icon set, recoloured from the desktop palette"></td>
+    <td><img src="docs/screenshots/preferences.png" alt="Preferences as a window inside the app"></td>
+  </tr>
+  <tr>
+    <td align="center">List view</td>
+    <td align="center">Built-in icons, coloured from your palette</td>
+    <td align="center">Preferences, as an in-app window</td>
+  </tr>
+</table>
+
+<sub>Screenshots come from a throwaway sample home folder — run <code>docs/make-screenshots.sh</code> to regenerate them.</sub>
+
 ## Features
 
 - Icon, list and compact views, tabs, back/forward/up, breadcrumb path bar or typed location (Ctrl+L)
