@@ -37,6 +37,8 @@ enum Action {
     Rename(PathBuf),
     Trash,
     Delete,
+    /// The Delete key: ask, offering Move to Trash (default) or Delete Permanently.
+    AskDelete,
     Restore,
     EmptyTrash,
     NewFolder,
@@ -59,13 +61,27 @@ enum Dialog {
     None,
     Rename { path: PathBuf, text: String, focus: bool },
     NewItem { folder: bool, text: String, focus: bool, template: Option<PathBuf> },
-    ConfirmDelete(Vec<PathBuf>),
+    ConfirmDelete(Box<DeleteAsk>),
     ConfirmEmptyTrash,
     OpenWith { paths: Vec<PathBuf>, mime: String, show_all: bool, filter: String },
     RenameBookmark { idx: usize, text: String },
     Message(String, String),
     About,
     Shortcuts,
+}
+
+/// What the delete confirmation shows.
+struct DeleteAsk {
+    paths: Vec<PathBuf>,
+    /// Offer "Move to Trash" (not inside the Trash itself).
+    allow_trash: bool,
+    /// Enter means "Delete Permanently" (Shift+Delete, or already in the Trash).
+    permanent_default: bool,
+    folders: usize,
+    files: usize,
+    bytes: u64,
+    /// Size counting stopped early (very big folders).
+    partial: bool,
 }
 
 struct PropsState {
@@ -336,6 +352,11 @@ impl RivetApp {
         match std::env::var("RIVET_DIALOG").as_deref() {
             Ok("about") => app.dialog = Dialog::About,
             Ok("shortcuts") => app.dialog = Dialog::Shortcuts,
+            Ok("delete") | Ok("delete-permanently") => {
+                let sel = app.tab().selected_paths();
+                let perm = std::env::var("RIVET_DIALOG").as_deref() == Ok("delete-permanently");
+                app.ask_delete(sel, perm);
+            }
             _ => {}
         }
         if std::env::var_os("RIVET_SEARCH").is_some() {
@@ -819,16 +840,24 @@ impl RivetApp {
                     if sel.is_empty() {
                         continue;
                     }
-                    if matches!(self.tab().loc, Location::Trash) || self.s.confirm_trash {
-                        self.dialog = Dialog::ConfirmDelete(sel);
+                    let in_trash = matches!(self.tab().loc, Location::Trash);
+                    if in_trash || self.s.confirm_trash {
+                        self.ask_delete(sel, in_trash);
                     } else {
                         self.start_op(OpKind::Trash, sel, None);
+                    }
+                }
+                Action::AskDelete => {
+                    let sel = self.tab().selected_paths();
+                    if !sel.is_empty() {
+                        let in_trash = matches!(self.tab().loc, Location::Trash);
+                        self.ask_delete(sel, in_trash);
                     }
                 }
                 Action::Delete => {
                     let sel = self.tab().selected_paths();
                     if !sel.is_empty() {
-                        self.dialog = Dialog::ConfirmDelete(sel);
+                        self.ask_delete(sel, true);
                     }
                 }
                 Action::Restore => {
@@ -956,6 +985,37 @@ impl RivetApp {
                 .map(|img| ctx.load_texture("rivet-app-icon", img, egui::TextureOptions::LINEAR));
         }
         self.app_icon.clone()
+    }
+
+    /// Open the delete confirmation for these items (counts and size measured up front).
+    fn ask_delete(&mut self, paths: Vec<PathBuf>, permanent_default: bool) {
+        let allow_trash = !matches!(self.tab().loc, Location::Trash);
+        let (mut folders, mut files, mut bytes, mut partial) = (0, 0, 0u64, false);
+        let deadline = Instant::now() + std::time::Duration::from_millis(400);
+        for p in &paths {
+            match std::fs::symlink_metadata(p) {
+                Ok(m) if m.is_dir() => {
+                    folders += 1;
+                    let (b, _, complete) = fsops::dir_size(p, deadline);
+                    bytes += b;
+                    partial |= !complete;
+                }
+                Ok(m) => {
+                    files += 1;
+                    bytes += m.len();
+                }
+                Err(_) => {}
+            }
+        }
+        self.dialog = Dialog::ConfirmDelete(Box::new(DeleteAsk {
+            paths,
+            allow_trash,
+            permanent_default: permanent_default || !allow_trash,
+            folders,
+            files,
+            bytes,
+            partial,
+        }));
     }
 
     fn open_prefs(&mut self) {
@@ -1244,7 +1304,7 @@ impl RivetApp {
             self.pending.push(Action::Rename(sel[0].clone()));
         }
         if pressed(Key::Delete) {
-            self.pending.push(if m.shift { Action::Delete } else { Action::Trash });
+            self.pending.push(if m.shift { Action::Delete } else { Action::AskDelete });
         }
         if (cmd && pressed(Key::I)) || (m.alt && pressed(Key::Enter)) {
             self.pending.push(Action::Properties(sel.first().cloned()));

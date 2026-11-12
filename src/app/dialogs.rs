@@ -173,27 +173,8 @@ impl RivetApp {
                     close = true;
                 }
             }
-            Dialog::ConfirmDelete(paths) => {
-                let n = paths.len();
-                let r = egui::Modal::new(Id::unique("confirmdel")).show(ctx, |ui| {
-                    ui.set_width(380.0);
-                    ui.heading(if n == 1 {
-                        format!("Permanently delete “{}”?", paths[0].file_name().map(|x| x.to_string_lossy().to_string()).unwrap_or_default())
-                    } else {
-                        format!("Permanently delete {n} items?")
-                    });
-                    ui.add_space(4.0);
-                    ui.label("If you delete an item, it will be permanently lost.");
-                    ui.add_space(8.0);
-                    ui.horizontal(|ui| (danger_button(ui, "Delete"), ui.button("Cancel").clicked())).inner
-                });
-                if r.inner.0 {
-                    self.ops.push(fsops::spawn_op(OpKind::Delete, paths.clone(), None));
-                    close = true;
-                }
-                if r.inner.1 || r.should_close() {
-                    close = true;
-                }
+            Dialog::ConfirmDelete(_) => {
+                close = self.delete_dialog(ctx);
             }
             Dialog::ConfirmEmptyTrash => {
                 let r = egui::Modal::new(Id::unique("emptytrash")).show(ctx, |ui| {
@@ -262,7 +243,7 @@ impl RivetApp {
                         ("Enter", "Open"),
                         ("Ctrl+C / X / V", "Copy / cut / paste"),
                         ("F2", "Rename"),
-                        ("Delete", "Move to Trash"),
+                        ("Delete", "Move to Trash or delete (asks)"),
                         ("Shift+Delete", "Delete permanently"),
                         ("Ctrl+Shift+N", "New folder"),
                         ("Ctrl+A", "Select all"),
@@ -342,6 +323,132 @@ impl RivetApp {
             self.dialog = n;
         } else if close {
             self.dialog = Dialog::None;
+        }
+    }
+
+    /// The delete confirmation: what's affected, how big it is, and a safe default.
+    fn delete_dialog(&mut self, ctx: &egui::Context) -> bool {
+        // Icons first (needs &mut self), then the dialog itself.
+        let preview: Vec<(String, Option<egui::TextureHandle>)> = {
+            let Dialog::ConfirmDelete(d) = &self.dialog else { return true };
+            d.paths.iter().take(5).cloned().collect::<Vec<_>>()
+        }
+        .into_iter()
+        .map(|p| {
+            let name = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| p.display().to_string());
+            let tex = crate::model::Entry::from_path(p, &self.mime).and_then(|e| self.entry_texture(ctx, &e, 48.0));
+            (name, tex)
+        })
+        .collect();
+        let Dialog::ConfirmDelete(d) = &self.dialog else { return true };
+        let n = d.paths.len();
+        let title = if n == 1 { format!("Delete “{}”?", preview[0].0) } else { format!("Delete {n} items?") };
+        let mut parts = Vec::new();
+        if d.folders > 0 {
+            parts.push(format!("{} folder{}", d.folders, if d.folders == 1 { "" } else { "s" }));
+        }
+        if d.files > 0 {
+            parts.push(format!("{} file{}", d.files, if d.files == 1 { "" } else { "s" }));
+        }
+        let size = format!("{}{}", if d.partial { "at least " } else { "" }, fsops::human_size(d.bytes));
+        let summary = format!("{} · {size}", parts.join(", "));
+        let (allow_trash, permanent_default) = (d.allow_trash, d.permanent_default);
+
+        let mut choice: Option<bool> = None; // Some(true) = permanently, Some(false) = trash
+        let r = egui::Modal::new(Id::unique("confirmdel")).show(ctx, |ui| {
+            ui.set_width(440.0);
+            let v = ui.visuals().clone();
+            ui.horizontal(|ui| {
+                if let Some(Some(t)) = preview.first().map(|p| p.1.clone()) {
+                    let (r, _) = ui.allocate_exact_size(Vec2::splat(52.0), Sense::hover());
+                    super::paint_tex(ui.painter(), &t, r.shrink(2.0), Color32::WHITE);
+                    if n > 1 {
+                        // A count badge on the icon.
+                        let c = r.right_bottom() - Vec2::splat(6.0);
+                        ui.painter().circle_filled(c, 10.0, v.selection.bg_fill);
+                        ui.painter().text(c, egui::Align2::CENTER_CENTER, n.min(99).to_string(), crate::fonts::ui_font(11.0), v.selection.stroke.color);
+                    }
+                    ui.add_space(8.0);
+                }
+                ui.vertical(|ui| {
+                    ui.add(egui::Label::new(egui::RichText::new(&title).heading()).truncate());
+                    ui.label(egui::RichText::new(&summary).color(v.weak_text_color()));
+                });
+            });
+            if n > 1 {
+                ui.add_space(8.0);
+                egui::Frame::NONE.fill(v.faint_bg_color).corner_radius(super::R_SM).inner_margin(egui::Margin::symmetric(10, 8)).show(ui, |ui| {
+                    ui.set_width(ui.available_width());
+                    for (name, tex) in &preview {
+                        ui.horizontal(|ui| {
+                            let (r, _) = ui.allocate_exact_size(Vec2::splat(18.0), Sense::hover());
+                            if let Some(t) = tex {
+                                super::paint_tex(ui.painter(), t, r, Color32::WHITE);
+                            }
+                            ui.add(egui::Label::new(name.as_str()).truncate());
+                        });
+                    }
+                    if n > preview.len() {
+                        ui.label(egui::RichText::new(format!("…and {} more", n - preview.len())).color(v.weak_text_color()));
+                    }
+                });
+            }
+            ui.add_space(10.0);
+            let warn = Color32::from_rgb(0xe5, 0x5a, 0x5a);
+            if allow_trash {
+                ui.label(egui::RichText::new("Move to Trash keeps them recoverable. Deleting permanently can’t be undone.").color(v.weak_text_color()));
+            } else {
+                ui.label(egui::RichText::new("These will be deleted permanently. This can’t be undone.").color(warn));
+            }
+            ui.add_space(12.0);
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.spacing_mut().item_spacing.x = 8.0;
+                ui.spacing_mut().button_padding = Vec2::new(12.0, 5.0);
+                // Rightmost = the default (Enter).
+                let red = egui::Button::new(egui::RichText::new("Delete Permanently").color(if permanent_default { Color32::WHITE } else { warn }));
+                let red = if permanent_default { red.fill(Color32::from_rgb(0xc0, 0x1c, 0x28)) } else { red.stroke(Stroke::new(1.0, warn.gamma_multiply(0.6))) };
+                let trash = egui::Button::new(egui::RichText::new("Move to Trash").color(if permanent_default { v.text_color() } else { v.selection.stroke.color }));
+                let trash = if permanent_default { trash } else { trash.fill(v.selection.bg_fill) };
+                let mut clicked_cancel = false;
+                if permanent_default {
+                    if ui.add(red).clicked() {
+                        choice = Some(true);
+                    }
+                    if allow_trash && ui.add(trash).clicked() {
+                        choice = Some(false);
+                    }
+                } else {
+                    if ui.add(trash).clicked() {
+                        choice = Some(false);
+                    }
+                    if ui.add(red).clicked() {
+                        choice = Some(true);
+                    }
+                }
+                if ui.button("Cancel").clicked() {
+                    clicked_cancel = true;
+                }
+                clicked_cancel
+            })
+            .inner
+        });
+        if choice.is_none() && ctx.input(|i| i.key_pressed(Key::Enter)) {
+            choice = Some(permanent_default);
+        }
+        let paths = match &self.dialog {
+            Dialog::ConfirmDelete(d) => d.paths.clone(),
+            _ => return true,
+        };
+        match choice {
+            Some(true) => {
+                self.ops.push(fsops::spawn_op(OpKind::Delete, paths, None));
+                true
+            }
+            Some(false) => {
+                self.ops.push(fsops::spawn_op(OpKind::Trash, paths, None));
+                true
+            }
+            None => r.inner || r.should_close(),
         }
     }
 
