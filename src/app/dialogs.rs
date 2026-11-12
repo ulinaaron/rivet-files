@@ -218,6 +218,7 @@ impl RivetApp {
                 let r = egui::Modal::new(Id::unique("about")).show(ctx, |ui| {
                     ui.set_width(440.0);
                     ui.heading("Rivet Files");
+                    ui.label(egui::RichText::new(format!("Version {}", env!("CARGO_PKG_VERSION"))).small().weak());
                     ui.label("A file manager written in Rust. No GTK or Qt — it reads your desktop's icon theme, file types, bookmarks and default applications directly.");
                     ui.add_space(8.0);
                     ui.label(egui::RichText::new("Keyboard shortcuts").strong());

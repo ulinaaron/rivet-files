@@ -52,6 +52,10 @@ fn main() -> eframe::Result {
                 }
                 return Ok(());
             }
+            "-V" | "--version" => {
+                println!("Rivet Files {}", env!("CARGO_PKG_VERSION"));
+                return Ok(());
+            }
             "-h" | "--help" => {
                 println!("Usage: rivet [FOLDER] [--no-decorations | --decorations] [--view icons|list|compact] [--tree] [--hide-menubar] [--home] [--install-desktop-entry] [--screenshot FILE.png]");
                 return Ok(());

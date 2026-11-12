@@ -66,6 +66,11 @@ cargo build --release
 ./target/release/rivet [FOLDER]
 ```
 
+### Download
+
+Grab the latest `rivet-files-…-linux.tar.gz` from the
+[Releases page](https://github.com/ulinaaron/rivet-files/releases), unpack it and run `./install.sh`.
+
 ### Install (adds it to your app launcher)
 
 ```sh
@@ -141,6 +146,12 @@ Reproduce with `rivet --bench [FOLDER…]` (folder timings, no window) and
 | F9 | Show or hide the sidebar |
 | Ctrl+M or F10 | Show or hide the menu bar |
 | Alt (hold or tap) | Peek at a hidden menu bar |
+
+## Making a release
+
+Bump `version` in `Cargo.toml`, add a section to `CHANGELOG.md`, commit, then run
+`./release.sh` (builds `dist/rivet-files-VERSION-ARCH-linux.tar.gz` and tags it) or
+`./release.sh --publish` (also creates the GitHub release).
 
 ## License
 
