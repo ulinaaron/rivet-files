@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.1.2
+
+- bump.sh: one command to set the next version
+- Delete dialog: roomier padding
+- Clearer delete confirmation; the Delete key asks
+- Highlighted sidebar rows recolor the same icon
+- Appearance: grouped spacing, US spelling, drop auto-update hint
+- Toolbar settings: trash-can button instead of 'Remove'
+- Title bar setting: only in Preferences, clearer wording
+- Toolbar settings: up / down chevron buttons instead of text
+- Sidebar icon size: Off, Small, Medium, Large
+- Highlighted rows show the icon as a solid recoloured silhouette
+- Active view / sidebar-mode buttons use the selected-file look; status bar padding
+- Grid view: one tile style for hover and selection; names stay visible
+- Faster big folders, zero idle CPU, 100k-file benchmark, mouse back/forward
+- README: cleaner layout with concise emoji feature list
+- Pop-up windows: close button only (no roll-up / maximise)
+- Describe Rivet as a classic Linux file manager like Nemo, Thunar and Caja
+- CI workflow and README badges
+- README: logo above the title, not floated right
+- Logo assets in the codebase
+- Separate Keyboard Shortcuts and About; new purple folder + rivet icon
+- Polish: one radius scale, even location pills, flat status bar, readable icons on highlights
+
 ## 0.1.1
 
 - **AppImage**: Rivet now also ships as a single-file AppImage — download, `chmod +x`, run.
