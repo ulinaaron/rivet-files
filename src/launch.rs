@@ -90,7 +90,7 @@ pub fn all_apps() -> Vec<DesktopApp> {
     v
 }
 
-fn mimeapps_default(mime: &str) -> Option<String> {
+pub(crate) fn mimeapps_default(mime: &str) -> Option<String> {
     let mut files = vec![places::config_home().join("mimeapps.list")];
     if let Ok(d) = std::env::var("XDG_CURRENT_DESKTOP") {
         for de in d.split(':') {
@@ -182,6 +182,21 @@ fn split_exec(exec: &str) -> Vec<String> {
 }
 
 pub fn launch_app(app: &DesktopApp, files: &[PathBuf]) -> Result<(), String> {
+    let mut args = exec_args(app, files);
+    if args.is_empty() {
+        return Err("Nothing to run".into());
+    }
+    if app.terminal {
+        let mut t = terminal_command();
+        t.push("-e".into());
+        t.extend(args);
+        args = t;
+    }
+    spawn_detached(&args, files.first().and_then(|f| f.parent()))
+}
+
+/// Expand a desktop entry's Exec= line into a command line for these files.
+pub fn exec_args(app: &DesktopApp, files: &[PathBuf]) -> Vec<String> {
     let mut args: Vec<String> = Vec::new();
     let mut used = false;
     for tok in split_exec(&app.exec) {
@@ -210,16 +225,7 @@ pub fn launch_app(app: &DesktopApp, files: &[PathBuf]) -> Result<(), String> {
     if !used {
         args.extend(files.iter().map(|f| f.to_string_lossy().to_string()));
     }
-    if args.is_empty() {
-        return Err("Nothing to run".into());
-    }
-    if app.terminal {
-        let mut t = terminal_command();
-        t.push("-e".into());
-        t.extend(args);
-        args = t;
-    }
-    spawn_detached(&args, files.first().and_then(|f| f.parent()))
+    args
 }
 
 fn spawn_detached(args: &[String], cwd: Option<&Path>) -> Result<(), String> {

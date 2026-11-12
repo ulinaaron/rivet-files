@@ -23,7 +23,18 @@ cargo build --release
 ./target/release/rivet [FOLDER]
 ```
 
-Options: `--no-decorations`, `--decorations`, `--view icons|list|compact`, `--tree`, `--hide-menubar`,
+### Install (adds it to your app launcher)
+
+```sh
+./install.sh            # binary to ~/.local/bin, desktop entry to ~/.local/share/applications
+./install.sh --default  # …and make it the default file manager
+```
+
+Or from inside the app: Preferences → System → *Add Rivet to the app launcher*
+(and *Make Rivet the default file manager*). `rivet --install-desktop-entry` does the same from a terminal.
+The entry file lives in `data/rivet-files.desktop`.
+
+Options: `--no-decorations`, `--decorations`, `--view icons|list|compact`, `--tree`, `--hide-menubar`, `--home`,
 `--screenshot FILE.png` (draws ~120 frames, saves a picture, exits).
 
 ## Theme integration

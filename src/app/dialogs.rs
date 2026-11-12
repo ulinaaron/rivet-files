@@ -5,6 +5,7 @@ use std::path::Path;
 
 use super::{Action, Dialog, RivetApp, ACCENTS};
 use crate::fsops::{self, OpKind};
+use crate::desktop;
 use crate::icons;
 use crate::palette;
 use crate::launch;
@@ -472,6 +473,7 @@ impl RivetApp {
         }
         let mut new_theme: Option<String> = None;
         let mut matugen_msg: Option<String> = None;
+        let mut system_msg: Option<String> = None;
         let mut changed = false;
         let mut resort = false;
         let (serial, centre) = (self.popup_serial, ctx.content_rect().center());
@@ -525,6 +527,35 @@ impl RivetApp {
                 section(ui, "Behaviour", &mut |ui| {
                     changed |= ui.checkbox(&mut self.s.single_click, "Single click to open items").changed();
                     changed |= ui.checkbox(&mut self.s.confirm_trash, "Ask before moving files to the Trash").changed();
+                });
+
+                section(ui, "System", &mut |ui| {
+                    let installed = desktop::is_installed();
+                    ui.horizontal(|ui| {
+                        if installed {
+                            ui.label("✔ In your app launcher");
+                            if ui.button("Update entry").on_hover_text("Point the launcher at this copy of Rivet").clicked() {
+                                system_msg = Some(desktop::install().map(|_| "Launcher entry updated.".to_string()).unwrap_or_else(|e| e));
+                            }
+                            if ui.button("Remove").clicked() {
+                                system_msg = Some(desktop::uninstall().map(|_| "Removed from the app launcher.".to_string()).unwrap_or_else(|e| e));
+                            }
+                        } else if ui.button("Add Rivet to the app launcher").clicked() {
+                            system_msg = Some(desktop::install().map(|_| "Rivet is now in your app launcher.".to_string()).unwrap_or_else(|e| e));
+                        }
+                    });
+                    ui.horizontal(|ui| {
+                        if desktop::is_default_file_manager() {
+                            ui.label("✔ Default file manager");
+                        } else if ui.button("Make Rivet the default file manager").on_hover_text("Folders opened from other apps and the desktop will open in Rivet").clicked() {
+                            system_msg = Some(
+                                desktop::set_default_file_manager()
+                                    .map(|_| "Rivet is now your default file manager.".to_string())
+                                    .unwrap_or_else(|e| e),
+                            );
+                        }
+                    });
+                    hint(ui, "Adds a standard desktop entry so Rivet appears in your launcher, menus and “Open With” lists.");
                 });
 
                 section(ui, "Window", &mut |ui| {
@@ -701,6 +732,10 @@ impl RivetApp {
         }
         if let Some(m) = matugen_msg {
             self.flash(&m);
+        }
+        if let Some(m) = system_msg {
+            self.flash(&m);
+            self.apps = crate::launch::all_apps();
         }
         if resort {
             self.resort_all();

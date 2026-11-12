@@ -6,6 +6,7 @@ mod app;
 mod fsops;
 mod icons;
 mod launch;
+mod desktop;
 mod mime;
 mod model;
 mod palette;
@@ -32,13 +33,29 @@ fn main() -> eframe::Result {
             "--view" => view = args.next(),
             "--tree" => tree = true,
             "--hide-menubar" => hide_menubar = true,
+            "--home" => start = Some(places::home()),
+            "--install-desktop-entry" => {
+                match desktop::install() {
+                    Ok(p) => println!("Installed {}", p.display()),
+                    Err(e) => eprintln!("Could not install the desktop entry: {e}"),
+                }
+                return Ok(());
+            }
             "-h" | "--help" => {
-                println!("Usage: rivet [FOLDER] [--no-decorations | --decorations] [--view icons|list|compact] [--tree] [--hide-menubar] [--screenshot FILE.png]");
+                println!("Usage: rivet [FOLDER] [--no-decorations | --decorations] [--view icons|list|compact] [--tree] [--hide-menubar] [--home] [--install-desktop-entry] [--screenshot FILE.png]");
                 return Ok(());
             }
             _ if a.starts_with("--screenshot=") => screenshot = Some(PathBuf::from(&a["--screenshot=".len()..])),
             _ => {
-                let p = a.strip_prefix("file://").map(|s| PathBuf::from(places::percent_decode(s))).unwrap_or_else(|| PathBuf::from(&a));
+                let p = if let Some(s) = a.strip_prefix("file://") {
+                    PathBuf::from(places::percent_decode(s))
+                } else if a == "~" {
+                    places::home()
+                } else if let Some(r) = a.strip_prefix("~/") {
+                    places::home().join(r)
+                } else {
+                    PathBuf::from(&a)
+                };
                 start = Some(p);
             }
         }
