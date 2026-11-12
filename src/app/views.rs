@@ -197,8 +197,7 @@ impl RivetApp {
                 let icon_rect = Rect::from_center_size(Pos2::new(item.center().x, item.top() + 4.0 + z / 2.0), Vec2::splat(z));
                 let text_pos = Pos2::new(item.center().x, icon_rect.bottom() + 6.0);
                 let tile = item.shrink(1.0);
-                let sel_fill = crate::palette::mix(v.extreme_bg_color, v.selection.bg_fill, 0.30);
-                let sel_stroke = Stroke::new(1.0, v.selection.bg_fill.gamma_multiply(0.65));
+                let (sel_fill, sel_stroke) = super::selected_tile(&v, v.extreme_bg_color);
                 let fg = v.strong_text_color();
                 let tint = self.tint_for(&e);
                 let tex = self.entry_texture(ctx, &e, z);
@@ -237,8 +236,9 @@ impl RivetApp {
                 let p = ui.painter();
                 // Opaque base first so neighbours underneath don't show through.
                 p.rect_filled(tile, R_SM, v.extreme_bg_color);
-                p.rect_filled(tile, R_SM, crate::palette::mix(v.extreme_bg_color, v.selection.bg_fill, 0.30));
-                p.rect_stroke(tile, R_SM, Stroke::new(1.0, v.selection.bg_fill.gamma_multiply(0.65)), StrokeKind::Inside);
+                let (fill, stroke) = super::selected_tile(&v, v.extreme_bg_color);
+                p.rect_filled(tile, R_SM, fill);
+                p.rect_stroke(tile, R_SM, stroke, StrokeKind::Inside);
                 if let Some(t) = &tex {
                     paint_tex(p, t, icon_rect, tint);
                 }

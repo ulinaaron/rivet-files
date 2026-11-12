@@ -222,6 +222,12 @@ fn desktop_icon(p: &Path) -> Option<String> {
     text.lines().find_map(|l| l.strip_prefix("Icon=").map(|s| s.trim().to_string()))
 }
 
+/// The shared "selected" look (selected files, active view and sidebar-mode buttons):
+/// the surface tinted with the accent plus a thin accent outline. `bg` is the surface underneath.
+pub(crate) fn selected_tile(v: &egui::Visuals, bg: Color32) -> (Color32, Stroke) {
+    (crate::palette::mix(bg, v.selection.bg_fill, 0.30), Stroke::new(1.0, v.selection.bg_fill.gamma_multiply(0.65)))
+}
+
 /// Keep a full-colour icon readable on the highlight colour: a small backdrop in the
 /// view's own surface colour sits behind it, so it never blends into the accent.
 fn paint_on_accent(painter: &egui::Painter, tex: &egui::TextureHandle, rect: Rect, tint: Color32, backdrop: Color32) {

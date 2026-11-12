@@ -390,15 +390,28 @@ impl RivetApp {
 
     pub(super) fn tool_button(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, icons: &[&str], fallback: &str, tip: &str, enabled: bool, selected: bool) -> bool {
         let tex = self.icon(ctx, icons, 16.0);
-        let fg = if selected { ui.visuals().selection.stroke.color } else { ui.visuals().text_color() };
+        let flat = self.toolbar_drawing || self.flat_buttons;
+        // Active buttons get the same look as a selected file; the icon keeps the normal text colour.
+        let fg = if selected && !flat { ui.visuals().selection.stroke.color } else if selected { ui.visuals().strong_text_color() } else { ui.visuals().text_color() };
         let btn = match tex {
             Some(t) => egui::Button::image(egui::Image::from_texture(&t).fit_to_exact_size(Vec2::splat(16.0)).tint(fg)),
             None => egui::Button::new(fallback),
         };
         let size = if self.toolbar_drawing { Vec2::new(34.0, 32.0) } else { Vec2::new(30.0, 28.0) };
-        // In the toolbar, buttons are flat: a background only on hover or when active.
-        let btn = btn.selected(selected).min_size(size).frame_when_inactive(!(self.toolbar_drawing || self.flat_buttons) || selected);
-        ui.add_enabled(enabled, btn).on_hover_text(tip).clicked()
+        // Reserve a slot underneath the button for the selected tile.
+        let under = ui.painter().add(egui::Shape::Noop);
+        let btn = btn.selected(selected && !flat).min_size(size).frame_when_inactive(!flat || (selected && !flat));
+        let resp = ui.add_enabled(enabled, btn);
+        if selected && flat {
+            let v = ui.visuals();
+            let (fill, stroke) = super::selected_tile(v, v.panel_fill);
+            let r = resp.rect;
+            ui.painter().set(under, egui::Shape::Vec(vec![
+                egui::Shape::rect_filled(r, R_SM, fill),
+                egui::Shape::rect_stroke(r, R_SM, stroke, StrokeKind::Inside),
+            ]));
+        }
+        resp.on_hover_text(tip).clicked()
     }
 
     /// Draw one configurable toolbar item.
@@ -812,7 +825,7 @@ impl RivetApp {
     pub(super) fn status_bar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         let fill = ctx.global_style().visuals.panel_fill;
         egui::Panel::bottom("status").show_separator_line(false)
-            .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin::symmetric(6, 3)))
+            .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin { left: 6, right: 6, top: 3, bottom: 6 }))
             .show(ui, |ui| {
                 self.flat_buttons = true;
                 ui.horizontal(|ui| {
