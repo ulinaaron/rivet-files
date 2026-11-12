@@ -4,7 +4,7 @@ use eframe::egui::{self, Align2, Color32, CornerRadius, Id, Key, Pos2, Rect, Sen
 use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
 
-use super::{R_MD, R_SM, accent_color, paint_on_accent, paint_tex, Action, Dialog, DragFiles, RivetApp};
+use super::{R_MD, R_SM, accent_color, paint_tex, Action, Dialog, DragFiles, RivetApp};
 use crate::fsops;
 use crate::model::{self, Location};
 use crate::places;
@@ -994,7 +994,7 @@ impl RivetApp {
             // On the highlight: single-colour icon in the highlight's text colour, or a backdrop.
             match self.accent_icon(ctx, icon, 16.0) {
                 Some((t, true)) => paint_tex(ui.painter(), &t, icon_rect, fg),
-                Some((t, false)) => paint_on_accent(ui.painter(), &t, icon_rect, Color32::WHITE, v.extreme_bg_color),
+                Some((t, false)) => paint_tex(ui.painter(), &t, icon_rect, fg),
                 None => {}
             }
         } else if let Some(t) = self.icon(ctx, icon, 16.0) {
@@ -1204,7 +1204,7 @@ impl RivetApp {
             if active {
                 match self.accent_icon(ctx, &icon, 16.0) {
                     Some((t, true)) => paint_tex(ui.painter(), &t, ir, fg),
-                    Some((t, false)) => paint_on_accent(ui.painter(), &t, ir, Color32::WHITE, v.extreme_bg_color),
+                    Some((t, false)) => paint_tex(ui.painter(), &t, ir, fg),
                     None => {}
                 }
             } else if let Some(t) = self.icon(ctx, &icon, 16.0) {

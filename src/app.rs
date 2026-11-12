@@ -228,13 +228,6 @@ pub(crate) fn selected_tile(v: &egui::Visuals, bg: Color32) -> (Color32, Stroke)
     (crate::palette::mix(bg, v.selection.bg_fill, 0.30), Stroke::new(1.0, v.selection.bg_fill.gamma_multiply(0.65)))
 }
 
-/// Keep a full-colour icon readable on the highlight colour: a small backdrop in the
-/// view's own surface colour sits behind it, so it never blends into the accent.
-fn paint_on_accent(painter: &egui::Painter, tex: &egui::TextureHandle, rect: Rect, tint: Color32, backdrop: Color32) {
-    painter.rect_filled(rect.expand(rect.width() * 0.16), R_XS, backdrop);
-    paint_tex(painter, tex, rect, tint);
-}
-
 fn paint_tex(painter: &egui::Painter, tex: &egui::TextureHandle, rect: Rect, tint: Color32) {
     let size = tex.size_vec2();
     let scale = (rect.width() / size.x).min(rect.height() / size.y);
@@ -553,7 +546,9 @@ impl RivetApp {
         if let Some(t) = self.icon(ctx, &sym_refs, px) {
             return Some((t, true));
         }
-        self.icon(ctx, names, px).map(|t| (t, false))
+        // No single-colour version in the theme: make one from the full-colour icon.
+        let ppp = ctx.pixels_per_point();
+        self.icons.mask(ctx, names, (px * ppp).round().max(8.0) as u32).map(|t| (t, true))
     }
 
     fn entry_texture(&mut self, ctx: &egui::Context, e: &Entry, px: f32) -> Option<egui::TextureHandle> {
@@ -562,23 +557,43 @@ impl RivetApp {
                 return Some(t);
             }
         }
+        self.entry_icon(ctx, e, px, false)
+    }
+
+    /// The entry's icon as a single-colour silhouette (tint it), for highlighted rows.
+    fn entry_mask(&mut self, ctx: &egui::Context, e: &Entry, px: f32) -> Option<egui::TextureHandle> {
+        self.entry_icon(ctx, e, px, true)
+    }
+
+    fn icon_or_mask(&mut self, ctx: &egui::Context, names: &[&str], px: f32, mask: bool) -> Option<egui::TextureHandle> {
+        if mask {
+            let ppp = ctx.pixels_per_point();
+            self.icons.mask(ctx, names, (px * ppp).round().max(8.0) as u32)
+        } else {
+            self.icon(ctx, names, px)
+        }
+    }
+
+    fn entry_icon(&mut self, ctx: &egui::Context, e: &Entry, px: f32, mask: bool) -> Option<egui::TextureHandle> {
         if e.is_dir {
             if let Some(special) = places::special_folder_icon(&e.path, &self.user_dirs) {
-                return self.icon(ctx, &[special, "folder"], px);
+                return self.icon_or_mask(ctx, &[special, "folder"], px, mask);
             }
-            return self.icon(ctx, &["folder", "inode-directory"], px);
+            return self.icon_or_mask(ctx, &["folder", "inode-directory"], px, mask);
         }
         if e.broken_link {
-            return self.icon(ctx, &["emblem-unreadable", "text-x-generic"], px);
+            return self.icon_or_mask(ctx, &["emblem-unreadable", "text-x-generic"], px, mask);
         }
         if e.mime == "application/x-desktop" || e.name.ends_with(".desktop") {
             if let Some(icon) = desktop_icon(&e.path) {
                 if icon.starts_with('/') {
                     let ppp = ctx.pixels_per_point();
-                    if let Some(t) = self.icons.texture_from_path(ctx, Path::new(&icon), (px * ppp) as u32) {
-                        return Some(t);
+                    let size = (px * ppp) as u32;
+                    let t = if mask { self.icons.mask_from_path(ctx, Path::new(&icon), size) } else { self.icons.texture_from_path(ctx, Path::new(&icon), size) };
+                    if t.is_some() {
+                        return t;
                     }
-                } else if let Some(t) = self.icon(ctx, &[icon.as_str()], px) {
+                } else if let Some(t) = self.icon_or_mask(ctx, &[icon.as_str()], px, mask) {
                     return Some(t);
                 }
             }
@@ -588,7 +603,7 @@ impl RivetApp {
         if e.is_executable() && !e.mime.starts_with("text/") && !e.mime.contains("script") {
             refs.insert(0, "application-x-executable");
         }
-        self.icon(ctx, &refs, px)
+        self.icon_or_mask(ctx, &refs, px, mask)
     }
 
     // ---------------------------------------------------------------- navigation

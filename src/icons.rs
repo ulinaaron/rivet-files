@@ -43,6 +43,8 @@ pub struct IconTheme {
     /// When set, Rivet's own palette-coloured SVG icons answer first.
     builtin: Option<crate::builtin_icons::BuiltinColors>,
     builtin_tex: HashMap<(&'static str, u32), egui::TextureHandle>,
+    /// Single-colour versions of icons, for drawing on the highlight colour.
+    masks: HashMap<(String, u32), Option<egui::TextureHandle>>,
 }
 
 pub fn icon_base_dirs() -> Vec<PathBuf> {
@@ -303,7 +305,7 @@ impl IconTheme {
                 }
             }
         }
-        Self { name: name.to_string(), chain, found: HashMap::new(), textures: HashMap::new(), builtin: None, builtin_tex: HashMap::new() }
+        Self { name: name.to_string(), chain, found: HashMap::new(), textures: HashMap::new(), builtin: None, builtin_tex: HashMap::new(), masks: HashMap::new() }
     }
 
     fn build_index(theme: &mut Theme) {
@@ -386,6 +388,7 @@ impl IconTheme {
         if self.builtin != colors {
             self.builtin = colors;
             self.builtin_tex.clear(); // recolour on next draw
+            self.masks.clear();
         }
     }
 
@@ -431,6 +434,42 @@ impl IconTheme {
         tex
     }
 
+    /// A single-colour (white, tint it) version of the first available icon: its shape,
+    /// with a little shading kept so inner details such as document lines stay visible.
+    pub fn mask(&mut self, ctx: &egui::Context, names: &[&str], px: u32) -> Option<egui::TextureHandle> {
+        if let Some(colors) = self.builtin {
+            for n in names {
+                if let Some((key, _)) = crate::builtin_icons::lookup(n) {
+                    let k = (format!("b:{key}"), px);
+                    if let Some(t) = self.masks.get(&k) {
+                        return t.clone();
+                    }
+                    let img = render_svg(crate::builtin_icons::svg(key, &colors).as_bytes(), px);
+                    let t = img.map(|i| ctx.load_texture(format!("mask:{}:{px}", k.0), to_mask(i), egui::TextureOptions::LINEAR));
+                    self.masks.insert(k, t.clone());
+                    return t;
+                }
+            }
+        }
+        let (name, path) = self.find(names, nominal_size(px))?;
+        self.mask_path(ctx, &name, &path, px)
+    }
+
+    pub fn mask_from_path(&mut self, ctx: &egui::Context, path: &Path, px: u32) -> Option<egui::TextureHandle> {
+        let key = path.to_string_lossy().to_string();
+        self.mask_path(ctx, &key, path, px)
+    }
+
+    fn mask_path(&mut self, ctx: &egui::Context, key: &str, path: &Path, px: u32) -> Option<egui::TextureHandle> {
+        let k = (key.to_string(), px);
+        if let Some(t) = self.masks.get(&k) {
+            return t.clone();
+        }
+        let t = load_image_file(path, px).map(|i| ctx.load_texture(format!("mask:{key}:{px}"), to_mask(i), egui::TextureOptions::LINEAR));
+        self.masks.insert(k, t.clone());
+        t
+    }
+
     /// Load an icon from an absolute path (e.g. an `Icon=` value in a .desktop file).
     pub fn texture_from_path(&mut self, ctx: &egui::Context, path: &Path, px: u32) -> Option<egui::TextureHandle> {
         let key = (path.to_string_lossy().to_string(), px);
@@ -442,6 +481,24 @@ impl IconTheme {
         self.textures.insert(key, tex.clone());
         tex
     }
+}
+
+/// Turn a full-colour icon into a white silhouette (premultiplied). Brightness is kept
+/// as a gentle opacity variation (relative to the icon's brightest pixel), so the shape
+/// reads as one solid colour while darker details still show through.
+fn to_mask(mut img: egui::ColorImage) -> egui::ColorImage {
+    let lum = |p: &egui::Color32| {
+        let [r, g, b, a] = p.to_srgba_unmultiplied();
+        if a == 0 { 0.0 } else { (0.2126 * r as f32 + 0.7152 * g as f32 + 0.0722 * b as f32) / 255.0 }
+    };
+    let max = img.pixels.iter().map(lum).fold(0.0f32, f32::max).max(0.05);
+    for p in img.pixels.iter_mut() {
+        let a = p.a() as f32 / 255.0;
+        let l = (lum(p) / max).clamp(0.0, 1.0);
+        let out = (a * (0.45 + 0.55 * l) * 255.0).round() as u8;
+        *p = egui::Color32::from_rgba_premultiplied(out, out, out, out);
+    }
+    img
 }
 
 /// Snap a pixel size to the usual theme sizes so lookups are shared.

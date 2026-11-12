@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use super::{R_LG, R_SM, R_XS, accent_color, fmt_time, paint_on_accent, paint_tex, Action, DragFiles, RivetApp};
+use super::{R_LG, R_SM, R_XS, accent_color, fmt_time, paint_tex, Action, DragFiles, RivetApp};
 use crate::fsops;
 use crate::launch;
 use crate::model::{Entry, Location};
@@ -352,12 +352,13 @@ impl RivetApp {
                 let weak = if selected { v.selection.stroke.color } else { v.weak_text_color() };
                 let icon_rect = Rect::from_min_size(Pos2::new(row.left() + 10.0, row.center().y - z / 2.0), Vec2::splat(z));
                 let tint = self.tint_for(&e);
-                if let Some(t) = self.entry_texture(ctx, &e, z) {
-                    if selected {
-                        paint_on_accent(ui.painter(), &t, icon_rect, tint, v.extreme_bg_color);
-                    } else {
-                        paint_tex(ui.painter(), &t, icon_rect, tint);
+                if selected {
+                    // On the highlight: the icon's own shape in one solid colour.
+                    if let Some(t) = self.entry_mask(ctx, &e, z) {
+                        paint_tex(ui.painter(), &t, icon_rect, v.selection.stroke.color);
                     }
+                } else if let Some(t) = self.entry_texture(ctx, &e, z) {
+                    paint_tex(ui.painter(), &t, icon_rect, tint);
                 }
                 if e.is_link {
                     let er = Rect::from_min_size(icon_rect.right_bottom() - Vec2::splat(z * 0.5), Vec2::splat(z * 0.5));
@@ -447,12 +448,13 @@ impl RivetApp {
                 let fg = if selected { v.selection.stroke.color } else { v.text_color() };
                 let icon_rect = Rect::from_min_size(Pos2::new(item.left() + 6.0, item.center().y - z / 2.0), Vec2::splat(z));
                 let tint = self.tint_for(&e);
-                if let Some(t) = self.entry_texture(ctx, &e, z) {
-                    if selected {
-                        paint_on_accent(ui.painter(), &t, icon_rect, tint, v.extreme_bg_color);
-                    } else {
-                        paint_tex(ui.painter(), &t, icon_rect, tint);
+                if selected {
+                    // On the highlight: the icon's own shape in one solid colour.
+                    if let Some(t) = self.entry_mask(ctx, &e, z) {
+                        paint_tex(ui.painter(), &t, icon_rect, v.selection.stroke.color);
                     }
+                } else if let Some(t) = self.entry_texture(ctx, &e, z) {
+                    paint_tex(ui.painter(), &t, icon_rect, tint);
                 }
                 let mut job = egui::text::LayoutJob::simple_singleline(e.name.clone(), crate::fonts::ui_font(13.0), fg);
                 job.wrap = egui::text::TextWrapping::truncate_at_width(item.right() - icon_rect.right() - 12.0);
