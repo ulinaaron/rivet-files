@@ -1,6 +1,6 @@
 [package]
 name = "rivet"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "A Nemo-style Linux file manager in Rust/egui — no GTK or Qt"
 license = "MIT OR Apache-2.0"

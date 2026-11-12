@@ -21,6 +21,18 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 grep -q "^## $VERSION" CHANGELOG.md || { echo "CHANGELOG.md has no section for $VERSION." >&2; exit 1; }
 
+# A published version never moves to a different commit: ask for a new version instead.
+HEAD_COMMIT=$(git rev-parse HEAD)
+LOCAL_TAG=$(git rev-parse -q --verify "refs/tags/$TAG^{}" || true)
+REMOTE_TAG=$(git ls-remote origin "refs/tags/$TAG^{}" 2>/dev/null | cut -f1)
+for T in "$LOCAL_TAG" "$REMOTE_TAG"; do
+    if [ -n "$T" ] && [ "$T" != "$HEAD_COMMIT" ]; then
+        echo "$TAG already exists for an earlier commit (it may already be published)." >&2
+        echo "Bump 'version' in Cargo.toml, add a CHANGELOG section for it, commit, and run this again." >&2
+        exit 1
+    fi
+done
+
 cargo build --release
 mkdir -p dist
 STAGE="dist/$NAME"

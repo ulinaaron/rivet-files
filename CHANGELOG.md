@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1
+
+- **AppImage**: Rivet now also ships as a single-file AppImage — download, `chmod +x`, run.
+  "Add Rivet to the app launcher" from inside it points your menus at the AppImage.
+- New app icon (window, launcher entry and AppImage).
+- The archive's installer also installs the icon.
+
 ## 0.1.0 — first release
 
 The first public version of Rivet Files: a Nemo-style file manager for Linux, written in Rust
@@ -29,7 +36,5 @@ with egui. No GTK or Qt.
 - Preferences and Properties as movable, resizable windows inside the app
 
 ### System
-- Ships as an AppImage (single file) and as a tar.gz archive with an installer
-- Own app icon
 - Desktop entry, "make default file manager", and a global `rivet` command
 - `rivet --bench` for timings; ~0.2 s to first frame, ~1 ms per frame
