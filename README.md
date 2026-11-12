@@ -18,6 +18,30 @@ No GTK, no Qt — it talks to the desktop through the freedesktop standards dire
   </tr>
 </table>
 
+### Follows your colours
+
+The same window under four matugen-style schemes, with Rivet's built-in icons recoloured to match.
+Change your wallpaper / scheme and Rivet restyles itself within a second — no restart.
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/theme-ember-wide.png" alt="Ember: warm dark scheme"></td>
+    <td><img src="docs/screenshots/theme-moss-wide.png" alt="Moss: green dark scheme"></td>
+  </tr>
+  <tr>
+    <td align="center">Ember</td>
+    <td align="center">Moss</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/theme-violet-wide.png" alt="Violet: purple dark scheme"></td>
+    <td><img src="docs/screenshots/theme-rose-wide.png" alt="Rose: light scheme"></td>
+  </tr>
+  <tr>
+    <td align="center">Violet</td>
+    <td align="center">Rose (light)</td>
+  </tr>
+</table>
+
 <sub>Screenshots come from a throwaway sample home folder — run <code>docs/make-screenshots.sh</code> to regenerate them.</sub>
 
 ## Features

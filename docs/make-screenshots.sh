@@ -59,6 +59,28 @@ RIVET_ICON_THEME=Papirus "$BIN" "$H/Documents" --view list --screenshot "$OUT/li
 RIVET_ICONS=builtin RIVET_ICON_COLOR=tertiary "$BIN" "$H" --screenshot "$OUT/rivet-icons-wide.png"
 RIVET_ICON_THEME=Papirus RIVET_OPEN_PREFS=1 "$BIN" "$H" --screenshot "$OUT/preferences-wide.png"
 
+# The same window recoloured by different matugen-style schemes (Rivet's own icons).
+# palette NAME ACCENT ACCENT_FG WINDOW_BG WINDOW_FG HEADERBAR VIEW POPOVER SECONDARY TERTIARY [VIEW_OPTS]
+palette() {
+    name=$1; shift
+    cat > "$XDG_CONFIG_HOME/rivet/colors.css" <<EOF
+@define-color accent_bg_color $1;
+@define-color accent_fg_color $2;
+@define-color window_bg_color $3;
+@define-color window_fg_color $4;
+@define-color headerbar_bg_color $5;
+@define-color view_bg_color $6;
+@define-color popover_bg_color $7;
+@define-color secondary $8;
+@define-color tertiary $9;
+EOF
+    RIVET_ICONS=builtin "$BIN" "$H" --screenshot "$OUT/theme-$name-wide.png"
+}
+palette ember  '#ffb4a1' '#561f10' '#201a19' '#f1dfdb' '#271d1b' '#1a1110' '#352826' '#e7bdb3' '#d8c58d'
+palette moss   '#a5d395' '#11380b' '#1a1c18' '#e2e3dc' '#1e201c' '#12140f' '#282b25' '#bccbb0' '#a0cfd0'
+palette violet '#d4bbff' '#3b2163' '#1d1b20' '#e6e1e9' '#211f24' '#141218' '#2b2930' '#cdc2db' '#f0b7c5'
+palette rose   '#8f4a5b' '#ffffff' '#f6e6e9' '#22191b' '#f1dde1' '#fff8f8' '#ffffff' '#75565c' '#7c5635'
+
 # Keep the repository light: scale to 1100 px wide.
 python3 -I - "$OUT" <<'EOF'
 import sys, glob
