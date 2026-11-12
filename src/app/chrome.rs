@@ -218,6 +218,9 @@ impl RivetApp {
             }
             ui.separator();
             if ui.button("Preferences").clicked() {
+                if !self.prefs_open {
+                    self.popup_serial += 1; // a fresh window id re-centres it
+                }
                 self.prefs_open = true;
             }
         });

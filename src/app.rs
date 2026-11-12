@@ -114,6 +114,8 @@ pub struct RivetApp {
     palette: Option<Palette>,
     color_watch: palette::Watcher,
     sidebar_fill: Option<Color32>,
+    /// Bumped whenever a movable window opens so it starts centred again.
+    popup_serial: u64,
     last_decorations: bool,
     collapsed: std::collections::HashSet<String>,
     tree_expanded: std::collections::HashSet<PathBuf>,
@@ -267,6 +269,7 @@ impl RivetApp {
             palette: pal,
             color_watch: palette::Watcher::new(watched),
             sidebar_fill: None,
+            popup_serial: 0,
             last_decorations,
             collapsed: Default::default(),
             tree_expanded: [places::home()].into_iter().collect(),
@@ -276,6 +279,14 @@ impl RivetApp {
             dirty_settings: false,
         };
         app.apply_visuals(&ctx);
+        // Test hooks for checks: open a window straight away.
+        if std::env::var_os("RIVET_OPEN_PREFS").is_some() {
+            app.prefs_open = true;
+            app.popup_serial += 1;
+        }
+        if let Some(p) = std::env::var_os("RIVET_OPEN_PROPERTIES") {
+            app.open_properties(PathBuf::from(p));
+        }
         app
     }
 
@@ -763,6 +774,7 @@ impl RivetApp {
     }
 
     fn open_properties(&mut self, p: PathBuf) {
+        self.popup_serial += 1;
         use std::os::unix::fs::MetadataExt;
         let entry = Entry::from_path(p.clone(), &self.mime);
         let meta = std::fs::metadata(&p).ok();

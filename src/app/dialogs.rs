@@ -327,8 +327,9 @@ impl RivetApp {
         let mut open = true;
         let mut apply_mode: Option<u32> = None;
         let mut rename: Option<String> = None;
+        let (serial, centre) = (self.popup_serial, ctx.content_rect().center());
         let title = format!("{} — Properties", st.path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "/".into()));
-        egui::Window::new(title).id(Id::unique("props")).collapsible(false).resizable(false).open(&mut open).default_width(400.0).show(ctx, |ui| {
+        egui::Window::new(title).id(Id::unique(("props", serial))).pivot(egui::Align2::CENTER_CENTER).default_pos(centre).collapsible(false).resizable(false).open(&mut open).default_width(400.0).show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.selectable_value(&mut st.tab, 0, "Basic");
                 ui.selectable_value(&mut st.tab, 1, "Permissions");
@@ -468,7 +469,8 @@ impl RivetApp {
         let mut matugen_msg: Option<String> = None;
         let mut changed = false;
         let mut resort = false;
-        egui::Window::new("Preferences").id(Id::unique("prefs")).collapsible(false).open(&mut open).default_width(440.0).show(ctx, |ui| {
+        let (serial, centre) = (self.popup_serial, ctx.content_rect().center());
+        egui::Window::new("Preferences").id(Id::unique(("prefs", serial))).pivot(egui::Align2::CENTER_CENTER).default_pos(centre).collapsible(false).open(&mut open).default_width(440.0).show(ctx, |ui| {
             ui.label(egui::RichText::new("Views").strong());
             ui.horizontal(|ui| {
                 ui.label("Default view:");
