@@ -517,7 +517,7 @@ impl RivetApp {
                     ui.add_space(4.0);
                     ui.label(egui::RichText::new(title).strong().size(14.5));
                     ui.add_space(2.0);
-                    egui::Frame::NONE.fill(card_fill).corner_radius(8.0).inner_margin(egui::Margin::symmetric(14, 12)).show(ui, |ui| {
+                    egui::Frame::NONE.fill(card_fill).corner_radius(super::R_MD).inner_margin(egui::Margin::symmetric(14, 12)).show(ui, |ui| {
                         ui.set_width(ui.available_width());
                         body(ui);
                     });
@@ -561,8 +561,8 @@ impl RivetApp {
                                 ui.spacing_mut().item_spacing.x = 6.0;
                                 for c in [p.accent, p.window_bg, p.view_bg, p.window_fg].into_iter().flatten() {
                                     let (r, _) = ui.allocate_exact_size(Vec2::splat(16.0), Sense::hover());
-                                    ui.painter().rect_filled(r, 4.0, c);
-                                    ui.painter().rect_stroke(r, 4.0, Stroke::new(1.0, weak), egui::StrokeKind::Inside);
+                                    ui.painter().rect_filled(r, super::R_XS, c);
+                                    ui.painter().rect_stroke(r, super::R_XS, Stroke::new(1.0, weak), egui::StrokeKind::Inside);
                                 }
                                 ui.add_space(4.0);
                                 let name = p.source.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
@@ -720,7 +720,7 @@ impl RivetApp {
                         // The location bar and the menu button can be moved but not removed.
                         let fixed = path || item == ToolItem::Menu;
                         let row_fill = if path { ui.visuals().selection.bg_fill.gamma_multiply(0.18) } else { Color32::TRANSPARENT };
-                        egui::Frame::NONE.fill(row_fill).corner_radius(6.0).inner_margin(egui::Margin::symmetric(6, 2)).show(ui, |ui| {
+                        egui::Frame::NONE.fill(row_fill).corner_radius(super::R_SM).inner_margin(egui::Margin::symmetric(6, 2)).show(ui, |ui| {
                             ui.horizontal(|ui| {
                                 ui.set_width(ui.available_width());
                                 let (icons, fb) = item.icons();

@@ -135,6 +135,8 @@ pub struct RivetApp {
     font_name: String,
     font_families: Vec<String>,
     toolbar_drawing: bool,
+    /// Draw tool buttons without a background (toolbar, status bar).
+    flat_buttons: bool,
     alt_was_down: bool,
     alt_combo: bool,
     peek_popup_was_open: bool,
@@ -144,6 +146,14 @@ pub struct RivetApp {
     tree_expanded: std::collections::HashSet<PathBuf>,
     tree_children: std::collections::HashMap<PathBuf, Vec<PathBuf>>,
 }
+
+/// One radius scale for the whole app. Nested shapes use the next step down by the
+/// padding between them, so corners stay concentric (e.g. a MD bar with 4 px
+/// padding holds SM pills).
+pub(crate) const R_XS: u8 = 4; // tiny things: swatches, selection band
+pub(crate) const R_SM: u8 = 6; // controls: buttons, pills, tabs, items, list rows
+pub(crate) const R_MD: u8 = 10; // bars and cards: location bar, sidebar rows, menus, settings cards
+pub(crate) const R_LG: u8 = 14; // big surfaces: the file area, in-app windows
 
 const ACCENTS: [([u8; 3], &str); 7] = [
     ([0x35, 0x84, 0xe4], "Blue"),
@@ -205,6 +215,13 @@ fn step_in(steps: &[f32], cur: f32, dir: i32) -> f32 {
 fn desktop_icon(p: &Path) -> Option<String> {
     let text = std::fs::read_to_string(p).ok()?;
     text.lines().find_map(|l| l.strip_prefix("Icon=").map(|s| s.trim().to_string()))
+}
+
+/// Keep a full-colour icon readable on the highlight colour: a small backdrop in the
+/// view's own surface colour sits behind it, so it never blends into the accent.
+fn paint_on_accent(painter: &egui::Painter, tex: &egui::TextureHandle, rect: Rect, tint: Color32, backdrop: Color32) {
+    painter.rect_filled(rect.expand(rect.width() * 0.16), R_XS, backdrop);
+    paint_tex(painter, tex, rect, tint);
 }
 
 fn paint_tex(painter: &egui::Painter, tex: &egui::TextureHandle, rect: Rect, tint: Color32) {
@@ -279,6 +296,7 @@ impl RivetApp {
             font_name: String::new(),
             font_families: Vec::new(),
             toolbar_drawing: false,
+            flat_buttons: false,
             alt_was_down: false,
             alt_combo: false,
             peek_popup_was_open: false,
@@ -299,6 +317,13 @@ impl RivetApp {
         }
         if let Some(p) = std::env::var_os("RIVET_EXTRA_TAB") {
             app.new_tab(Location::Dir(PathBuf::from(p)));
+        }
+        if let Some(n) = std::env::var("RIVET_SELECT").ok().and_then(|v| v.parse::<usize>().ok()) {
+            let t = &mut app.tabs[app.active];
+            if let Some(&i) = t.visible.get(n) {
+                let p = t.entries[i].path.clone();
+                t.selected.insert(p);
+            }
         }
         if std::env::var_os("RIVET_SEARCH").is_some() {
             app.search_open = true;
@@ -437,11 +462,11 @@ impl RivetApp {
                     v.window_fill = Color32::from_rgb(0xfc, 0xfc, 0xfc);
                     v.faint_bg_color = Color32::from_rgb(0xf4, 0xf4, 0xf5);
                 }
-                for w in [&mut v.widgets.noninteractive, &mut v.widgets.inactive, &mut v.widgets.hovered, &mut v.widgets.active] {
-                    w.corner_radius = CornerRadius::same(4);
+                for w in [&mut v.widgets.noninteractive, &mut v.widgets.inactive, &mut v.widgets.hovered, &mut v.widgets.active, &mut v.widgets.open] {
+                    w.corner_radius = CornerRadius::same(R_SM);
                 }
-                v.window_corner_radius = CornerRadius::same(10);
-                v.menu_corner_radius = CornerRadius::same(8);
+                v.window_corner_radius = CornerRadius::same(R_LG);
+                v.menu_corner_radius = CornerRadius::same(R_MD);
                 // No outlines: pop-ups stand out by their raised surface and shadow.
                 v.window_stroke = Stroke::NONE;
                 if let Some(p) = pal.as_ref().filter(|p| p.is_dark() == dark) {
@@ -497,6 +522,18 @@ impl RivetApp {
     fn icon(&mut self, ctx: &egui::Context, names: &[&str], px: f32) -> Option<egui::TextureHandle> {
         let ppp = ctx.pixels_per_point();
         self.icons.texture(ctx, names, (px * ppp).round().max(8.0) as u32)
+    }
+
+    /// An icon for a highlighted row: the single-colour (symbolic) version when the theme
+    /// has one, tinted with the highlight's text colour; otherwise the full-colour icon on
+    /// a small backdrop. Returns (texture, is_symbolic).
+    fn accent_icon(&mut self, ctx: &egui::Context, names: &[&str], px: f32) -> Option<(egui::TextureHandle, bool)> {
+        let sym: Vec<String> = names.iter().map(|n| if n.ends_with("-symbolic") { n.to_string() } else { format!("{n}-symbolic") }).collect();
+        let sym_refs: Vec<&str> = sym.iter().map(|s| s.as_str()).collect();
+        if let Some(t) = self.icon(ctx, &sym_refs, px) {
+            return Some((t, true));
+        }
+        self.icon(ctx, names, px).map(|t| (t, false))
     }
 
     fn entry_texture(&mut self, ctx: &egui::Context, e: &Entry, px: f32) -> Option<egui::TextureHandle> {
@@ -1274,7 +1311,7 @@ impl RivetApp {
 
     fn drop_highlight(&self, ui: &egui::Ui, rect: Rect, resp: &egui::Response, is_dir: bool) {
         if is_dir && resp.dnd_hover_payload::<DragFiles>().is_some() {
-            ui.painter().rect_stroke(rect, 4.0, Stroke::new(2.0, accent_color(&self.s)), StrokeKind::Inside);
+            ui.painter().rect_stroke(rect, R_SM, Stroke::new(2.0, accent_color(&self.s)), StrokeKind::Inside);
         }
     }
 
@@ -1360,6 +1397,7 @@ impl eframe::App for RivetApp {
         self.toolbar(ui, &ctx);
         if self.s.show_statusbar {
             self.status_bar(ui, &ctx);
+            self.flat_buttons = false;
         }
         if self.s.show_sidebar {
             self.sidebar(ui, &ctx);

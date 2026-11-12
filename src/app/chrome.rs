@@ -4,7 +4,7 @@ use eframe::egui::{self, Align2, Color32, CornerRadius, Id, Key, Pos2, Rect, Sen
 use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
 
-use super::{accent_color, paint_tex, Action, Dialog, DragFiles, RivetApp};
+use super::{R_MD, R_SM, accent_color, paint_on_accent, paint_tex, Action, Dialog, DragFiles, RivetApp};
 use crate::fsops;
 use crate::model::{self, Location};
 use crate::places;
@@ -393,7 +393,7 @@ impl RivetApp {
         };
         let size = if self.toolbar_drawing { Vec2::new(34.0, 32.0) } else { Vec2::new(30.0, 28.0) };
         // In the toolbar, buttons are flat: a background only on hover or when active.
-        let btn = btn.selected(selected).min_size(size).frame_when_inactive(!self.toolbar_drawing || selected);
+        let btn = btn.selected(selected).min_size(size).frame_when_inactive(!(self.toolbar_drawing || self.flat_buttons) || selected);
         ui.add_enabled(enabled, btn).on_hover_text(tip).clicked()
     }
 
@@ -543,9 +543,10 @@ impl RivetApp {
                     let elevated = crate::palette::mix(v.window_fill, v.text_color(), 0.04);
                     let shadow = egui::Shadow { offset: [0, 1], blur: 6, spread: 0, color: Color32::from_black_alpha(if v.dark_mode { 90 } else { 40 }) };
                     ui.allocate_ui_with_layout(Vec2::new(path_w, 32.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                        egui::Frame::NONE.fill(elevated).shadow(shadow).corner_radius(9.0).inner_margin(egui::Margin::symmetric(6, 3)).show(ui, |ui| {
+                        egui::Frame::NONE.fill(elevated).shadow(shadow).corner_radius(R_MD).inner_margin(egui::Margin::same(4)).show(ui, |ui| {
+                            // Even padding all round; pills inside use R_MD − 4 = R_SM, so corners nest.
                             ui.set_min_width(ui.available_width());
-                            ui.set_min_height(26.0);
+                            ui.set_min_height(24.0);
                             if self.search_open {
                                 self.search_bar(ui, ctx);
                             } else if self.path_editing {
@@ -716,7 +717,7 @@ impl RivetApp {
         let bg = ui.interact(area, Id::unique("crumbs-bg"), Sense::click());
         if bg.hovered() {
             // Lift the bar a touch on hover instead of drawing an outline.
-            ui.painter().rect_filled(area.expand2(Vec2::new(6.0, 3.0)), 9.0, ui.visuals().text_color().gamma_multiply(0.05));
+            ui.painter().rect_filled(area.expand(4.0), R_MD, ui.visuals().text_color().gamma_multiply(0.05));
             ui.ctx().set_cursor_icon(egui::CursorIcon::Text);
         }
         if bg.clicked() {
@@ -738,7 +739,7 @@ impl RivetApp {
                             Some(t) => egui::Button::image_and_text(egui::Image::from_texture(&t).fit_to_exact_size(Vec2::splat(16.0)).tint(fg), text),
                             None => egui::Button::new(text),
                         };
-                        let resp = ui.add(btn.selected(sel).frame_when_inactive(sel).min_size(Vec2::new(0.0, 26.0)));
+                        let resp = ui.add(btn.selected(sel).frame_when_inactive(sel).min_size(Vec2::new(0.0, 24.0)));
                         if resp.clicked() {
                             if let Some(t) = target.clone() {
                                 self.pending.push(Action::Navigate(t));
@@ -766,7 +767,7 @@ impl RivetApp {
                     let (rect, resp) = ui.allocate_exact_size(Vec2::new(w, 28.0), Sense::click());
                     let v = ui.visuals().clone();
                     let bg = if sel { v.extreme_bg_color } else if resp.hovered() { v.widgets.hovered.weak_bg_fill } else { v.panel_fill };
-                    ui.painter().rect_filled(rect, CornerRadius { nw: 6, ne: 6, sw: 0, se: 0 }, bg);
+                    ui.painter().rect_filled(rect, CornerRadius { nw: R_SM, ne: R_SM, sw: 0, se: 0 }, bg);
                     if sel {
                         ui.painter().line_segment([rect.left_bottom(), rect.right_bottom()], Stroke::new(2.0, accent_color(&self.s)));
                     }
@@ -809,8 +810,9 @@ impl RivetApp {
         egui::Panel::bottom("status").show_separator_line(false)
             .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin::symmetric(6, 3)))
             .show(ui, |ui| {
+                self.flat_buttons = true;
                 ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 2.0;
+                    ui.spacing_mut().item_spacing.x = 6.0;
                     let (sb, tree) = (self.s.show_sidebar, self.s.sidebar_tree);
                     if self.tool_button(ui, ctx, &["user-bookmarks-symbolic", "starred-symbolic", "bookmark-new-symbolic"], "★", "Show places", true, sb && !tree) {
                         self.s.show_sidebar = true;
@@ -845,7 +847,7 @@ impl RivetApp {
                         }
                     });
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.small_button("+").on_hover_text("Zoom in").clicked() {
+                        if ui.add(egui::Button::new("+").small().frame_when_inactive(false)).on_hover_text("Zoom in").clicked() {
                             self.zoom(1);
                         }
                         let (val, range) = match self.s.view {
@@ -856,7 +858,7 @@ impl RivetApp {
                         if ui.add(egui::Slider::new(val, range).show_value(false)).changed() {
                             self.dirty_settings = true;
                         }
-                        if ui.small_button("−").on_hover_text("Zoom out").clicked() {
+                        if ui.add(egui::Button::new("−").small().frame_when_inactive(false)).on_hover_text("Zoom out").clicked() {
                             self.zoom(-1);
                         }
                     });
@@ -960,18 +962,25 @@ impl RivetApp {
         let v = ui.visuals().clone();
         let accent = accent_color(&self.s);
         if active {
-            ui.painter().rect_filled(rect, 9.0, accent);
+            ui.painter().rect_filled(rect, R_MD, accent);
         } else if resp.hovered() {
-            ui.painter().rect_filled(rect, 9.0, v.widgets.hovered.weak_bg_fill);
+            ui.painter().rect_filled(rect, R_MD, v.widgets.hovered.weak_bg_fill);
         }
         let droppable = loc.as_ref().is_some_and(|l| l.dir().is_some() || *l == Location::Trash);
         if droppable && resp.dnd_hover_payload::<DragFiles>().is_some() {
-            ui.painter().rect_stroke(rect, 9.0, Stroke::new(2.0, accent), StrokeKind::Inside);
+            ui.painter().rect_stroke(rect, R_MD, Stroke::new(2.0, accent), StrokeKind::Inside);
         }
         let fg = if active { v.selection.stroke.color } else { v.text_color() };
         let row_mid = if usage.is_some() { rect.top() + 15.0 * sc } else { rect.center().y };
         let icon_rect = Rect::from_center_size(Pos2::new(rect.left() + 20.0, row_mid), Vec2::splat(16.0));
-        if let Some(t) = self.icon(ctx, icon, 16.0) {
+        if active {
+            // On the highlight: single-colour icon in the highlight's text colour, or a backdrop.
+            match self.accent_icon(ctx, icon, 16.0) {
+                Some((t, true)) => paint_tex(ui.painter(), &t, icon_rect, fg),
+                Some((t, false)) => paint_on_accent(ui.painter(), &t, icon_rect, Color32::WHITE, v.extreme_bg_color),
+                None => {}
+            }
+        } else if let Some(t) = self.icon(ctx, icon, 16.0) {
             paint_tex(ui.painter(), &t, icon_rect, Color32::WHITE);
         }
         let text_right = rect.right() - if eject { 30.0 } else { 10.0 };
@@ -1155,9 +1164,9 @@ impl RivetApp {
             let active = current.as_deref() == Some(p.as_path());
             let v = ui.visuals().clone();
             if active {
-                ui.painter().rect_filled(rect, 9.0, accent);
+                ui.painter().rect_filled(rect, R_MD, accent);
             } else if resp.hovered() {
-                ui.painter().rect_filled(rect, 9.0, v.widgets.hovered.weak_bg_fill);
+                ui.painter().rect_filled(rect, R_MD, v.widgets.hovered.weak_bg_fill);
             }
             let fg = if active { v.selection.stroke.color } else { v.text_color() };
             let x = rect.left() + 4.0 + depth as f32 * 14.0;
@@ -1175,7 +1184,13 @@ impl RivetApp {
                 None => vec!["folder"],
             };
             let ir = Rect::from_min_size(Pos2::new(chev.right() + 2.0, rect.center().y - 8.0), Vec2::splat(16.0));
-            if let Some(t) = self.icon(ctx, &icon, 16.0) {
+            if active {
+                match self.accent_icon(ctx, &icon, 16.0) {
+                    Some((t, true)) => paint_tex(ui.painter(), &t, ir, fg),
+                    Some((t, false)) => paint_on_accent(ui.painter(), &t, ir, Color32::WHITE, v.extreme_bg_color),
+                    None => {}
+                }
+            } else if let Some(t) = self.icon(ctx, &icon, 16.0) {
                 paint_tex(ui.painter(), &t, ir, Color32::WHITE);
             }
             let name = if p == Path::new("/") {
@@ -1211,7 +1226,7 @@ impl RivetApp {
                 self.pending.push(Action::Transfer(pl.0.clone(), p.clone(), ctx.input(|i| i.modifiers.ctrl)));
             }
             if resp.dnd_hover_payload::<DragFiles>().is_some() {
-                ui.painter().rect_stroke(rect, 9.0, Stroke::new(2.0, accent), StrokeKind::Inside);
+                ui.painter().rect_stroke(rect, R_MD, Stroke::new(2.0, accent), StrokeKind::Inside);
             }
             resp.context_menu(|ui| self.place_menu(ui, &p));
         }
