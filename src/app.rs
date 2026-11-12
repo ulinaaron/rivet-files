@@ -124,6 +124,8 @@ pub struct RivetApp {
     /// Bumped whenever a movable window opens so it starts centred again.
     popup_serial: u64,
     menu_peek: bool,
+    /// The sample folder used for screenshots (removed on exit).
+    demo_dir: Option<PathBuf>,
     /// The font choice currently loaded (to avoid reloading every frame) and its resolved name.
     applied_font: Option<String>,
     font_name: String,
@@ -209,7 +211,9 @@ fn paint_tex(painter: &egui::Painter, tex: &egui::TextureHandle, rect: Rect, tin
 }
 
 impl RivetApp {
-    pub fn new(cc: &eframe::CreationContext<'_>, settings: Settings, start: Option<PathBuf>, screenshot: Option<PathBuf>) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>, settings: Settings, start: Option<PathBuf>, screenshot: Option<PathBuf>, demo: Option<PathBuf>) -> Self {
+        // In screenshot mode nothing personal is shown: no bookmarks, no drive names.
+        let private = screenshot.is_some();
         let ctx = cc.egui_ctx.clone();
         let system_icon_theme = icons::detect_system_theme();
         let theme_name = if settings.icon_theme.is_empty() { system_icon_theme.clone() } else { settings.icon_theme.clone() };
@@ -246,8 +250,9 @@ impl RivetApp {
             search_open: false,
             search_focus: false,
             user_dirs: places::user_dirs(),
-            bookmarks: places::load_bookmarks(),
-            mounts: places::mounts(),
+            bookmarks: if private { Vec::new() } else { places::load_bookmarks() },
+            mounts: if private { Vec::new() } else { places::mounts() },
+            demo_dir: demo,
             trash_empty: places::trash_is_empty(),
             places_checked: Instant::now(),
             status_msg: None,
@@ -977,7 +982,9 @@ impl RivetApp {
         }
         if self.places_checked.elapsed().as_secs() >= 3 {
             self.places_checked = Instant::now();
-            self.mounts = places::mounts();
+            if self.screenshot.is_none() {
+                self.mounts = places::mounts();
+            }
             self.trash_empty = places::trash_is_empty();
         }
         ctx.request_repaint_after(std::time::Duration::from_millis(1000));
@@ -1273,6 +1280,9 @@ impl RivetApp {
         // Keep painting even if the compositor reports the window as hidden.
         ctx.send_viewport_cmd(egui::ViewportCommand::RequestPaintWhileHidden);
         if self.shot_done.load(Ordering::Acquire) {
+            if let Some(d) = self.demo_dir.take() {
+                places::remove_demo_dir(&d);
+            }
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             return;
         }
@@ -1371,6 +1381,9 @@ impl eframe::App for RivetApp {
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
         if self.screenshot.is_none() {
             self.s.save();
+        }
+        if let Some(d) = self.demo_dir.take() {
+            places::remove_demo_dir(&d);
         }
     }
 }

@@ -65,6 +65,13 @@ fn main() -> eframe::Result {
 
     // Checks use the default look so they are comparable from run to run.
     let mut settings = if screenshot.is_some() { settings::Settings::default() } else { settings::Settings::load() };
+    // Screenshots for checks show a neutral sample folder, never the person's own files,
+    // unless a folder was named on purpose.
+    let mut demo: Option<PathBuf> = None;
+    if screenshot.is_some() && start.is_none() && std::env::var_os("RIVET_REAL_HOME").is_none() {
+        demo = places::make_demo_dir();
+        start = demo.clone();
+    }
     if let Some(d) = decorations {
         settings.decorations = d;
     }
@@ -122,6 +129,6 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "Rivet",
         options,
-        Box::new(move |cc| Ok(Box::new(app::RivetApp::new(cc, settings, start, screenshot)))),
+        Box::new(move |cc| Ok(Box::new(app::RivetApp::new(cc, settings, start, screenshot, demo)))),
     )
 }

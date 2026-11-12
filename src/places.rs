@@ -275,6 +275,29 @@ pub fn recent_files() -> Vec<PathBuf> {
     items.into_iter().map(|i| i.1).take(200).collect()
 }
 
+/// A neutral sample folder for screenshots and checks, so they never show the
+/// person's own files. Lives in the temp folder and is removed on exit.
+pub fn make_demo_dir() -> Option<PathBuf> {
+    let root = std::env::temp_dir().join(format!("rivet-demo-{}", std::process::id())).join("Home");
+    for d in ["Desktop", "Documents", "Downloads", "Music", "Pictures", "Public", "Templates", "Videos"] {
+        std::fs::create_dir_all(root.join(d)).ok()?;
+    }
+    for f in ["notes.txt", "wallpaper.png"] {
+        std::fs::write(root.join(f), b"").ok()?;
+    }
+    Some(root)
+}
+
+/// Remove a folder made by `make_demo_dir` (only ever inside the temp folder).
+pub fn remove_demo_dir(home: &Path) {
+    if let Some(top) = home.parent() {
+        let is_demo = top.starts_with(std::env::temp_dir()) && top.file_name().is_some_and(|n| n.to_string_lossy().starts_with("rivet-demo-"));
+        if is_demo {
+            let _ = std::fs::remove_dir_all(top);
+        }
+    }
+}
+
 pub fn trash_dir() -> PathBuf {
     data_home().join("Trash")
 }
