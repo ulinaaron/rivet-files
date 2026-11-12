@@ -470,93 +470,146 @@ impl RivetApp {
         let mut changed = false;
         let mut resort = false;
         let (serial, centre) = (self.popup_serial, ctx.content_rect().center());
-        egui::Window::new("Preferences").id(Id::unique(("prefs", serial))).pivot(egui::Align2::CENTER_CENTER).default_pos(centre).collapsible(false).open(&mut open).default_width(440.0).show(ctx, |ui| {
-            ui.label(egui::RichText::new("Views").strong());
-            ui.horizontal(|ui| {
-                ui.label("Default view:");
-                changed |= ui.selectable_value(&mut self.s.view, ViewMode::Icons, "Icons").changed();
-                changed |= ui.selectable_value(&mut self.s.view, ViewMode::List, "List").changed();
-                changed |= ui.selectable_value(&mut self.s.view, ViewMode::Compact, "Compact").changed();
-            });
-            resort |= ui.checkbox(&mut self.s.show_hidden, "Show hidden files").changed();
-            resort |= ui.checkbox(&mut self.s.folders_first, "Sort folders before files").changed();
-            changed |= ui.checkbox(&mut self.s.show_thumbnails, "Show picture thumbnails").changed();
-            ui.add_space(6.0);
-            ui.label(egui::RichText::new("Behaviour").strong());
-            changed |= ui.checkbox(&mut self.s.single_click, "Single click to open items").changed();
-            changed |= ui.checkbox(&mut self.s.confirm_trash, "Ask before moving files to the Trash").changed();
-            ui.add_space(6.0);
-            ui.label(egui::RichText::new("Window").strong());
-            changed |= ui.checkbox(&mut self.s.decorations, "Use the system title bar and borders (window decorations)").changed();
-            ui.label(egui::RichText::new("When off, Rivet draws its own title bar with minimise, maximise and close buttons.").small().weak());
-            ui.add_space(6.0);
-            ui.label(egui::RichText::new("Appearance").strong());
-            changed |= ui.checkbox(&mut self.s.follow_desktop_colors, "Follow desktop colours (matugen, Noctalia, GTK theme)").changed();
-            match (&self.palette, self.s.follow_desktop_colors) {
-                (Some(p), true) => {
-                    ui.horizontal(|ui| {
-                        for c in [p.accent, p.window_bg, p.view_bg, p.window_fg].into_iter().flatten() {
-                            let (r, _) = ui.allocate_exact_size(Vec2::splat(14.0), Sense::hover());
-                            ui.painter().rect_filled(r, 3.0, c);
-                            ui.painter().rect_stroke(r, 3.0, Stroke::new(1.0, ui.visuals().weak_text_color()), egui::StrokeKind::Inside);
-                        }
-                        ui.label(egui::RichText::new(format!("Using {}", p.source.display())).small().weak());
+        let frame = egui::Frame::window(&ctx.global_style()).inner_margin(egui::Margin::same(18));
+        egui::Window::new("Preferences")
+            .id(Id::unique(("prefs", serial)))
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(centre)
+            .collapsible(false)
+            .resizable(false)
+            .frame(frame)
+            .open(&mut open)
+            .show(ctx, |ui| {
+                ui.set_width(500.0);
+                ui.spacing_mut().item_spacing = Vec2::new(10.0, 8.0);
+                ui.spacing_mut().button_padding = Vec2::new(10.0, 4.0);
+                let card_fill = ui.visuals().faint_bg_color;
+                let weak = ui.visuals().weak_text_color();
+                // One titled, padded card per group of settings.
+                let section = |ui: &mut egui::Ui, title: &str, body: &mut dyn FnMut(&mut egui::Ui)| {
+                    ui.add_space(4.0);
+                    ui.label(egui::RichText::new(title).strong().size(14.5));
+                    ui.add_space(2.0);
+                    egui::Frame::NONE.fill(card_fill).corner_radius(8.0).inner_margin(egui::Margin::symmetric(14, 12)).show(ui, |ui| {
+                        ui.set_width(ui.available_width());
+                        body(ui);
                     });
-                    ui.label(egui::RichText::new("Colours update by themselves within a second when the file changes. Style and accent below are ignored while this is on.").small().weak());
-                }
-                (None, true) => {
-                    ui.label(egui::RichText::new("No desktop colour file found yet — using the style below.").small().weak());
-                }
-                _ => {}
-            }
-            ui.horizontal(|ui| {
-                if ui.button("Add Rivet template to matugen").on_hover_text("Writes a template into matugen's templates folder and adds it to matugen's config, so matugen writes Rivet's own colour file.").clicked() {
-                    match palette::install_matugen_template() {
-                        Ok(msg) => matugen_msg = Some(msg),
-                        Err(e) => matugen_msg = Some(format!("Could not update matugen's config: {e}")),
-                    }
-                }
-                if ui.button("Copy template").on_hover_text("Copy the matugen template text").clicked() {
-                    ui.ctx().copy_text(palette::MATUGEN_TEMPLATE.to_string());
-                    matugen_msg = Some("Template copied.".into());
-                }
-            });
-            ui.horizontal(|ui| {
-                ui.label("Style:");
-                changed |= ui.selectable_value(&mut self.s.theme, ThemeChoice::System, "Follow system").changed();
-                changed |= ui.selectable_value(&mut self.s.theme, ThemeChoice::Light, "Light").changed();
-                changed |= ui.selectable_value(&mut self.s.theme, ThemeChoice::Dark, "Dark").changed();
-            });
-            ui.horizontal(|ui| {
-                ui.label("Accent:");
-                for (c, name) in ACCENTS {
-                    let (r, resp) = ui.allocate_exact_size(Vec2::splat(20.0), Sense::click());
-                    ui.painter().circle_filled(r.center(), 9.0, Color32::from_rgb(c[0], c[1], c[2]));
-                    if self.s.accent == c {
-                        ui.painter().circle_stroke(r.center(), 10.5, Stroke::new(2.0, ui.visuals().strong_text_color()));
-                    }
-                    if resp.on_hover_text(name).clicked() {
-                        self.s.accent = c;
-                        changed = true;
-                    }
-                }
-            });
-            ui.horizontal(|ui| {
-                ui.label("Icon theme:");
-                let sys = format!("System ({})", self.system_icon_theme);
-                let current = if self.s.icon_theme.is_empty() { sys.clone() } else { self.s.icon_theme.clone() };
-                egui::ComboBox::from_id_salt("icontheme").selected_text(current).width(240.0).show_ui(ui, |ui| {
-                    if ui.selectable_label(self.s.icon_theme.is_empty(), sys).clicked() {
-                        new_theme = Some(String::new());
-                    }
-                    for t in &self.installed_themes {
-                        if ui.selectable_label(self.s.icon_theme == *t, t).clicked() {
-                            new_theme = Some(t.clone());
+                    ui.add_space(10.0);
+                };
+                let hint = |ui: &mut egui::Ui, text: &str| {
+                    ui.add(egui::Label::new(egui::RichText::new(text).small().color(weak)).wrap());
+                };
+
+                section(ui, "Views", &mut |ui| {
+                    egui::Grid::new("prefs-views").num_columns(2).spacing([18.0, 10.0]).min_col_width(110.0).show(ui, |ui| {
+                        ui.label("Default view");
+                        ui.horizontal(|ui| {
+                            changed |= ui.selectable_value(&mut self.s.view, ViewMode::Icons, "Icons").changed();
+                            changed |= ui.selectable_value(&mut self.s.view, ViewMode::List, "List").changed();
+                            changed |= ui.selectable_value(&mut self.s.view, ViewMode::Compact, "Compact").changed();
+                        });
+                        ui.end_row();
+                    });
+                    ui.add_space(4.0);
+                    resort |= ui.checkbox(&mut self.s.show_hidden, "Show hidden files").changed();
+                    resort |= ui.checkbox(&mut self.s.folders_first, "Sort folders before files").changed();
+                    changed |= ui.checkbox(&mut self.s.show_thumbnails, "Show picture thumbnails").changed();
+                });
+
+                section(ui, "Behaviour", &mut |ui| {
+                    changed |= ui.checkbox(&mut self.s.single_click, "Single click to open items").changed();
+                    changed |= ui.checkbox(&mut self.s.confirm_trash, "Ask before moving files to the Trash").changed();
+                });
+
+                section(ui, "Window", &mut |ui| {
+                    changed |= ui.checkbox(&mut self.s.decorations, "Use the system title bar and borders").changed();
+                    hint(ui, "When off, Rivet draws its own title bar with minimise, maximise and close buttons.");
+                });
+
+                section(ui, "Appearance", &mut |ui| {
+                    changed |= ui.checkbox(&mut self.s.follow_desktop_colors, "Follow desktop colours (matugen, Noctalia, GTK theme)").changed();
+                    match (&self.palette, self.s.follow_desktop_colors) {
+                        (Some(p), true) => {
+                            ui.horizontal(|ui| {
+                                ui.spacing_mut().item_spacing.x = 6.0;
+                                for c in [p.accent, p.window_bg, p.view_bg, p.window_fg].into_iter().flatten() {
+                                    let (r, _) = ui.allocate_exact_size(Vec2::splat(16.0), Sense::hover());
+                                    ui.painter().rect_filled(r, 4.0, c);
+                                    ui.painter().rect_stroke(r, 4.0, Stroke::new(1.0, weak), egui::StrokeKind::Inside);
+                                }
+                                ui.add_space(4.0);
+                                let name = p.source.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+                                ui.label(egui::RichText::new(format!("from {name}")).small().color(weak)).on_hover_text(p.source.display().to_string());
+                            });
+                            hint(ui, "Colours update by themselves within a second of a change.");
                         }
+                        (None, true) => hint(ui, "No desktop colour file found yet — using the style below."),
+                        _ => {}
+                    }
+                    ui.horizontal(|ui| {
+                        if ui.button("Add Rivet template to matugen").on_hover_text("Writes a template into matugen's templates folder and adds it to matugen's config, so matugen writes Rivet's own colour file.").clicked() {
+                            match palette::install_matugen_template() {
+                                Ok(msg) => matugen_msg = Some(msg),
+                                Err(e) => matugen_msg = Some(format!("Could not update matugen's config: {e}")),
+                            }
+                        }
+                        if ui.button("Copy template").on_hover_text("Copy the matugen template text").clicked() {
+                            ui.ctx().copy_text(palette::MATUGEN_TEMPLATE.to_string());
+                            matugen_msg = Some("Template copied.".into());
+                        }
+                    });
+                    ui.add_space(6.0);
+                    let manual = !(self.s.follow_desktop_colors && self.palette.is_some());
+                    egui::Grid::new("prefs-look").num_columns(2).spacing([18.0, 12.0]).min_col_width(110.0).show(ui, |ui| {
+                        ui.label("Style");
+                        ui.add_enabled_ui(manual, |ui| {
+                            ui.horizontal(|ui| {
+                                changed |= ui.selectable_value(&mut self.s.theme, ThemeChoice::System, "Follow system").changed();
+                                changed |= ui.selectable_value(&mut self.s.theme, ThemeChoice::Light, "Light").changed();
+                                changed |= ui.selectable_value(&mut self.s.theme, ThemeChoice::Dark, "Dark").changed();
+                            });
+                        });
+                        ui.end_row();
+                        ui.label("Accent");
+                        ui.add_enabled_ui(manual, |ui| {
+                            ui.horizontal(|ui| {
+                                ui.spacing_mut().item_spacing.x = 8.0;
+                                for (c, name) in ACCENTS {
+                                    let (r, resp) = ui.allocate_exact_size(Vec2::splat(22.0), Sense::click());
+                                    let col = Color32::from_rgb(c[0], c[1], c[2]);
+                                    let col = if manual { col } else { col.gamma_multiply(0.4) };
+                                    ui.painter().circle_filled(r.center(), 9.0, col);
+                                    if self.s.accent == c {
+                                        ui.painter().circle_stroke(r.center(), 11.0, Stroke::new(2.0, ui.visuals().strong_text_color()));
+                                    }
+                                    if resp.on_hover_text(name).clicked() && manual {
+                                        self.s.accent = c;
+                                        changed = true;
+                                    }
+                                }
+                            });
+                        });
+                        ui.end_row();
+                        ui.label("Icon theme");
+                        let sys = format!("System ({})", self.system_icon_theme);
+                        let current = if self.s.icon_theme.is_empty() { sys.clone() } else { self.s.icon_theme.clone() };
+                        egui::ComboBox::from_id_salt("icontheme").selected_text(current).width(260.0).show_ui(ui, |ui| {
+                            if ui.selectable_label(self.s.icon_theme.is_empty(), sys).clicked() {
+                                new_theme = Some(String::new());
+                            }
+                            for t in &self.installed_themes {
+                                if ui.selectable_label(self.s.icon_theme == *t, t).clicked() {
+                                    new_theme = Some(t.clone());
+                                }
+                            }
+                        });
+                        ui.end_row();
+                    });
+                    if !manual {
+                        hint(ui, "Style and accent come from your desktop colours while following them.");
                     }
                 });
             });
-        });
         if let Some(t) = new_theme {
             self.set_theme_name(t);
         }
