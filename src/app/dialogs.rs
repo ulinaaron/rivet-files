@@ -22,6 +22,11 @@ fn select_stem(ctx: &egui::Context, id: Id, text: &str, is_dir: bool) {
     }
 }
 
+/// Window titles in the regular UI size rather than the large heading size.
+fn window_title(text: &str) -> egui::RichText {
+    egui::RichText::new(text).size(13.5).strong()
+}
+
 fn danger_button(ui: &mut egui::Ui, label: &str) -> bool {
     ui.add(egui::Button::new(egui::RichText::new(label).color(Color32::WHITE)).fill(Color32::from_rgb(0xc0, 0x1c, 0x28))).clicked()
 }
@@ -329,7 +334,7 @@ impl RivetApp {
         let mut rename: Option<String> = None;
         let (serial, centre) = (self.popup_serial, ctx.content_rect().center());
         let title = format!("{} — Properties", st.path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "/".into()));
-        egui::Window::new(title).id(Id::unique(("props", serial))).pivot(egui::Align2::CENTER_CENTER).default_pos(centre).collapsible(false).resizable(false).open(&mut open).default_width(400.0).show(ctx, |ui| {
+        egui::Window::new(window_title(&title)).id(Id::unique(("props", serial))).pivot(egui::Align2::CENTER_CENTER).default_pos(centre).collapsible(false).resizable(false).open(&mut open).default_width(400.0).show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.selectable_value(&mut st.tab, 0, "Basic");
                 ui.selectable_value(&mut st.tab, 1, "Permissions");
@@ -470,17 +475,16 @@ impl RivetApp {
         let mut changed = false;
         let mut resort = false;
         let (serial, centre) = (self.popup_serial, ctx.content_rect().center());
-        let frame = egui::Frame::window(&ctx.global_style()).inner_margin(egui::Margin::same(18));
-        egui::Window::new("Preferences")
+        egui::Window::new(window_title("Preferences"))
             .id(Id::unique(("prefs", serial)))
             .pivot(egui::Align2::CENTER_CENTER)
             .default_pos(centre)
             .collapsible(false)
             .resizable(false)
-            .frame(frame)
             .open(&mut open)
             .show(ctx, |ui| {
-                ui.set_width(500.0);
+                ui.set_width(520.0);
+                ui.add_space(6.0);
                 ui.spacing_mut().item_spacing = Vec2::new(10.0, 8.0);
                 ui.spacing_mut().button_padding = Vec2::new(10.0, 4.0);
                 let card_fill = ui.visuals().faint_bg_color;
