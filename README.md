@@ -34,6 +34,18 @@ Or from inside the app: Preferences → System → *Add Rivet to the app launche
 (and *Make Rivet the default file manager*). `rivet --install-desktop-entry` does the same from a terminal.
 The entry file lives in `data/rivet-files.desktop`.
 
+### A global `rivet` command that follows your builds
+
+```sh
+./link.sh          # /usr/bin/rivet -> target/debug/rivet  (asks for your password)
+./link.sh --user   # ~/.local/bin/rivet instead (no password)
+./link.sh --remove [--user]
+```
+
+It is a symlink, so every rebuild is picked up. Preferences → System has the same two buttons
+(the system one asks for your password through the desktop's own dialog). Real packaged files
+are never overwritten.
+
 Options: `--no-decorations`, `--decorations`, `--view icons|list|compact`, `--tree`, `--hide-menubar`, `--home`,
 `--screenshot FILE.png` (draws ~120 frames, saves a picture, exits).
 

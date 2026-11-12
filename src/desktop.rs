@@ -149,8 +149,136 @@ fn write_mimeapps_default() -> bool {
     std::fs::write(&p, out.join("\n") + "\n").is_ok()
 }
 
+// ---------------------------------------------------------------- `rivet` command link
+
+/// Where a global `rivet` command can live.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum LinkSpot {
+    /// ~/.local/bin — just for you, no password.
+    User,
+    /// /usr/bin — for everyone, needs an administrator password.
+    System,
+}
+
+impl LinkSpot {
+    pub fn path(self) -> PathBuf {
+        match self {
+            LinkSpot::User => std::env::var_os("XDG_BIN_HOME")
+                .map(PathBuf::from)
+                .unwrap_or_else(|| places::home().join(".local/bin"))
+                .join("rivet"),
+            LinkSpot::System => PathBuf::from("/usr/bin/rivet"),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum LinkState {
+    Missing,
+    /// A link to the program that is running now.
+    ThisBuild,
+    /// A link to some other file.
+    Elsewhere(PathBuf),
+    /// A real file (e.g. from a package) — never overwritten.
+    NotALink,
+}
+
+fn this_build() -> Option<PathBuf> {
+    std::env::current_exe().ok().map(|p| std::fs::canonicalize(&p).unwrap_or(p))
+}
+
+pub fn link_state(spot: LinkSpot) -> LinkState {
+    let p = spot.path();
+    let Ok(meta) = std::fs::symlink_metadata(&p) else { return LinkState::Missing };
+    if !meta.file_type().is_symlink() {
+        return LinkState::NotALink;
+    }
+    let target = std::fs::canonicalize(&p).unwrap_or_else(|_| std::fs::read_link(&p).unwrap_or_default());
+    if Some(&target) == this_build().as_ref() { LinkState::ThisBuild } else { LinkState::Elsewhere(target) }
+}
+
+/// The shell command that makes the link (shown so it can be run by hand).
+pub fn link_command(spot: LinkSpot) -> String {
+    let exe = this_build().unwrap_or_default();
+    let q = |p: &Path| format!("'{}'", p.to_string_lossy().replace('\'', "'\\''"));
+    let cmd = format!("ln -sfn {} {}", q(&exe), q(&spot.path()));
+    if spot == LinkSpot::System { format!("sudo {cmd}") } else { cmd }
+}
+
+/// Point the `rivet` command at this build, so `rivet` works from anywhere and
+/// every rebuild is picked up automatically.
+pub fn link_command_here(spot: LinkSpot) -> Result<String, String> {
+    if link_state(spot) == LinkState::NotALink {
+        return Err(format!("{} is a real program file (probably from a package), so it was left alone.", spot.path().display()));
+    }
+    let exe = this_build().ok_or("Could not find this program's own location.")?;
+    let dest = spot.path();
+    match spot {
+        LinkSpot::User => {
+            if let Some(d) = dest.parent() {
+                std::fs::create_dir_all(d).map_err(|e| e.to_string())?;
+            }
+            let _ = std::fs::remove_file(&dest);
+            std::os::unix::fs::symlink(&exe, &dest).map_err(|e| e.to_string())?;
+            Ok(format!("The rivet command now opens this build ({}).", dest.display()))
+        }
+        LinkSpot::System => {
+            // pkexec asks for the administrator password with the desktop's own dialog.
+            let ok = Command::new("pkexec")
+                .args(["ln", "-sfn"])
+                .arg(&exe)
+                .arg(&dest)
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false);
+            if ok {
+                Ok(format!("The rivet command now opens this build for everyone ({}).", dest.display()))
+            } else {
+                Err(format!(
+                    "The password prompt was cancelled or isn't available. You can run this in a terminal instead (it's on your clipboard):\n\n{}",
+                    link_command(spot)
+                ))
+            }
+        }
+    }
+}
+
+pub fn unlink_command(spot: LinkSpot) -> Result<(), String> {
+    match link_state(spot) {
+        LinkState::Missing => Ok(()),
+        LinkState::NotALink => Err("That is a real program file, so it was left alone.".into()),
+        _ => match spot {
+            LinkSpot::User => std::fs::remove_file(spot.path()).map_err(|e| e.to_string()),
+            LinkSpot::System => {
+                let ok = Command::new("pkexec").arg("rm").arg(spot.path()).status().map(|s| s.success()).unwrap_or(false);
+                if ok { Ok(()) } else { Err("The password prompt was cancelled or isn't available.".into()) }
+            }
+        },
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn user_command_link_points_at_this_build() {
+        let dir = std::env::temp_dir().join(format!("rivet-bin-{}", std::process::id()));
+        // SAFETY: only this test reads XDG_BIN_HOME.
+        unsafe { std::env::set_var("XDG_BIN_HOME", &dir) };
+        use super::*;
+        assert_eq!(link_state(LinkSpot::User), LinkState::Missing);
+        link_command_here(LinkSpot::User).unwrap();
+        assert_eq!(link_state(LinkSpot::User), LinkState::ThisBuild);
+        // A real file is never replaced.
+        unlink_command(LinkSpot::User).unwrap();
+        std::fs::write(LinkSpot::User.path(), "x").unwrap();
+        assert_eq!(link_state(LinkSpot::User), LinkState::NotALink);
+        assert!(link_command_here(LinkSpot::User).is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
+        unsafe { std::env::remove_var("XDG_BIN_HOME") };
+    }
+
     #[test]
     fn exec_line_quotes_spaces() {
         let t = super::entry_text(std::path::Path::new("/home/me/My Apps/rivet"));
