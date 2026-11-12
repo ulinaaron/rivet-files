@@ -4,6 +4,7 @@
 
 mod app;
 mod builtin_icons;
+mod fonts;
 mod fsops;
 mod icons;
 mod launch;
@@ -73,6 +74,12 @@ fn main() -> eframe::Result {
     }
     if std::env::var("RIVET_ICONS").as_deref() == Ok("builtin") {
         settings.builtin_icons = true;
+    }
+    if let Ok(f) = std::env::var("RIVET_FONT") {
+        settings.ui_font = f;
+    }
+    if let Some(sz) = std::env::var("RIVET_FONT_SIZE").ok().and_then(|v| v.parse().ok()) {
+        settings.ui_font_size = sz;
     }
     if let Ok(c) = std::env::var("RIVET_ICON_COLOR") {
         settings.icon_color = settings::IconColor::from_id(&c);

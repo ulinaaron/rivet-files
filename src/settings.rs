@@ -37,6 +37,10 @@ pub struct Settings {
     pub icon_theme: String, // empty = follow the system
     /// Use Rivet's own SVG icons, recoloured from the desktop palette.
     pub builtin_icons: bool,
+    /// UI font family; empty = the desktop's font.
+    pub ui_font: String,
+    /// UI text size; 0 = follow the desktop's font size.
+    pub ui_font_size: f32,
     /// Which palette colour the built-in icons use.
     pub icon_color: IconColor,
     pub theme: ThemeChoice,
@@ -71,6 +75,8 @@ impl Default for Settings {
             decorations: true,
             icon_theme: String::new(),
             builtin_icons: false,
+            ui_font: String::new(),
+            ui_font_size: 0.0,
             icon_color: IconColor::Primary,
             theme: ThemeChoice::System,
             show_sidebar: true,
@@ -115,6 +121,8 @@ impl Settings {
                 "decorations" => s.decorations = b,
                 "icon_theme" => s.icon_theme = v.to_string(),
                 "builtin_icons" => s.builtin_icons = b,
+                "ui_font" => s.ui_font = v.to_string(),
+                "ui_font_size" => s.ui_font_size = f.unwrap_or(0.0).clamp(0.0, 28.0),
                 "icon_color" => s.icon_color = IconColor::from_id(v),
                 "theme" => s.theme = match v { "light" => ThemeChoice::Light, "dark" => ThemeChoice::Dark, _ => ThemeChoice::System },
                 "show_sidebar" => s.show_sidebar = b,
@@ -148,9 +156,9 @@ impl Settings {
         let sort = match self.sort { SortKey::Name => "name", SortKey::Size => "size", SortKey::Type => "type", SortKey::Modified => "modified" };
         let theme = match self.theme { ThemeChoice::System => "system", ThemeChoice::Light => "light", ThemeChoice::Dark => "dark" };
         let text = format!(
-            "view={view}\nsort={sort}\nsort_desc={}\nfolders_first={}\nshow_hidden={}\nzoom={}\nlist_zoom={}\ndecorations={}\nicon_theme={}\nbuiltin_icons={}\nicon_color={}\ntheme={theme}\nshow_sidebar={}\nsidebar_tree={}\nshow_statusbar={}\nshow_menubar={}\nshow_thumbnails={}\nsingle_click={}\nconfirm_trash={}\nfollow_desktop_colors={}\naccent=#{:02x}{:02x}{:02x}\nwindow_w={}\nwindow_h={}\nsidebar_width={}\ntoolbar={}\n",
+            "view={view}\nsort={sort}\nsort_desc={}\nfolders_first={}\nshow_hidden={}\nzoom={}\nlist_zoom={}\ndecorations={}\nicon_theme={}\nbuiltin_icons={}\nui_font={}\nui_font_size={}\nicon_color={}\ntheme={theme}\nshow_sidebar={}\nsidebar_tree={}\nshow_statusbar={}\nshow_menubar={}\nshow_thumbnails={}\nsingle_click={}\nconfirm_trash={}\nfollow_desktop_colors={}\naccent=#{:02x}{:02x}{:02x}\nwindow_w={}\nwindow_h={}\nsidebar_width={}\ntoolbar={}\n",
             self.sort_desc, self.folders_first, self.show_hidden, self.zoom, self.list_zoom, self.decorations,
-            self.icon_theme, self.builtin_icons, self.icon_color.id(), self.show_sidebar, self.sidebar_tree, self.show_statusbar, self.show_menubar, self.show_thumbnails,
+            self.icon_theme, self.builtin_icons, self.ui_font, self.ui_font_size, self.icon_color.id(), self.show_sidebar, self.sidebar_tree, self.show_statusbar, self.show_menubar, self.show_thumbnails,
             self.single_click, self.confirm_trash, self.follow_desktop_colors, self.accent[0], self.accent[1], self.accent[2],
             self.window_w, self.window_h, self.sidebar_width, toolbar_string(&self.toolbar)
         );

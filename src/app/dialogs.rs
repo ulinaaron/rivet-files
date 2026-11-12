@@ -478,6 +478,9 @@ impl RivetApp {
 
     pub(super) fn prefs_window(&mut self, ctx: &egui::Context) {
         let mut open = self.prefs_open;
+        if self.font_families.is_empty() {
+            self.font_families = crate::fonts::families();
+        }
         if self.installed_themes.is_empty() {
             self.installed_themes = icons::installed_themes();
         }
@@ -722,6 +725,39 @@ impl RivetApp {
                             });
                             ui.end_row();
                         }
+                        // UI font family and size.
+                        ui.label("Font");
+                        let system_name = crate::fonts::desktop_font_cached().map(|(f, _)| f).unwrap_or_else(|| "Sans".into());
+                        let current = if self.s.ui_font.is_empty() { format!("System ({system_name})") } else { self.s.ui_font.clone() };
+                        egui::ComboBox::from_id_salt("uifont").selected_text(current).width(260.0).height(320.0).show_ui(ui, |ui| {
+                            if ui.selectable_label(self.s.ui_font.is_empty(), format!("System ({system_name})")).clicked() {
+                                self.s.ui_font.clear();
+                                changed = true;
+                            }
+                            ui.separator();
+                            for fam in &self.font_families {
+                                if ui.selectable_label(self.s.ui_font == *fam, fam).clicked() {
+                                    self.s.ui_font = fam.clone();
+                                    changed = true;
+                                }
+                            }
+                        });
+                        ui.end_row();
+                        ui.label("Text size");
+                        ui.horizontal(|ui| {
+                            let system_size = crate::fonts::desktop_font_cached().map(|(_, pt)| crate::fonts::points_to_ui(pt)).unwrap_or(crate::fonts::BASE_SIZE);
+                            let mut size = if self.s.ui_font_size > 0.0 { self.s.ui_font_size } else { system_size };
+                            if ui.add(egui::Slider::new(&mut size, 10.0..=22.0).step_by(0.5).show_value(true)).changed() {
+                                self.s.ui_font_size = size;
+                                changed = true;
+                            }
+                            let following = self.s.ui_font_size == 0.0;
+                            if ui.add_enabled(!following, egui::Button::new("Use system size")).clicked() {
+                                self.s.ui_font_size = 0.0;
+                                changed = true;
+                            }
+                        });
+                        ui.end_row();
                     });
                     if !manual {
                         hint(ui, "Style and accent come from your desktop colours while following them.");
@@ -759,7 +795,7 @@ impl RivetApp {
                                         ui.painter().line_segment([c - Vec2::new(0.0, 7.0), c + Vec2::new(0.0, 7.0)], Stroke::new(1.5, weak));
                                     }
                                     None => {
-                                        ui.painter().text(r.center(), egui::Align2::CENTER_CENTER, fb, egui::FontId::proportional(12.0), fg);
+                                        ui.painter().text(r.center(), egui::Align2::CENTER_CENTER, fb, crate::fonts::ui_font(12.0), fg);
                                     }
                                 }
                                 let label = if path { egui::RichText::new(item.label()).strong() } else { egui::RichText::new(item.label()) };

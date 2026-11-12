@@ -117,6 +117,10 @@ pub struct RivetApp {
     /// Bumped whenever a movable window opens so it starts centred again.
     popup_serial: u64,
     menu_peek: bool,
+    /// The font choice currently loaded (to avoid reloading every frame) and its resolved name.
+    applied_font: Option<String>,
+    font_name: String,
+    font_families: Vec<String>,
     toolbar_drawing: bool,
     alt_was_down: bool,
     alt_combo: bool,
@@ -180,35 +184,6 @@ fn group_name(gid: u32) -> String {
     }
 }
 
-/// Load a sans-serif font from the system so text matches the desktop.
-fn install_system_font(ctx: &egui::Context) {
-    let candidates = ["NotoSans-Regular.ttf", "Cantarell-Regular.otf", "Ubuntu-R.ttf", "DejaVuSans.ttf", "LiberationSans-Regular.ttf"];
-    let mut found: Option<PathBuf> = None;
-    'outer: for c in candidates {
-        let mut stack = vec![(PathBuf::from("/usr/share/fonts"), 0), (places::data_home().join("fonts"), 0)];
-        while let Some((d, depth)) = stack.pop() {
-            let Ok(rd) = std::fs::read_dir(&d) else { continue };
-            for e in rd.flatten() {
-                let p = e.path();
-                if p.is_dir() && depth < 3 {
-                    stack.push((p, depth + 1));
-                } else if e.file_name().to_string_lossy() == c {
-                    found = Some(p);
-                    break 'outer;
-                }
-            }
-        }
-    }
-    if let Some(p) = found {
-        if let Ok(bytes) = std::fs::read(&p) {
-            let mut fonts = egui::FontDefinitions::default();
-            fonts.font_data.insert("system-sans".into(), Arc::new(egui::FontData::from_owned(bytes)));
-            fonts.families.entry(egui::FontFamily::Proportional).or_default().insert(0, "system-sans".into());
-            ctx.set_fonts(fonts);
-        }
-    }
-}
-
 fn step_in(steps: &[f32], cur: f32, dir: i32) -> f32 {
     let idx = steps.iter().position(|&s| s >= cur - 0.5).unwrap_or(steps.len() - 1) as i32;
     steps[(idx + dir).clamp(0, steps.len() as i32 - 1) as usize]
@@ -229,7 +204,6 @@ fn paint_tex(painter: &egui::Painter, tex: &egui::TextureHandle, rect: Rect, tin
 impl RivetApp {
     pub fn new(cc: &eframe::CreationContext<'_>, settings: Settings, start: Option<PathBuf>, screenshot: Option<PathBuf>) -> Self {
         let ctx = cc.egui_ctx.clone();
-        install_system_font(&ctx);
         let system_icon_theme = icons::detect_system_theme();
         let theme_name = if settings.icon_theme.is_empty() { system_icon_theme.clone() } else { settings.icon_theme.clone() };
         let mime = MimeDb::load();
@@ -277,6 +251,9 @@ impl RivetApp {
             sidebar_fill: None,
             popup_serial: 0,
             menu_peek: false,
+            applied_font: None,
+            font_name: String::new(),
+            font_families: Vec::new(),
             toolbar_drawing: false,
             alt_was_down: false,
             alt_combo: false,
@@ -295,6 +272,9 @@ impl RivetApp {
         if std::env::var_os("RIVET_OPEN_PREFS").is_some() {
             app.prefs_open = true;
             app.popup_serial += 1;
+        }
+        if let Some(p) = std::env::var_os("RIVET_EXTRA_TAB") {
+            app.new_tab(Location::Dir(PathBuf::from(p)));
         }
         if std::env::var_os("RIVET_SEARCH").is_some() {
             app.search_open = true;
@@ -330,6 +310,29 @@ impl RivetApp {
         }
     }
 
+    /// Load the chosen UI font (or the desktop's) and set the text scale.
+    fn apply_font(&mut self, ctx: &egui::Context) {
+        let size = if self.s.ui_font_size > 0.0 {
+            self.s.ui_font_size
+        } else {
+            crate::fonts::desktop_font_cached().map(|(_, pt)| crate::fonts::points_to_ui(pt)).unwrap_or(crate::fonts::BASE_SIZE)
+        };
+        crate::fonts::set_scale(size / crate::fonts::BASE_SIZE);
+        if self.applied_font.as_deref() == Some(self.s.ui_font.as_str()) {
+            return;
+        }
+        self.applied_font = Some(self.s.ui_font.clone());
+        let mut defs = egui::FontDefinitions::default();
+        if let Some((name, path)) = crate::fonts::resolve(&self.s.ui_font) {
+            if let Ok(bytes) = std::fs::read(&path) {
+                defs.font_data.insert("ui-font".into(), Arc::new(egui::FontData::from_owned(bytes)));
+                defs.families.entry(egui::FontFamily::Proportional).or_default().insert(0, "ui-font".into());
+                self.font_name = name;
+            }
+        }
+        ctx.set_fonts(defs);
+    }
+
     /// The palette colour picked for Rivet's own icons (primary / secondary / tertiary).
     fn icon_base_color(&self) -> Color32 {
         use crate::settings::IconColor;
@@ -360,7 +363,7 @@ impl RivetApp {
 
     fn apply_visuals(&mut self, ctx: &egui::Context) {
         let pal = if self.s.follow_desktop_colors { self.palette.clone() } else { None };
-        let key = format!("{:?}{:?}{:?}", self.s.theme, self.s.accent, pal);
+        let key = format!("{:?}{:?}{:?}{}", self.s.theme, self.s.accent, pal, crate::fonts::scale());
         if self.applied_visuals.as_ref() == Some(&key) {
             return;
         }
@@ -448,7 +451,7 @@ impl RivetApp {
                     (egui::TextStyle::Heading, 18.0),
                 ] {
                     if let Some(f) = st.text_styles.get_mut(&ts) {
-                        f.size = size;
+                        f.size = size * crate::fonts::scale();
                     }
                 }
             });
@@ -1268,6 +1271,7 @@ impl eframe::App for RivetApp {
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
+        self.apply_font(&ctx);
         self.apply_visuals(&ctx);
         self.sync_builtin_icons(&ctx);
         self.housekeeping(&ctx);
@@ -1278,14 +1282,15 @@ impl eframe::App for RivetApp {
         self.update_menu_peek(&ctx);
         self.header(ui, &ctx);
         self.toolbar(ui, &ctx);
-        if self.tabs.len() > 1 {
-            self.tab_bar(ui, &ctx);
-        }
         if self.s.show_statusbar {
             self.status_bar(ui, &ctx);
         }
         if self.s.show_sidebar {
             self.sidebar(ui, &ctx);
+        }
+        // Added after the sidebar, so the tab strip starts where the sidebar ends.
+        if self.tabs.len() > 1 {
+            self.tab_bar(ui, &ctx);
         }
         let cols = self.file_area(ui, &ctx);
         self.dialogs(&ctx);

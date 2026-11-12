@@ -1,6 +1,6 @@
 //! The file area: icon, list and compact views, rubber-band selection and context menus.
 
-use eframe::egui::{self, Align2, Color32, FontId, Id, Pos2, Rect, Sense, Stroke, StrokeKind, Vec2};
+use eframe::egui::{self, Align2, Color32, Id, Pos2, Rect, Sense, Stroke, StrokeKind, Vec2};
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -57,7 +57,7 @@ impl RivetApp {
                 };
                 let rect = ui.available_rect_before_wrap();
                 let resp = ui.allocate_rect(rect, Sense::click());
-                ui.painter().text(rect.center(), Align2::CENTER_CENTER, msg, FontId::proportional(15.0), ui.visuals().weak_text_color());
+                ui.painter().text(rect.center(), Align2::CENTER_CENTER, msg, crate::fonts::ui_font(15.0), ui.visuals().weak_text_color());
                 resp.context_menu(|ui| self.background_menu(ui));
                 if let Some(p) = resp.dnd_release_payload::<DragFiles>() {
                     if let Some(d) = self.current_dir() {
@@ -123,7 +123,7 @@ impl RivetApp {
     }
 
     fn name_galley(&self, ui: &egui::Ui, name: &str, width: f32, rows: usize, color: Color32) -> Arc<egui::Galley> {
-        let mut job = egui::text::LayoutJob::simple(name.to_string(), FontId::proportional(13.0), color, width);
+        let mut job = egui::text::LayoutJob::simple(name.to_string(), crate::fonts::ui_font(13.0), color, width);
         job.wrap.max_rows = rows;
         job.wrap.break_anywhere = true;
         job.wrap.overflow_character = Some('…');
@@ -267,7 +267,7 @@ impl RivetApp {
             if resp.hovered() && key.is_some() {
                 ui.painter().rect_filled(r, 0.0, v.widgets.hovered.weak_bg_fill);
             }
-            let tr = ui.painter().text(Pos2::new(r.left() + 8.0, r.center().y), Align2::LEFT_CENTER, *label, FontId::proportional(12.5), v.strong_text_color());
+            let tr = ui.painter().text(Pos2::new(r.left() + 8.0, r.center().y), Align2::LEFT_CENTER, *label, crate::fonts::ui_font(12.5), v.strong_text_color());
             if *key == Some(self.s.sort) {
                 // Sort direction arrow, drawn so it never depends on the font having the glyph.
                 let c = Pos2::new(tr.right() + 10.0, r.center().y);
@@ -340,7 +340,7 @@ impl RivetApp {
                 }
                 let painter = ui.painter().with_clip_rect(row.intersect(clip));
                 let cell = |x: f32, w: f32, text: String, color: Color32| {
-                    let mut job = egui::text::LayoutJob::simple_singleline(text, FontId::proportional(13.0), color);
+                    let mut job = egui::text::LayoutJob::simple_singleline(text, crate::fonts::ui_font(13.0), color);
                     job.wrap = egui::text::TextWrapping::truncate_at_width((w - 12.0).max(10.0));
                     let g = painter.layout_job(job);
                     painter.galley(Pos2::new(x, row.center().y - g.size().y / 2.0), g, color);
@@ -423,7 +423,7 @@ impl RivetApp {
                 if let Some(t) = self.entry_texture(ctx, &e, z) {
                     paint_tex(ui.painter(), &t, icon_rect, tint);
                 }
-                let mut job = egui::text::LayoutJob::simple_singleline(e.name.clone(), FontId::proportional(13.0), fg);
+                let mut job = egui::text::LayoutJob::simple_singleline(e.name.clone(), crate::fonts::ui_font(13.0), fg);
                 job.wrap = egui::text::TextWrapping::truncate_at_width(item.right() - icon_rect.right() - 12.0);
                 let g = ui.painter().layout_job(job);
                 ui.painter().galley(Pos2::new(icon_rect.right() + 6.0, item.center().y - g.size().y / 2.0), g, fg);
@@ -445,7 +445,7 @@ impl RivetApp {
         let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Tooltip, Id::unique("dragtip")));
         let text = format!("{} {label}", if copy { "+ Copy" } else { "→ Move" });
         let tip_fg = ctx.global_style().visuals.selection.stroke.color;
-        let g = painter.layout_no_wrap(text, FontId::proportional(13.0), tip_fg);
+        let g = painter.layout_no_wrap(text, crate::fonts::ui_font(13.0), tip_fg);
         let r = Rect::from_min_size(pos + Vec2::new(14.0, 10.0), g.size() + Vec2::new(14.0, 8.0));
         painter.rect_filled(r, 4.0, accent_color(&self.s));
         painter.galley(r.min + Vec2::new(7.0, 4.0), g, tip_fg);

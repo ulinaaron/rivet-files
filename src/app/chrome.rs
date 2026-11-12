@@ -1,6 +1,6 @@
 //! Title bar (when decorations are off), menus, toolbar, tabs, status bar and sidebar.
 
-use eframe::egui::{self, Align2, Color32, CornerRadius, FontId, Id, Key, Pos2, Rect, Sense, Stroke, StrokeKind, Vec2};
+use eframe::egui::{self, Align2, Color32, CornerRadius, Id, Key, Pos2, Rect, Sense, Stroke, StrokeKind, Vec2};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
 
@@ -136,7 +136,7 @@ impl RivetApp {
                             Pos2::new(full.center().x.max(rect.left() + 80.0), rect.center().y),
                             Align2::CENTER_CENTER,
                             &self.last_title,
-                            FontId::proportional(13.5),
+                            crate::fonts::ui_font(13.5),
                             ui.visuals().strong_text_color(),
                         );
                         if resp.drag_started_by(egui::PointerButton::Primary) {
@@ -772,7 +772,7 @@ impl RivetApp {
                     }
                     let close_rect = Rect::from_center_size(Pos2::new(rect.right() - 14.0, rect.center().y), Vec2::splat(16.0));
                     let col = if sel { v.strong_text_color() } else { v.text_color() };
-                    let mut job = egui::text::LayoutJob::simple_singleline(title, FontId::proportional(13.0), col);
+                    let mut job = egui::text::LayoutJob::simple_singleline(title, crate::fonts::ui_font(13.0), col);
                     job.wrap = egui::text::TextWrapping::truncate_at_width(close_rect.left() - rect.left() - 14.0);
                     let galley = ui.painter().layout_job(job);
                     ui.painter().galley(Pos2::new(rect.left() + 10.0, rect.center().y - galley.size().y / 2.0), galley, col);
@@ -907,7 +907,7 @@ impl RivetApp {
             .resizable(true)
             .default_size(self.s.sidebar_width)
             .size_range(120.0..=420.0)
-            .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin::same(4)))
+            .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin { left: 8, right: 8, top: 6, bottom: 10 }))
             .show(ui, |ui| {
                 egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
                     if self.s.sidebar_tree {
@@ -926,18 +926,18 @@ impl RivetApp {
 
     /// A collapsible section title ("▾ My Computer"). Returns whether the section is open.
     fn section_header(&mut self, ui: &mut egui::Ui, text: &str) -> bool {
-        ui.add_space(6.0);
+        ui.add_space(10.0);
         let open = !self.collapsed.contains(text);
-        let (rect, resp) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 22.0), Sense::click());
+        let (rect, resp) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 26.0 * crate::fonts::scale().max(1.0)), Sense::click());
         let col = if resp.hovered() { ui.visuals().strong_text_color() } else { ui.visuals().text_color() };
-        let c = Pos2::new(rect.left() + 10.0, rect.center().y);
+        let c = Pos2::new(rect.left() + 12.0, rect.center().y);
         let pts = if open {
             vec![c + Vec2::new(-4.0, -2.0), c + Vec2::new(4.0, -2.0), c + Vec2::new(0.0, 3.0)]
         } else {
             vec![c + Vec2::new(-2.0, -4.0), c + Vec2::new(-2.0, 4.0), c + Vec2::new(3.0, 0.0)]
         };
         ui.painter().add(egui::Shape::convex_polygon(pts, col, Stroke::NONE));
-        ui.painter().text(Pos2::new(rect.left() + 20.0, rect.center().y), Align2::LEFT_CENTER, text, FontId::proportional(13.5), col);
+        ui.painter().text(Pos2::new(rect.left() + 24.0, rect.center().y), Align2::LEFT_CENTER, text, crate::fonts::ui_font(13.5), col);
         if resp.clicked() {
             if open {
                 self.collapsed.insert(text.to_string());
@@ -953,31 +953,34 @@ impl RivetApp {
     #[allow(clippy::too_many_arguments)]
     fn place_row(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, icon: &[&str], label: &str, loc: Option<Location>, usage: Option<f32>, eject: bool) -> (egui::Response, bool) {
         let active = loc.as_ref() == Some(&self.tab().loc);
-        let h = if usage.is_some() { 32.0 } else { 26.0 };
+        // Comfortable rows that grow with the chosen text size.
+        let sc = crate::fonts::scale().max(1.0);
+        let h = if usage.is_some() { 38.0 * sc } else { 32.0 * sc };
         let (rect, resp) = ui.allocate_exact_size(Vec2::new(ui.available_width(), h), Sense::click());
         let v = ui.visuals().clone();
         let accent = accent_color(&self.s);
         if active {
-            ui.painter().rect_filled(rect, 4.0, accent);
+            ui.painter().rect_filled(rect, 9.0, accent);
         } else if resp.hovered() {
-            ui.painter().rect_filled(rect, 4.0, v.widgets.hovered.weak_bg_fill);
+            ui.painter().rect_filled(rect, 9.0, v.widgets.hovered.weak_bg_fill);
         }
         let droppable = loc.as_ref().is_some_and(|l| l.dir().is_some() || *l == Location::Trash);
         if droppable && resp.dnd_hover_payload::<DragFiles>().is_some() {
-            ui.painter().rect_stroke(rect, 4.0, Stroke::new(2.0, accent), StrokeKind::Inside);
+            ui.painter().rect_stroke(rect, 9.0, Stroke::new(2.0, accent), StrokeKind::Inside);
         }
         let fg = if active { v.selection.stroke.color } else { v.text_color() };
-        let icon_rect = Rect::from_min_size(Pos2::new(rect.left() + 6.0, rect.top() + 5.0), Vec2::splat(16.0));
+        let row_mid = if usage.is_some() { rect.top() + 15.0 * sc } else { rect.center().y };
+        let icon_rect = Rect::from_center_size(Pos2::new(rect.left() + 20.0, row_mid), Vec2::splat(16.0));
         if let Some(t) = self.icon(ctx, icon, 16.0) {
             paint_tex(ui.painter(), &t, icon_rect, Color32::WHITE);
         }
-        let text_right = rect.right() - if eject { 26.0 } else { 6.0 };
-        let mut job = egui::text::LayoutJob::simple_singleline(label.to_string(), FontId::proportional(13.5), fg);
-        job.wrap = egui::text::TextWrapping::truncate_at_width(text_right - icon_rect.right() - 8.0);
+        let text_right = rect.right() - if eject { 30.0 } else { 10.0 };
+        let mut job = egui::text::LayoutJob::simple_singleline(label.to_string(), crate::fonts::ui_font(13.5), fg);
+        job.wrap = egui::text::TextWrapping::truncate_at_width(text_right - icon_rect.right() - 12.0);
         let g = ui.painter().layout_job(job);
-        ui.painter().galley(Pos2::new(icon_rect.right() + 8.0, icon_rect.center().y - g.size().y / 2.0), g, fg);
+        ui.painter().galley(Pos2::new(icon_rect.right() + 12.0, icon_rect.center().y - g.size().y / 2.0), g, fg);
         if let Some(u) = usage {
-            let bar = Rect::from_min_max(Pos2::new(icon_rect.right() + 8.0, rect.bottom() - 7.0), Pos2::new(text_right, rect.bottom() - 4.0));
+            let bar = Rect::from_min_max(Pos2::new(icon_rect.right() + 12.0, rect.bottom() - 9.0), Pos2::new(text_right, rect.bottom() - 6.0));
             ui.painter().rect_filled(bar, 1.5, if active { Color32::from_white_alpha(80) } else { v.widgets.inactive.bg_fill });
             let mut filled = bar;
             filled.set_right(bar.left() + bar.width() * u.clamp(0.0, 1.0));
@@ -986,7 +989,7 @@ impl RivetApp {
         }
         let mut eject_clicked = false;
         if eject {
-            let er = Rect::from_center_size(Pos2::new(rect.right() - 13.0, icon_rect.center().y), Vec2::splat(20.0));
+            let er = Rect::from_center_size(Pos2::new(rect.right() - 17.0, icon_rect.center().y), Vec2::splat(20.0));
             let eresp = ui.interact(er, resp.id.with("eject"), Sense::click()).on_hover_text("Eject");
             if eresp.hovered() {
                 ui.painter().circle_filled(er.center(), 10.0, v.widgets.hovered.bg_fill);
@@ -994,7 +997,7 @@ impl RivetApp {
             if let Some(t) = self.icon(ctx, &["media-eject-symbolic", "media-eject"], 14.0) {
                 paint_tex(ui.painter(), &t, Rect::from_center_size(er.center(), Vec2::splat(14.0)), fg);
             } else {
-                ui.painter().text(er.center(), Align2::CENTER_CENTER, "⏏", FontId::proportional(13.0), fg);
+                ui.painter().text(er.center(), Align2::CENTER_CENTER, "⏏", crate::fonts::ui_font(13.0), fg);
             }
             eject_clicked = eresp.clicked();
         }
@@ -1019,7 +1022,7 @@ impl RivetApp {
     }
 
     fn sidebar_contents(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        ui.spacing_mut().item_spacing.y = 1.0;
+        ui.spacing_mut().item_spacing.y = 3.0;
         if self.section_header(ui, "My Computer") {
             self.my_computer(ui, ctx);
         }
@@ -1117,7 +1120,7 @@ impl RivetApp {
 
     /// Folder tree sidebar: Home and File System, expandable.
     fn tree_contents(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        ui.spacing_mut().item_spacing.y = 1.0;
+        ui.spacing_mut().item_spacing.y = 3.0;
         let current = self.current_dir();
         let mut rows: Vec<(PathBuf, usize)> = Vec::new();
         let mut stack: Vec<(PathBuf, usize)> = vec![(PathBuf::from("/"), 0), (places::home(), 0)];
@@ -1148,13 +1151,13 @@ impl RivetApp {
         }
         let accent = accent_color(&self.s);
         for (p, depth) in rows {
-            let (rect, resp) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 24.0), Sense::click());
+            let (rect, resp) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 30.0 * crate::fonts::scale().max(1.0)), Sense::click());
             let active = current.as_deref() == Some(p.as_path());
             let v = ui.visuals().clone();
             if active {
-                ui.painter().rect_filled(rect, 4.0, accent);
+                ui.painter().rect_filled(rect, 9.0, accent);
             } else if resp.hovered() {
-                ui.painter().rect_filled(rect, 4.0, v.widgets.hovered.weak_bg_fill);
+                ui.painter().rect_filled(rect, 9.0, v.widgets.hovered.weak_bg_fill);
             }
             let fg = if active { v.selection.stroke.color } else { v.text_color() };
             let x = rect.left() + 4.0 + depth as f32 * 14.0;
@@ -1182,7 +1185,7 @@ impl RivetApp {
             } else {
                 p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default()
             };
-            let mut job = egui::text::LayoutJob::simple_singleline(name, FontId::proportional(13.0), fg);
+            let mut job = egui::text::LayoutJob::simple_singleline(name, crate::fonts::ui_font(13.0), fg);
             job.wrap = egui::text::TextWrapping::truncate_at_width((rect.right() - ir.right() - 10.0).max(10.0));
             let g = ui.painter().layout_job(job);
             ui.painter().galley(Pos2::new(ir.right() + 6.0, rect.center().y - g.size().y / 2.0), g, fg);
@@ -1208,7 +1211,7 @@ impl RivetApp {
                 self.pending.push(Action::Transfer(pl.0.clone(), p.clone(), ctx.input(|i| i.modifiers.ctrl)));
             }
             if resp.dnd_hover_payload::<DragFiles>().is_some() {
-                ui.painter().rect_stroke(rect, 4.0, Stroke::new(2.0, accent), StrokeKind::Inside);
+                ui.painter().rect_stroke(rect, 9.0, Stroke::new(2.0, accent), StrokeKind::Inside);
             }
             resp.context_menu(|ui| self.place_menu(ui, &p));
         }
