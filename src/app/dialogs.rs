@@ -543,66 +543,6 @@ impl RivetApp {
                     changed |= ui.checkbox(&mut self.s.confirm_trash, "Ask before moving files to the Trash").changed();
                 });
 
-                section(ui, "System", &mut |ui| {
-                    let installed = desktop::is_installed();
-                    ui.horizontal(|ui| {
-                        if installed {
-                            check_label(ui, "In your app launcher");
-                            if ui.button("Update entry").on_hover_text("Point the launcher at this copy of Rivet").clicked() {
-                                system_msg = Some(desktop::install().map(|_| "Launcher entry updated.".to_string()).unwrap_or_else(|e| e));
-                            }
-                            if ui.button("Remove").clicked() {
-                                system_msg = Some(desktop::uninstall().map(|_| "Removed from the app launcher.".to_string()).unwrap_or_else(|e| e));
-                            }
-                        } else if ui.button("Add Rivet to the app launcher").clicked() {
-                            system_msg = Some(desktop::install().map(|_| "Rivet is now in your app launcher.".to_string()).unwrap_or_else(|e| e));
-                        }
-                    });
-                    ui.horizontal(|ui| {
-                        if desktop::is_default_file_manager() {
-                            check_label(ui, "Default file manager");
-                        } else if ui.button("Make Rivet the default file manager").on_hover_text("Folders opened from other apps and the desktop will open in Rivet").clicked() {
-                            system_msg = Some(
-                                desktop::set_default_file_manager()
-                                    .map(|_| "Rivet is now your default file manager.".to_string())
-                                    .unwrap_or_else(|e| e),
-                            );
-                        }
-                    });
-                    hint(ui, "Adds a standard desktop entry so Rivet appears in your launcher, menus and “Open With” lists.");
-                    ui.add_space(6.0);
-                    // A global `rivet` command that always opens this build (rebuilds included).
-                    for (spot, title, button, tip) in [
-                        (desktop::LinkSpot::System, "rivet command for everyone", "Link in /usr/bin…", "Asks for your administrator password"),
-                        (desktop::LinkSpot::User, "rivet command just for you", "Link in ~/.local/bin", "No password needed"),
-                    ] {
-                        ui.horizontal(|ui| {
-                            let state = desktop::link_state(spot);
-                            match &state {
-                                desktop::LinkState::ThisBuild => {
-                                    check_label(ui, title);
-                                    if ui.button("Remove").clicked() {
-                                        link_result = Some(desktop::unlink_command(spot).map(|_| format!("Removed {}", spot.path().display())));
-                                    }
-                                }
-                                desktop::LinkState::NotALink => {
-                                    ui.label(egui::RichText::new(format!("{} is a packaged program; left alone", spot.path().display())).color(weak));
-                                }
-                                other => {
-                                    let label = if matches!(other, desktop::LinkState::Elsewhere(_)) { format!("{button} (replaces an older link)") } else { button.to_string() };
-                                    if ui.button(label).on_hover_text(tip).clicked() {
-                                        link_result = Some(desktop::link_command_here(spot));
-                                        if matches!(link_result, Some(Err(_))) {
-                                            ui.ctx().copy_text(desktop::link_command(spot));
-                                        }
-                                    }
-                                }
-                            }
-                        });
-                    }
-                    hint(ui, "Lets you type rivet in a terminal or launcher. It points at this build, so every rebuild is picked up.");
-                });
-
                 section(ui, "Window", &mut |ui| {
                     changed |= ui.checkbox(&mut self.s.decorations, "Use the system title bar and borders").changed();
                     hint(ui, "When off, Rivet draws its own title bar with minimise, maximise and close buttons.");
@@ -849,6 +789,66 @@ impl RivetApp {
                             changed = true;
                         }
                     });
+                });
+
+                section(ui, "System", &mut |ui| {
+                    let installed = desktop::is_installed();
+                    ui.horizontal(|ui| {
+                        if installed {
+                            check_label(ui, "In your app launcher");
+                            if ui.button("Update entry").on_hover_text("Point the launcher at this copy of Rivet").clicked() {
+                                system_msg = Some(desktop::install().map(|_| "Launcher entry updated.".to_string()).unwrap_or_else(|e| e));
+                            }
+                            if ui.button("Remove").clicked() {
+                                system_msg = Some(desktop::uninstall().map(|_| "Removed from the app launcher.".to_string()).unwrap_or_else(|e| e));
+                            }
+                        } else if ui.button("Add Rivet to the app launcher").clicked() {
+                            system_msg = Some(desktop::install().map(|_| "Rivet is now in your app launcher.".to_string()).unwrap_or_else(|e| e));
+                        }
+                    });
+                    ui.horizontal(|ui| {
+                        if desktop::is_default_file_manager() {
+                            check_label(ui, "Default file manager");
+                        } else if ui.button("Make Rivet the default file manager").on_hover_text("Folders opened from other apps and the desktop will open in Rivet").clicked() {
+                            system_msg = Some(
+                                desktop::set_default_file_manager()
+                                    .map(|_| "Rivet is now your default file manager.".to_string())
+                                    .unwrap_or_else(|e| e),
+                            );
+                        }
+                    });
+                    hint(ui, "Adds a standard desktop entry so Rivet appears in your launcher, menus and “Open With” lists.");
+                    ui.add_space(6.0);
+                    // A global `rivet` command that always opens this build (rebuilds included).
+                    for (spot, title, button, tip) in [
+                        (desktop::LinkSpot::System, "rivet command for everyone", "Link in /usr/bin…", "Asks for your administrator password"),
+                        (desktop::LinkSpot::User, "rivet command just for you", "Link in ~/.local/bin", "No password needed"),
+                    ] {
+                        ui.horizontal(|ui| {
+                            let state = desktop::link_state(spot);
+                            match &state {
+                                desktop::LinkState::ThisBuild => {
+                                    check_label(ui, title);
+                                    if ui.button("Remove").clicked() {
+                                        link_result = Some(desktop::unlink_command(spot).map(|_| format!("Removed {}", spot.path().display())));
+                                    }
+                                }
+                                desktop::LinkState::NotALink => {
+                                    ui.label(egui::RichText::new(format!("{} is a packaged program; left alone", spot.path().display())).color(weak));
+                                }
+                                other => {
+                                    let label = if matches!(other, desktop::LinkState::Elsewhere(_)) { format!("{button} (replaces an older link)") } else { button.to_string() };
+                                    if ui.button(label).on_hover_text(tip).clicked() {
+                                        link_result = Some(desktop::link_command_here(spot));
+                                        if matches!(link_result, Some(Err(_))) {
+                                            ui.ctx().copy_text(desktop::link_command(spot));
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    hint(ui, "Lets you type rivet in a terminal or launcher. It points at this build, so every rebuild is picked up.");
                 });
                 });
             });
