@@ -513,7 +513,7 @@ pub fn install_matugen_template() -> Result<String, String> {
     let mut text = existing;
     text.push_str(block);
     std::fs::write(&cfg, text).map_err(|e| e.to_string())?;
-    Ok("Added a Rivet template to matugen. The next time matugen runs, Rivet will recolour itself.".into())
+    Ok("Added a Rivet template to matugen. The next time matugen runs, Rivet will recolor itself.".into())
 }
 
 #[cfg(test)]

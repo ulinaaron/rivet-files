@@ -656,7 +656,7 @@ impl RivetApp {
                 });
 
                 section(ui, "Appearance", &mut |ui| {
-                    changed |= ui.checkbox(&mut self.s.follow_desktop_colors, "Follow desktop colours (matugen, Noctalia, GTK theme)").changed();
+                    changed |= ui.checkbox(&mut self.s.follow_desktop_colors, "Follow desktop colors (matugen, Noctalia, GTK theme)").changed();
                     match (&self.palette, self.s.follow_desktop_colors) {
                         (Some(p), true) => {
                             ui.horizontal(|ui| {
@@ -670,13 +670,12 @@ impl RivetApp {
                                 let name = p.source.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
                                 ui.label(egui::RichText::new(format!("from {name}")).small().color(weak)).on_hover_text(p.source.display().to_string());
                             });
-                            hint(ui, "Colours update by themselves within a second of a change.");
                         }
-                        (None, true) => hint(ui, "No desktop colour file found yet — using the style below."),
+                        (None, true) => hint(ui, "No desktop color file found yet — using the style below."),
                         _ => {}
                     }
                     ui.horizontal(|ui| {
-                        if ui.button("Add Rivet template to matugen").on_hover_text("Writes a template into matugen's templates folder and adds it to matugen's config, so matugen writes Rivet's own colour file.").clicked() {
+                        if ui.button("Add Rivet template to matugen").on_hover_text("Writes a template into matugen's templates folder and adds it to matugen's config, so matugen writes Rivet's own color file.").clicked() {
                             match palette::install_matugen_template() {
                                 Ok(msg) => matugen_msg = Some(msg),
                                 Err(e) => matugen_msg = Some(format!("Could not update matugen's config: {e}")),
@@ -719,9 +718,14 @@ impl RivetApp {
                             });
                         });
                         ui.end_row();
+                        // A little breathing room between groups (colors · icons · text).
+                    });
+                    // A slight gap between groups (colors · icons · text).
+                    ui.add_space(8.0);
+                    egui::Grid::new("prefs-look-icons").num_columns(2).spacing([18.0, 12.0]).min_col_width(110.0).show(ui, |ui| {
                         ui.label("Icon theme");
                         let sys = format!("System ({})", self.system_icon_theme);
-                        let builtin_label = "Rivet (follows your colours)".to_string();
+                        let builtin_label = "Rivet (follows your colors)".to_string();
                         let current = if self.s.builtin_icons {
                             builtin_label.clone()
                         } else if self.s.icon_theme.is_empty() {
@@ -730,7 +734,7 @@ impl RivetApp {
                             self.s.icon_theme.clone()
                         };
                         egui::ComboBox::from_id_salt("icontheme").selected_text(current).width(260.0).show_ui(ui, |ui| {
-                            if ui.selectable_label(self.s.builtin_icons, builtin_label).on_hover_text("Rivet's own icons, recoloured from matugen / your desktop colours").clicked() {
+                            if ui.selectable_label(self.s.builtin_icons, builtin_label).on_hover_text("Rivet's own icons, recolored from matugen / your desktop colors").clicked() {
                                 self.s.builtin_icons = true;
                                 changed = true;
                             }
@@ -748,7 +752,7 @@ impl RivetApp {
                         });
                         ui.end_row();
                         if self.s.builtin_icons {
-                            ui.label("Icon colour");
+                            ui.label("Icon color");
                             ui.horizontal(|ui| {
                                 use crate::settings::IconColor;
                                 let primary = super::accent_color(&self.s);
@@ -772,6 +776,10 @@ impl RivetApp {
                             });
                             ui.end_row();
                         }
+                    });
+                    // A slight gap between groups (colors · icons · text).
+                    ui.add_space(8.0);
+                    egui::Grid::new("prefs-look-text").num_columns(2).spacing([18.0, 12.0]).min_col_width(110.0).show(ui, |ui| {
                         // UI font family and size.
                         ui.label("Font");
                         let system_name = crate::fonts::desktop_font_cached().map(|(f, _)| f).unwrap_or_else(|| "Sans".into());
@@ -807,7 +815,7 @@ impl RivetApp {
                         ui.end_row();
                     });
                     if !manual {
-                        hint(ui, "Style and accent come from your desktop colours while following them.");
+                        hint(ui, "Style and accent come from your desktop colors while following them.");
                     }
                 });
 

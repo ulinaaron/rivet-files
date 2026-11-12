@@ -20,14 +20,14 @@ A  Linux file manager in the same vein as Nemo, Thunar and Caja — written in R
 - 📋 **Everything you expect** — copy, cut, paste, drag and drop, rename, Trash with restore
 - 🔍 **Instant filter** as you type, plus search through subfolders
 - 🖼️ **Picture thumbnails** and your system icon theme
-- 🎨 **Follows your colours** — matugen, Noctalia and GTK themes, live, no restart
-- 💜 **Built-in icon set** recoloured from your palette (primary, secondary or tertiary)
+- 🎨 **Follows your colors** — matugen, Noctalia and GTK themes, live, no restart
+- 💜 **Built-in icon set** recolored from your palette (primary, secondary or tertiary)
 - 🧰 **Make it yours** — custom toolbar, fonts, text size, hideable menu bar
 - 🪟 **Title bar your way** — your desktop's, or Rivet's own with window buttons
 - ⚡ **Fast** — 100,000 files open in under 0.4 s, and an idle Rivet uses no CPU
 - 🦀 **Light** — one 12 MB program, no toolkit to install
 
-## 🎨 Follows your colours
+## 🎨 Follows your colors
 
 Change your wallpaper or scheme and Rivet restyles itself within a second.
 
@@ -104,7 +104,7 @@ For context, Flea publishes these figures from **their own machine** with the sa
 
 Rivet reads big folders on all CPU cores, so its CPU total is higher than its wall-clock time.
 When idle it uses no CPU at all: a small background watcher wakes the window only when a
-folder, your colours or your drives actually change.
+folder, your colors or your drives actually change.
 
 <details>
 <summary><b>More numbers</b></summary>
@@ -144,7 +144,7 @@ your password) or `./link.sh --user` (`~/.local/bin`). Preferences → System ha
 </details>
 
 <details>
-<summary><b>Where the colours come from</b></summary>
+<summary><b>Where the colors come from</b></summary>
 
 In order of priority:
 

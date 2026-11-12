@@ -1439,7 +1439,7 @@ impl eframe::App for RivetApp {
             if self.color_watch.changed() {
                 self.reload_desktop_theme();
                 self.apply_visuals(ctx);
-                self.flash("Desktop theme changed — colours updated");
+                self.flash("Desktop theme changed — colors updated");
             }
             for i in 0..self.tabs.len() {
                 if self.tabs[i].needs_refresh() {
