@@ -224,7 +224,7 @@ impl ToolItem {
         ToolItem::Menu,
     ];
 
-    /// The Nemo-like default layout.
+    /// The default layout (classic file-manager toolbar).
     pub fn default_layout() -> Vec<ToolItem> {
         use ToolItem::*;
         vec![Back, Forward, Up, Separator, Reload, Home, Computer, Separator, EditLocation, PathBar, Search, Separator, ViewIcons, ViewList, ViewCompact, Menu]

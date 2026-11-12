@@ -2,7 +2,7 @@
 name = "rivet"
 version = "0.1.1"
 edition = "2024"
-description = "A Nemo-style Linux file manager in Rust/egui — no GTK or Qt"
+description = "A classic Linux file manager, like Nemo, Thunar and Caja, written in Rust/egui — no GTK or Qt"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/ulinaaron/rivet-files"
 

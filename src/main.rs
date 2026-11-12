@@ -1,4 +1,5 @@
-//! Rivet Files — a Nemo-style file manager in Rust (egui), with no GTK or Qt.
+//! Rivet Files — a classic Linux file manager (in the family of Nemo, Thunar and Caja),
+//! written in Rust with egui and no GTK or Qt.
 //!
 //! Usage: rivet [FOLDER] [--no-decorations | --decorations] [--screenshot FILE.png]
 

@@ -9,7 +9,7 @@
 [![Built with Rust](https://img.shields.io/badge/built%20with-Rust%20%2B%20egui-orange)](https://github.com/emilk/egui)
 ![No GTK or Qt](https://img.shields.io/badge/GTK%20%2F%20Qt-none-success)
 
-A Nemo-style file manager for Linux, written in Rust with [egui](https://github.com/emilk/egui).
+A classic Linux file manager in the same family as Nemo, Thunar and Caja — written in Rust with [egui](https://github.com/emilk/egui).
 No GTK, no Qt — it talks to the desktop through the freedesktop standards directly.
 
 ![Rivet Files showing a home folder with the Papirus icon theme](docs/screenshots/icons-wide.png)
