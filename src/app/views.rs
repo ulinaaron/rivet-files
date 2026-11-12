@@ -15,7 +15,14 @@ impl RivetApp {
     pub(super) fn file_area(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) -> usize {
         let bg = ctx.global_style().visuals.extreme_bg_color;
         let mut cols = 1;
-        egui::CentralPanel::no_frame().frame(egui::Frame::NONE.fill(bg)).show(ui, |ui| {
+        // The file area is the lowest surface; it sits inside the chrome surface with a
+        // rounded corner where the toolbar and the sidebar meet (no border lines).
+        let chrome = ctx.global_style().visuals.panel_fill;
+        let round_bottom = self.s.show_statusbar;
+        let corner = egui::CornerRadius { nw: 12, ne: 0, sw: if round_bottom { 12 } else { 0 }, se: 0 };
+        egui::CentralPanel::no_frame().frame(egui::Frame::NONE.fill(chrome)).show(ui, |ui| {
+            egui::Frame::NONE.fill(bg).corner_radius(corner).inner_margin(egui::Margin { left: 6, top: 6, right: 0, bottom: 4 }).show(ui, |ui| {
+            ui.set_min_size(ui.available_size());
             let loc = self.tab().loc.clone();
             if matches!(loc, Location::Trash) {
                 egui::Frame::NONE.fill(ui.visuals().faint_bg_color).inner_margin(egui::Margin::symmetric(10, 6)).show(ui, |ui| {
@@ -67,6 +74,7 @@ impl RivetApp {
                 }
                 ViewMode::Compact => self.compact_view(ui, ctx),
             };
+            });
         });
         cols
     }
@@ -251,8 +259,7 @@ impl RivetApp {
 
         let (hrect, _) = ui.allocate_exact_size(Vec2::new(full_w, header_h), Sense::hover());
         let v = ui.visuals().clone();
-        ui.painter().rect_filled(hrect, 0.0, v.faint_bg_color);
-        ui.painter().line_segment([hrect.left_bottom(), hrect.right_bottom()], v.widgets.noninteractive.bg_stroke);
+        ui.painter().rect_filled(hrect.shrink2(Vec2::new(2.0, 1.0)), 6.0, v.faint_bg_color);
         let mut x = hrect.left() + 4.0;
         for (i, (label, key, w)) in columns.iter().enumerate() {
             let r = Rect::from_min_size(Pos2::new(x, hrect.top()), Vec2::new(*w, header_h));
@@ -270,9 +277,6 @@ impl RivetApp {
                     vec![c + Vec2::new(-4.0, 2.0), c + Vec2::new(4.0, 2.0), c + Vec2::new(0.0, -3.0)]
                 };
                 ui.painter().add(egui::Shape::convex_polygon(pts, v.strong_text_color(), Stroke::NONE));
-            }
-            if i > 0 {
-                ui.painter().line_segment([Pos2::new(r.left(), r.top() + 5.0), Pos2::new(r.left(), r.bottom() - 5.0)], v.widgets.noninteractive.bg_stroke);
             }
             if resp.clicked() {
                 if let Some(k) = key {

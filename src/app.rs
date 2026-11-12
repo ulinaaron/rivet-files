@@ -354,28 +354,37 @@ impl RivetApp {
                 v.selection.stroke = Stroke::new(1.0, Color32::WHITE);
                 v.hyperlink_color = accent;
                 if dark {
+                    // Elevation by surface: content (lowest) < chrome < pop-ups.
+                    v.extreme_bg_color = Color32::from_rgb(0x24, 0x24, 0x24);
                     v.panel_fill = Color32::from_rgb(0x30, 0x30, 0x30);
-                    v.window_fill = Color32::from_rgb(0x35, 0x35, 0x35);
-                    v.extreme_bg_color = Color32::from_rgb(0x2a, 0x2a, 0x2a);
-                    v.faint_bg_color = Color32::from_rgb(0x2e, 0x2e, 0x2e);
+                    v.window_fill = Color32::from_rgb(0x3a, 0x3a, 0x3a);
+                    v.faint_bg_color = Color32::from_rgb(0x2b, 0x2b, 0x2b);
                 } else {
-                    v.panel_fill = Color32::from_rgb(0xf0, 0xf0, 0xf0);
-                    v.window_fill = Color32::from_rgb(0xfa, 0xfa, 0xfa);
                     v.extreme_bg_color = Color32::WHITE;
-                    v.faint_bg_color = Color32::from_rgb(0xf6, 0xf6, 0xf6);
+                    v.panel_fill = Color32::from_rgb(0xee, 0xee, 0xef);
+                    v.window_fill = Color32::from_rgb(0xfc, 0xfc, 0xfc);
+                    v.faint_bg_color = Color32::from_rgb(0xf4, 0xf4, 0xf5);
                 }
                 for w in [&mut v.widgets.noninteractive, &mut v.widgets.inactive, &mut v.widgets.hovered, &mut v.widgets.active] {
                     w.corner_radius = CornerRadius::same(4);
                 }
-                v.window_corner_radius = CornerRadius::same(8);
+                v.window_corner_radius = CornerRadius::same(10);
+                v.menu_corner_radius = CornerRadius::same(8);
+                // No outlines: pop-ups stand out by their raised surface and shadow.
+                v.window_stroke = Stroke::NONE;
                 if let Some(p) = pal.as_ref().filter(|p| p.is_dark() == dark) {
                     let bg = p.window_bg.or(p.view_bg).unwrap_or(v.panel_fill);
                     let fg = p.window_fg.or(p.view_fg).unwrap_or(if dark { Color32::from_gray(225) } else { Color32::from_gray(30) });
                     let view = p.view_bg.unwrap_or(bg);
-                    v.panel_fill = p.headerbar_bg.unwrap_or(bg);
+                    // Toolbar, sidebar, menu bar and status bar share one raised surface.
+                    v.panel_fill = p.headerbar_bg.or(p.sidebar_bg).unwrap_or_else(|| mix(bg, fg, 0.05));
                     v.extreme_bg_color = view;
                     v.faint_bg_color = mix(view, fg, 0.035);
-                    v.window_fill = p.popover_bg.unwrap_or_else(|| mix(bg, fg, 0.04));
+                    if v.panel_fill == view {
+                        v.panel_fill = mix(view, fg, 0.05); // keep the two levels distinguishable
+                    }
+                    let chrome = v.panel_fill;
+                    v.window_fill = p.popover_bg.filter(|c| *c != chrome && *c != view).unwrap_or_else(|| mix(chrome, fg, 0.07));
                     v.text_edit_bg_color = Some(mix(view, fg, 0.05));
                     v.weak_text_color = Some(mix(fg, view, 0.4));
                     v.selection.stroke = Stroke::new(1.0, p.accent_fg.unwrap_or(if palette::luminance(accent) > 0.6 { Color32::BLACK } else { Color32::WHITE }));

@@ -99,7 +99,7 @@ impl RivetApp {
             return;
         }
         let fill = ctx.global_style().visuals.panel_fill;
-        let panel = egui::Panel::top("menubar")
+        let panel = egui::Panel::top("menubar").show_separator_line(false)
             .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin::symmetric(6, if csd { 4 } else { 2 })))
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
@@ -487,7 +487,7 @@ impl RivetApp {
         let layout = self.s.toolbar.clone();
         let split = layout.iter().position(|t| *t == ToolItem::PathBar).unwrap_or(layout.len());
         let (left, right) = (layout[..split].to_vec(), layout[(split + 1).min(layout.len())..].to_vec());
-        egui::Panel::top("toolbar")
+        egui::Panel::top("toolbar").show_separator_line(false)
             .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin::symmetric(12, 9)))
             .show(ui, |ui| {
                 // Right-click on empty toolbar space to customise it.
@@ -732,7 +732,7 @@ impl RivetApp {
 
     pub(super) fn tab_bar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         let fill = ctx.global_style().visuals.panel_fill;
-        egui::Panel::top("tabs").frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin::symmetric(6, 2))).show(ui, |ui| {
+        egui::Panel::top("tabs").show_separator_line(false).frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin::symmetric(6, 2))).show(ui, |ui| {
             ui.horizontal(|ui| {
                 let n = self.tabs.len();
                 let w = ((ui.available_width() - 40.0) / n as f32).clamp(80.0, 240.0);
@@ -782,7 +782,7 @@ impl RivetApp {
 
     pub(super) fn status_bar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         let fill = ctx.global_style().visuals.panel_fill;
-        egui::Panel::bottom("status")
+        egui::Panel::bottom("status").show_separator_line(false)
             .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin::symmetric(6, 3)))
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
@@ -878,8 +878,8 @@ impl RivetApp {
     // -------------------------------------------------------------- sidebar
 
     pub(super) fn sidebar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        let fill = self.sidebar_fill.unwrap_or(ctx.global_style().visuals.panel_fill);
-        let resp = egui::Panel::left("sidebar")
+        let fill = ctx.global_style().visuals.panel_fill;
+        let resp = egui::Panel::left("sidebar").show_separator_line(false)
             .resizable(true)
             .default_size(self.s.sidebar_width)
             .size_range(120.0..=420.0)

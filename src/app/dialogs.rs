@@ -340,7 +340,7 @@ impl RivetApp {
                 ui.selectable_value(&mut st.tab, 0, "Basic");
                 ui.selectable_value(&mut st.tab, 1, "Permissions");
             });
-            ui.separator();
+            ui.add_space(8.0);
             if st.tab == 0 {
                 ui.horizontal(|ui| {
                     if let Some(t) = &tex {
