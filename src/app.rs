@@ -330,6 +330,18 @@ impl RivetApp {
         }
     }
 
+    /// The palette colour picked for Rivet's own icons (primary / secondary / tertiary).
+    fn icon_base_color(&self) -> Color32 {
+        use crate::settings::IconColor;
+        let primary = accent_color(&self.s);
+        let pal = if self.s.follow_desktop_colors { self.palette.as_ref() } else { None };
+        match self.s.icon_color {
+            IconColor::Primary => primary,
+            IconColor::Secondary => pal.and_then(|p| p.secondary).unwrap_or_else(|| crate::builtin_icons::derive_secondary(primary)),
+            IconColor::Tertiary => pal.and_then(|p| p.tertiary).unwrap_or_else(|| crate::builtin_icons::derive_tertiary(primary)),
+        }
+    }
+
     /// Keep Rivet's own icon set (if chosen) coloured like the rest of the window.
     fn sync_builtin_icons(&mut self, ctx: &egui::Context) {
         if !self.s.builtin_icons {
@@ -339,7 +351,7 @@ impl RivetApp {
         let st = ctx.style_of(ctx.theme());
         let v = &st.visuals;
         self.icons.set_builtin(Some(crate::builtin_icons::BuiltinColors {
-            accent: accent_color(&self.s),
+            accent: self.icon_base_color(),
             bg: v.extreme_bg_color,
             fg: v.text_color(),
             dark: v.dark_mode,

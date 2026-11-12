@@ -74,6 +74,9 @@ fn main() -> eframe::Result {
     if std::env::var("RIVET_ICONS").as_deref() == Ok("builtin") {
         settings.builtin_icons = true;
     }
+    if let Ok(c) = std::env::var("RIVET_ICON_COLOR") {
+        settings.icon_color = settings::IconColor::from_id(&c);
+    }
     if hide_menubar {
         settings.show_menubar = false;
     }

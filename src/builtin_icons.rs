@@ -67,6 +67,18 @@ fn hue(accent: Color32, deg: f32) -> Color32 {
     from_hsv(h + deg, s.clamp(0.42, 0.8), v.clamp(0.62, 0.86))
 }
 
+/// Material-style secondary: the accent's hue, much calmer.
+pub fn derive_secondary(accent: Color32) -> Color32 {
+    let (h, s, v) = to_hsv(accent);
+    from_hsv(h, (s * 0.45).clamp(0.12, 0.4), v.clamp(0.55, 0.85))
+}
+
+/// Material-style tertiary: a neighbouring hue with similar strength.
+pub fn derive_tertiary(accent: Color32) -> Color32 {
+    let (h, s, v) = to_hsv(accent);
+    from_hsv(h + 60.0, (s * 0.8).clamp(0.3, 0.7), v.clamp(0.6, 0.85))
+}
+
 fn darken(c: Color32, t: f32) -> Color32 {
     mix(c, Color32::BLACK, t)
 }

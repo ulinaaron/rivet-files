@@ -37,6 +37,8 @@ pub struct Settings {
     pub icon_theme: String, // empty = follow the system
     /// Use Rivet's own SVG icons, recoloured from the desktop palette.
     pub builtin_icons: bool,
+    /// Which palette colour the built-in icons use.
+    pub icon_color: IconColor,
     pub theme: ThemeChoice,
     pub show_sidebar: bool,
     pub sidebar_tree: bool,
@@ -69,6 +71,7 @@ impl Default for Settings {
             decorations: true,
             icon_theme: String::new(),
             builtin_icons: false,
+            icon_color: IconColor::Primary,
             theme: ThemeChoice::System,
             show_sidebar: true,
             sidebar_tree: false,
@@ -112,6 +115,7 @@ impl Settings {
                 "decorations" => s.decorations = b,
                 "icon_theme" => s.icon_theme = v.to_string(),
                 "builtin_icons" => s.builtin_icons = b,
+                "icon_color" => s.icon_color = IconColor::from_id(v),
                 "theme" => s.theme = match v { "light" => ThemeChoice::Light, "dark" => ThemeChoice::Dark, _ => ThemeChoice::System },
                 "show_sidebar" => s.show_sidebar = b,
                 "sidebar_tree" => s.sidebar_tree = b,
@@ -144,9 +148,9 @@ impl Settings {
         let sort = match self.sort { SortKey::Name => "name", SortKey::Size => "size", SortKey::Type => "type", SortKey::Modified => "modified" };
         let theme = match self.theme { ThemeChoice::System => "system", ThemeChoice::Light => "light", ThemeChoice::Dark => "dark" };
         let text = format!(
-            "view={view}\nsort={sort}\nsort_desc={}\nfolders_first={}\nshow_hidden={}\nzoom={}\nlist_zoom={}\ndecorations={}\nicon_theme={}\nbuiltin_icons={}\ntheme={theme}\nshow_sidebar={}\nsidebar_tree={}\nshow_statusbar={}\nshow_menubar={}\nshow_thumbnails={}\nsingle_click={}\nconfirm_trash={}\nfollow_desktop_colors={}\naccent=#{:02x}{:02x}{:02x}\nwindow_w={}\nwindow_h={}\nsidebar_width={}\ntoolbar={}\n",
+            "view={view}\nsort={sort}\nsort_desc={}\nfolders_first={}\nshow_hidden={}\nzoom={}\nlist_zoom={}\ndecorations={}\nicon_theme={}\nbuiltin_icons={}\nicon_color={}\ntheme={theme}\nshow_sidebar={}\nsidebar_tree={}\nshow_statusbar={}\nshow_menubar={}\nshow_thumbnails={}\nsingle_click={}\nconfirm_trash={}\nfollow_desktop_colors={}\naccent=#{:02x}{:02x}{:02x}\nwindow_w={}\nwindow_h={}\nsidebar_width={}\ntoolbar={}\n",
             self.sort_desc, self.folders_first, self.show_hidden, self.zoom, self.list_zoom, self.decorations,
-            self.icon_theme, self.builtin_icons, self.show_sidebar, self.sidebar_tree, self.show_statusbar, self.show_menubar, self.show_thumbnails,
+            self.icon_theme, self.builtin_icons, self.icon_color.id(), self.show_sidebar, self.sidebar_tree, self.show_statusbar, self.show_menubar, self.show_thumbnails,
             self.single_click, self.confirm_trash, self.follow_desktop_colors, self.accent[0], self.accent[1], self.accent[2],
             self.window_w, self.window_h, self.sidebar_width, toolbar_string(&self.toolbar)
         );
@@ -336,4 +340,37 @@ pub fn parse_toolbar(v: &str) -> Vec<ToolItem> {
 
 pub fn toolbar_string(v: &[ToolItem]) -> String {
     v.iter().map(|t| t.id()).collect::<Vec<_>>().join(",")
+}
+
+/// The palette colour Rivet's own icons are painted with.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum IconColor {
+    Primary,
+    Secondary,
+    Tertiary,
+}
+
+impl IconColor {
+    pub const ALL: [IconColor; 3] = [IconColor::Primary, IconColor::Secondary, IconColor::Tertiary];
+    pub fn id(self) -> &'static str {
+        match self {
+            IconColor::Primary => "primary",
+            IconColor::Secondary => "secondary",
+            IconColor::Tertiary => "tertiary",
+        }
+    }
+    pub fn label(self) -> &'static str {
+        match self {
+            IconColor::Primary => "Primary",
+            IconColor::Secondary => "Secondary",
+            IconColor::Tertiary => "Tertiary",
+        }
+    }
+    pub fn from_id(v: &str) -> Self {
+        match v {
+            "secondary" => IconColor::Secondary,
+            "tertiary" => IconColor::Tertiary,
+            _ => IconColor::Primary,
+        }
+    }
 }

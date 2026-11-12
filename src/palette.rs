@@ -23,6 +23,8 @@ pub struct Palette {
     pub sidebar_bg: Option<Color32>,
     pub popover_bg: Option<Color32>,
     pub destructive: Option<Color32>,
+    pub secondary: Option<Color32>,
+    pub tertiary: Option<Color32>,
     pub source: PathBuf,
 }
 
@@ -181,6 +183,8 @@ fn build(defs: &HashMap<String, String>, source: &Path) -> Option<Palette> {
         sidebar_bg: get(&["sidebar_bg_color"]),
         popover_bg: get(&["popover_bg_color", "card_bg_color", "dialog_bg_color"]),
         destructive: get(&["destructive_bg_color", "error_color", "error"]),
+        secondary: get(&["secondary", "accent_secondary_color"]),
+        tertiary: get(&["tertiary", "accent_tertiary_color"]),
         source: source.to_path_buf(),
     };
     if p.accent.is_some() || p.window_bg.is_some() || p.view_bg.is_some() { Some(p) } else { None }
@@ -371,6 +375,8 @@ fn matugen_palette(watched: &mut Vec<PathBuf>) -> Option<(Palette, SystemTime)> 
         sidebar_bg: get(&["surface_container_low", "surface_container"]),
         popover_bg: get(&["surface_container_high", "surface_container"]),
         destructive: get(&["error"]),
+        secondary: get(&["secondary"]),
+        tertiary: get(&["tertiary"]),
         source: pairs.first().map(|p| p.1.clone()).unwrap_or_default(),
     };
     if p.accent.is_some() && (p.window_bg.is_some() || p.view_bg.is_some()) { Some((p, newest)) } else { None }
