@@ -29,5 +29,7 @@ with egui. No GTK or Qt.
 - Preferences and Properties as movable, resizable windows inside the app
 
 ### System
+- Ships as an AppImage (single file) and as a tar.gz archive with an installer
+- Own app icon
 - Desktop entry, "make default file manager", and a global `rivet` command
 - `rivet --bench` for timings; ~0.2 s to first frame, ~1 ms per frame

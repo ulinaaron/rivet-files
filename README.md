@@ -68,8 +68,13 @@ cargo build --release
 
 ### Download
 
-Grab the latest `rivet-files-…-linux.tar.gz` from the
-[Releases page](https://github.com/ulinaaron/rivet-files/releases), unpack it and run `./install.sh`.
+From the [Releases page](https://github.com/ulinaaron/rivet-files/releases):
+
+- **AppImage** — `Rivet_Files-…-x86_64.AppImage`: one file, `chmod +x` it and run.
+  Preferences → System → *Add Rivet to the app launcher* adds it to your menus.
+- **Archive** — `rivet-files-…-linux.tar.gz`: unpack it and run `./install.sh`.
+
+Build the AppImage yourself with `./appimage.sh` (needs `squashfs-tools`).
 
 ### Install (adds it to your app launcher)
 

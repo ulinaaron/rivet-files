@@ -7,6 +7,13 @@ use crate::places;
 
 pub const DESKTOP_ID: &str = "rivet-files.desktop";
 
+/// Rivet's app icon (also used for the window and the AppImage).
+pub const ICON_SVG: &str = include_str!("../data/rivet-files.svg");
+
+fn icon_path() -> PathBuf {
+    places::data_home().join("icons/hicolor/scalable/apps/rivet-files.svg")
+}
+
 pub fn entry_path() -> PathBuf {
     places::data_home().join("applications").join(DESKTOP_ID)
 }
@@ -35,7 +42,7 @@ Name=Rivet Files
 GenericName=File Manager
 Comment=Browse and organise your files
 Exec={e} %U
-Icon=system-file-manager
+Icon=rivet-files
 Terminal=false
 StartupNotify=true
 StartupWMClass=rivet-files
@@ -67,17 +74,23 @@ pub fn is_installed() -> bool {
 
 /// Write the launcher entry pointing at the program that is running now.
 pub fn install() -> Result<PathBuf, String> {
-    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let exe = this_build().ok_or("Could not find this program's own location.")?;
     let p = entry_path();
     if let Some(d) = p.parent() {
         std::fs::create_dir_all(d).map_err(|e| e.to_string())?;
     }
     std::fs::write(&p, entry_text(&exe)).map_err(|e| e.to_string())?;
+    let ip = icon_path();
+    if let Some(d) = ip.parent() {
+        let _ = std::fs::create_dir_all(d);
+    }
+    let _ = std::fs::write(ip, ICON_SVG);
     refresh_database();
     Ok(p)
 }
 
 pub fn uninstall() -> Result<(), String> {
+    let _ = std::fs::remove_file(icon_path());
     match std::fs::remove_file(entry_path()) {
         Ok(()) => {
             refresh_database();
@@ -184,6 +197,10 @@ pub enum LinkState {
 }
 
 fn this_build() -> Option<PathBuf> {
+    // Inside an AppImage the running file lives in a temporary mount; point at the AppImage itself.
+    if let Some(a) = std::env::var_os("APPIMAGE").map(PathBuf::from).filter(|p| p.is_file()) {
+        return Some(a);
+    }
     std::env::current_exe().ok().map(|p| std::fs::canonicalize(&p).unwrap_or(p))
 }
 
@@ -261,6 +278,17 @@ pub fn unlink_command(spot: LinkSpot) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn app_icon_renders() {
+        let img = crate::icons::render_svg(super::ICON_SVG.as_bytes(), 256).expect("icon renders");
+        assert!(img.pixels.iter().filter(|p| p.a() > 0).count() > 10_000);
+        // RIVET_ICON_PREVIEW=path.png writes it out for a look.
+        if let Some(p) = std::env::var_os("RIVET_ICON_PREVIEW") {
+            let rgba: Vec<u8> = img.pixels.iter().flat_map(|c| c.to_srgba_unmultiplied()).collect();
+            image::save_buffer(p, &rgba, 256, 256, image::ExtendedColorType::Rgba8).unwrap();
+        }
+    }
+
     #[test]
     fn user_command_link_points_at_this_build() {
         let dir = std::env::temp_dir().join(format!("rivet-bin-{}", std::process::id()));

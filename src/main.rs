@@ -129,6 +129,10 @@ fn main() -> eframe::Result {
         .with_inner_size([settings.window_w, settings.window_h])
         .with_min_inner_size([520.0, 340.0])
         .with_decorations(settings.decorations);
+    if let Some(img) = icons::render_svg(desktop::ICON_SVG.as_bytes(), 128) {
+        let rgba = img.pixels.iter().flat_map(|p| p.to_srgba_unmultiplied()).collect();
+        viewport = viewport.with_icon(egui::IconData { rgba, width: 128, height: 128 });
+    }
     if screenshot.is_some() {
         // A fixed size (min = max) so tiling window managers float the window at
         // exactly this size instead of stretching it to fill a tall tile.

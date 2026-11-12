@@ -17,6 +17,9 @@ BIN="${XDG_BIN_HOME:-$HOME/.local/bin}"
 APPS="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 install -Dm755 "$SRC" "$BIN/rivet"
 mkdir -p "$APPS"
+ICON=data/rivet-files.svg
+[ -f "$ICON" ] || ICON=rivet-files.svg
+install -Dm644 "$ICON" "${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/scalable/apps/rivet-files.svg"
 sed "s|^Exec=rivet|Exec=\"$BIN/rivet\"|" "$DESKTOP" > "$APPS/rivet-files.desktop"
 command -v update-desktop-database >/dev/null && update-desktop-database "$APPS" 2>/dev/null || true
 if [ "$1" = "--default" ]; then

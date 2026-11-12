@@ -27,17 +27,29 @@ STAGE="dist/$NAME"
 rm -rf "$STAGE"
 mkdir -p "$STAGE"
 strip -o "$STAGE/rivet" target/release/rivet
-cp data/rivet-files.desktop install.sh README.md CHANGELOG.md LICENSE-MIT LICENSE-APACHE "$STAGE/"
+cp data/rivet-files.desktop data/rivet-files.svg install.sh README.md CHANGELOG.md LICENSE-MIT LICENSE-APACHE "$STAGE/"
 tar -C dist -czf "dist/$NAME.tar.gz" "$NAME"
 rm -rf "$STAGE"
 (cd dist && sha256sum "$NAME.tar.gz" > "$NAME.tar.gz.sha256")
+./appimage.sh
+APPIMAGE="dist/Rivet_Files-$VERSION-$ARCH.AppImage"
 
 # Release notes = this version's CHANGELOG section.
 awk -v v="## $VERSION" '$0 ~ "^## " { p = (index($0, v) == 1) } p' CHANGELOG.md | tail -n +2 > "dist/notes-$VERSION.md"
 cat >> "dist/notes-$VERSION.md" <<EOF
 
 ### Install
-Download \`$NAME.tar.gz\`, then:
+
+**AppImage (one file, nothing to install):** download \`Rivet_Files-$VERSION-$ARCH.AppImage\`, then
+
+\`\`\`sh
+chmod +x Rivet_Files-$VERSION-$ARCH.AppImage
+./Rivet_Files-$VERSION-$ARCH.AppImage
+\`\`\`
+
+Inside Rivet, Preferences → System → *Add Rivet to the app launcher* puts it in your menus.
+
+**Archive:** download \`$NAME.tar.gz\`, then:
 
 \`\`\`sh
 tar xzf $NAME.tar.gz
@@ -50,11 +62,11 @@ Older systems can build from source: \`cargo build --release\`.
 EOF
 
 git rev-parse -q --verify "refs/tags/$TAG" >/dev/null || git tag -a "$TAG" -m "Rivet Files $VERSION"
-echo "Built dist/$NAME.tar.gz and tagged $TAG."
+echo "Built $APPIMAGE and dist/$NAME.tar.gz, tagged $TAG."
 
 if [ "$1" = "--publish" ]; then
     git push origin main "$TAG"
-    gh release create "$TAG" "dist/$NAME.tar.gz" "dist/$NAME.tar.gz.sha256" \
+    gh release create "$TAG" "$APPIMAGE" "$APPIMAGE.sha256" "dist/$NAME.tar.gz" "dist/$NAME.tar.gz.sha256" \
         --title "Rivet Files $VERSION" --notes-file "dist/notes-$VERSION.md"
     gh release view "$TAG" --json url -q .url
 fi
