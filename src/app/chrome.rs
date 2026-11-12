@@ -609,6 +609,12 @@ impl RivetApp {
         let in_dir = self.current_dir().is_some() || matches!(self.tab().loc, Location::Search { .. });
         let changed;
         let mut run_deep = false;
+        // Search icon at the start of the field.
+        let fg = ui.visuals().weak_text_color();
+        if let Some(t) = self.icon(ctx, &["edit-find-symbolic", "system-search-symbolic"], 16.0) {
+            let (r, _) = ui.allocate_exact_size(Vec2::new(20.0, 26.0), Sense::hover());
+            paint_tex(ui.painter(), &t, Rect::from_center_size(r.center(), Vec2::splat(15.0)), fg);
+        }
         {
             let focus = self.search_focus;
             let t = &mut self.tabs[self.active];
@@ -635,7 +641,8 @@ impl RivetApp {
             }
         }
         self.search_focus = false;
-        if ui.add_enabled(in_dir, egui::Button::new("Search subfolders")).clicked() {
+        // Flat like the rest of the raised location bar; a background only on hover.
+        if ui.add_enabled(in_dir, egui::Button::new("Search subfolders").frame_when_inactive(false)).clicked() {
             run_deep = true;
         }
         if changed && !matches!(self.tab().loc, Location::Search { .. }) {

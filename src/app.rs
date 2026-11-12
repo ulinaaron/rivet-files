@@ -296,6 +296,10 @@ impl RivetApp {
             app.prefs_open = true;
             app.popup_serial += 1;
         }
+        if std::env::var_os("RIVET_SEARCH").is_some() {
+            app.search_open = true;
+            app.search_focus = true;
+        }
         if std::env::var_os("RIVET_EDIT_PATH").is_some() {
             app.start_path_editing();
         }
