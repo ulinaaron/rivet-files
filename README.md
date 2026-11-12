@@ -23,7 +23,7 @@ A  Linux file manager in the same vein as Nemo, Thunar and Caja — written in R
 - 🎨 **Follows your colours** — matugen, Noctalia and GTK themes, live, no restart
 - 💜 **Built-in icon set** recoloured from your palette (primary, secondary or tertiary)
 - 🧰 **Make it yours** — custom toolbar, fonts, text size, hideable menu bar
-- 🪟 **Optional window decorations** — system title bar or a built-in one
+- 🪟 **Title bar your way** — your desktop's, or Rivet's own with window buttons
 - ⚡ **Fast** — 100,000 files open in under 0.4 s, and an idle Rivet uses no CPU
 - 🦀 **Light** — one 12 MB program, no toolkit to install
 

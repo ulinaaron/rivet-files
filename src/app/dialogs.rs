@@ -288,12 +288,7 @@ impl RivetApp {
             }
             Dialog::About => {
                 let theme = self.icons.name.clone();
-                if self.app_icon.is_none() {
-                    let ppp = ctx.pixels_per_point();
-                    let px = (96.0 * ppp) as u32;
-                    self.app_icon = crate::icons::render_svg(crate::desktop::ICON_SVG.as_bytes(), px)
-                        .map(|img| ctx.load_texture("rivet-app-icon", img, egui::TextureOptions::LINEAR));
-                }
+                self.app_icon_texture(ctx);
                 let icon = self.app_icon.clone();
                 let r = egui::Modal::new(Id::unique("about")).show(ctx, |ui| {
                     ui.set_width(380.0);
@@ -630,8 +625,12 @@ impl RivetApp {
                 });
 
                 section(ui, "Window", &mut |ui| {
-                    changed |= ui.checkbox(&mut self.s.decorations, "Use the system title bar and borders").changed();
-                    hint(ui, "When off, Rivet draws its own title bar with minimise, maximise and close buttons.");
+                    ui.horizontal(|ui| {
+                        ui.label("Title bar");
+                        ui.add_space(10.0);
+                        changed |= ui.selectable_value(&mut self.s.decorations, true, "From your desktop").changed();
+                        changed |= ui.selectable_value(&mut self.s.decorations, false, "Rivet's own").changed();
+                    });
                 });
 
                 section(ui, "Appearance", &mut |ui| {

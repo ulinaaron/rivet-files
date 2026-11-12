@@ -104,7 +104,7 @@ impl RivetApp {
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     if csd {
-                        if let Some(t) = self.icon(ctx, &["system-file-manager", "org.gnome.Nautilus", "folder"], 18.0) {
+                        if let Some(t) = self.app_icon_texture(ctx) {
                             ui.add(egui::Image::from_texture(&t).fit_to_exact_size(Vec2::splat(18.0)));
                         }
                     }
@@ -293,10 +293,6 @@ impl RivetApp {
             c |= ui.checkbox(&mut self.s.show_thumbnails, "Picture Thumbnails").changed();
             if c {
                 self.dirty_settings = true;
-            }
-            let mut csd = !self.s.decorations;
-            if ui.checkbox(&mut csd, "Built-in Title Bar (no window decorations)").changed() {
-                self.s.decorations = !csd;
             }
             ui.separator();
             ui.menu_button("Sort Items", |ui| self.sort_menu(ui));

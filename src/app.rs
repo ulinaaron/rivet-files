@@ -954,6 +954,16 @@ impl RivetApp {
         }
     }
 
+    /// Rivet's own app icon as a texture (rendered once).
+    fn app_icon_texture(&mut self, ctx: &egui::Context) -> Option<egui::TextureHandle> {
+        if self.app_icon.is_none() {
+            let px = (96.0 * ctx.pixels_per_point()) as u32;
+            self.app_icon = crate::icons::render_svg(crate::desktop::ICON_SVG.as_bytes(), px)
+                .map(|img| ctx.load_texture("rivet-app-icon", img, egui::TextureOptions::LINEAR));
+        }
+        self.app_icon.clone()
+    }
+
     fn open_prefs(&mut self) {
         if !self.prefs_open {
             self.popup_serial += 1; // a fresh window id re-centres it
