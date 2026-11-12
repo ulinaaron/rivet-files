@@ -521,13 +521,9 @@ impl RivetApp {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if !self.s.show_menubar {
                             // With the menu bar hidden, its menus live behind this button.
-                            let tex = self.icon(ctx, &["open-menu-symbolic", "application-menu-symbolic", "view-more-symbolic"], 16.0);
+                            // A drawn hamburger (three bars), so it looks the same in every icon theme.
                             let fg = ui.visuals().text_color();
-                            let btn = match tex {
-                                Some(t) => egui::Button::image(egui::Image::from_texture(&t).fit_to_exact_size(Vec2::splat(16.0)).tint(fg)),
-                                None => egui::Button::new("≡"),
-                            }
-                            .min_size(Vec2::new(30.0, 28.0));
+                            let btn = egui::Button::new("").min_size(Vec2::new(30.0, 28.0));
                             let r = egui::containers::menu::MenuButton::from_button(btn).ui(ui, |ui| {
                                 if ui.add(egui::Button::new("Show Menubar").shortcut_text("Ctrl+M")).clicked() {
                                     self.s.show_menubar = true;
@@ -536,6 +532,10 @@ impl RivetApp {
                                 ui.separator();
                                 self.menus(ui, ctx);
                             });
+                            let c = r.0.rect.center();
+                            for dy in [-4.5f32, 0.0, 4.5] {
+                                ui.painter().line_segment([c + Vec2::new(-6.5, dy), c + Vec2::new(6.5, dy)], Stroke::new(1.8, fg));
+                            }
                             r.0.on_hover_text("Menu — Ctrl+M shows the menu bar again, Alt shows it briefly");
                             ui.add_space(6.0);
                         }
