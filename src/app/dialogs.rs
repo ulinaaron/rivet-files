@@ -355,7 +355,9 @@ impl RivetApp {
         let (allow_trash, permanent_default) = (d.allow_trash, d.permanent_default);
 
         let mut choice: Option<bool> = None; // Some(true) = permanently, Some(false) = trash
-        let r = egui::Modal::new(Id::unique("confirmdel")).show(ctx, |ui| {
+        // A roomier box than the default dialog frame.
+        let frame = egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(22)).corner_radius(super::R_LG);
+        let r = egui::Modal::new(Id::unique("confirmdel")).frame(frame).show(ctx, |ui| {
             ui.set_width(440.0);
             let v = ui.visuals().clone();
             ui.horizontal(|ui| {
