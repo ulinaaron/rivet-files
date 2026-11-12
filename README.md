@@ -141,3 +141,13 @@ Reproduce with `rivet --bench [FOLDER…]` (folder timings, no window) and
 | F9 | Show or hide the sidebar |
 | Ctrl+M or F10 | Show or hide the menu bar |
 | Alt (hold or tap) | Peek at a hidden menu bar |
+
+## License
+
+Rivet Files is available under either of
+
+- [Apache License, Version 2.0](LICENSE-APACHE)
+- [MIT license](LICENSE-MIT)
+
+at your option. Unless you say otherwise, any contribution you submit is offered under the same terms.
+All of Rivet's library dependencies use compatible permissive licences (MIT, Apache-2.0, BSD, Zlib and similar).
