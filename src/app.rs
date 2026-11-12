@@ -125,6 +125,8 @@ pub struct RivetApp {
     applied_visuals: Option<String>,
     palette: Option<Palette>,
     color_watch: palette::Watcher,
+    /// Background change detection; the window never polls on its own.
+    watch: crate::watch::Watch,
     sidebar_fill: Option<Color32>,
     /// Bumped whenever a movable window opens so it starts centred again.
     popup_serial: u64,
@@ -292,6 +294,7 @@ impl RivetApp {
             applied_visuals: None,
             palette: pal,
             color_watch: palette::Watcher::new(watched),
+            watch: crate::watch::Watch::spawn(ctx.clone()),
             sidebar_fill: None,
             popup_serial: 0,
             menu_peek: false,
@@ -1025,24 +1028,19 @@ impl RivetApp {
                 }
             }
         }
-        // folder changed on disk?
-        if self.tabs[self.active].needs_refresh() {
-            let t = &mut self.tabs[self.active];
-            t.reload(&self.mime, &self.s);
-            for e in &t.entries {
-                self.thumbs.forget(&e.path);
+        // Tell the watcher what to look at: every open folder and the colour files.
+        let mut watched: Vec<PathBuf> = self.tabs.iter().filter_map(|t| t.watched_dir()).collect();
+        watched.push(places::trash_dir().join("files"));
+        watched.extend(self.color_watch.files().iter().cloned());
+        self.watch.set_paths(watched);
+        // A status message disappears after 4 s; wake up for that only while one is shown.
+        if let Some((_, t)) = &self.status_msg {
+            let shown = t.elapsed();
+            if shown.as_secs() >= 4 {
+                self.status_msg = None;
+            } else {
+                ctx.request_repaint_after(std::time::Duration::from_secs(4) - shown + std::time::Duration::from_millis(20));
             }
-        }
-        if self.places_checked.elapsed().as_secs() >= 3 {
-            self.places_checked = Instant::now();
-            if self.screenshot.is_none() {
-                self.mounts = places::mounts();
-            }
-            self.trash_empty = places::trash_is_empty();
-        }
-        ctx.request_repaint_after(std::time::Duration::from_millis(1000));
-        if self.status_msg.as_ref().is_some_and(|(_, t)| t.elapsed().as_secs() > 4) {
-            self.status_msg = None;
         }
         // files dropped from other applications: copy into the current folder
         let dropped: Vec<PathBuf> = ctx.input(|i| i.raw.dropped_files.iter().map(|f| f.path().to_path_buf()).collect());
@@ -1125,7 +1123,18 @@ impl RivetApp {
                 self.flash("Menu bar hidden — press Ctrl+M (or F10) to bring it back");
             }
         }
-        if typing || modal {
+        // Mouse side buttons (back / forward) work like the toolbar arrows (even while a text box has focus).
+        let (mouse_back, mouse_fwd) = ctx.input(|i| (i.pointer.button_pressed(egui::PointerButton::Extra1), i.pointer.button_pressed(egui::PointerButton::Extra2)));
+        if mouse_back {
+            self.go_back();
+        }
+        if mouse_fwd {
+            self.go_forward();
+        }
+        if modal {
+            return;
+        }
+        if typing {
             return;
         }
 
@@ -1384,13 +1393,37 @@ impl eframe::App for RivetApp {
     /// Runs every frame and also while the window is hidden, so a new matugen/GTK
     /// scheme is picked up even when the file manager is in the background.
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        if self.color_watch.changed() {
-            self.reload_desktop_theme();
-            self.apply_visuals(ctx);
-            self.flash("Desktop theme changed — colours updated");
+        if let (Some(secs), Some(t)) = (crate::MEASURE_SECS.get(), crate::STARTED.get()) {
+            let left = secs - t.elapsed().as_secs_f64();
+            if left <= 0.0 {
+                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+            } else {
+                ctx.request_repaint_after(std::time::Duration::from_secs_f64(left));
+            }
+        }
+        // Only when the background watcher saw a change (no polling here).
+        if self.watch.take() {
+            if self.color_watch.changed() {
+                self.reload_desktop_theme();
+                self.apply_visuals(ctx);
+                self.flash("Desktop theme changed — colours updated");
+            }
+            for i in 0..self.tabs.len() {
+                if self.tabs[i].needs_refresh() {
+                    let t = &mut self.tabs[i];
+                    t.reload(&self.mime, &self.s);
+                    for e in &t.entries {
+                        self.thumbs.forget(&e.path);
+                    }
+                }
+            }
+            if self.screenshot.is_none() {
+                self.mounts = places::mounts();
+            }
+            self.trash_empty = places::trash_is_empty();
+            self.places_checked = Instant::now();
             ctx.request_repaint();
         }
-        ctx.request_repaint_after(std::time::Duration::from_millis(1000));
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
@@ -1436,7 +1469,7 @@ impl eframe::App for RivetApp {
         self.drag_overlay(&ctx);
         self.process_actions(&ctx);
 
-        if self.dirty_settings && self.screenshot.is_none() {
+        if self.dirty_settings && self.screenshot.is_none() && !crate::measuring() {
             if let Some(r) = ctx.input(|i| i.viewport().inner_rect) {
                 self.s.window_w = r.width();
                 self.s.window_h = r.height();
@@ -1454,7 +1487,7 @@ impl eframe::App for RivetApp {
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
-        if self.screenshot.is_none() {
+        if self.screenshot.is_none() && !crate::measuring() {
             self.s.save();
         }
         if let Some(d) = self.demo_dir.take() {

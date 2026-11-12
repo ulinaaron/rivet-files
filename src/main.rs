@@ -1,7 +1,7 @@
 //! Rivet Files — a classic Linux file manager (in the family of Nemo, Thunar and Caja),
 //! written in Rust with egui and no GTK or Qt.
 //!
-//! Usage: rivet [FOLDER] [--no-decorations | --decorations] [--screenshot FILE.png]
+//! Usage: rivet [FOLDER] [--no-decorations | --decorations] [--screenshot FILE.png] [--measure SECS]
 
 mod app;
 mod bench;
@@ -17,9 +17,17 @@ mod palette;
 mod places;
 mod settings;
 mod thumbs;
+mod watch;
 
 use eframe::egui;
 use std::path::PathBuf;
+
+/// `--measure SECS`: run normally (window unfocused, nothing saved) and quit after SECS.
+pub static MEASURE_SECS: std::sync::OnceLock<f64> = std::sync::OnceLock::new();
+
+pub fn measuring() -> bool {
+    MEASURE_SECS.get().is_some()
+}
 
 /// When the process started (for RIVET_FRAME_STATS).
 pub static STARTED: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
@@ -36,6 +44,10 @@ fn main() -> eframe::Result {
     while let Some(a) = args.next() {
         match a.as_str() {
             "--screenshot" => screenshot = args.next().map(PathBuf::from),
+            "--measure" => {
+                let secs = args.next().and_then(|v| v.parse().ok()).unwrap_or(15.0);
+                let _ = MEASURE_SECS.set(secs);
+            }
             "--no-decorations" | "--csd" => decorations = Some(false),
             "--decorations" => decorations = Some(true),
             "--view" => view = args.next(),
@@ -75,7 +87,7 @@ fn main() -> eframe::Result {
                 return Ok(());
             }
             "-h" | "--help" => {
-                println!("Usage: rivet [FOLDER] [--no-decorations | --decorations] [--view icons|list|compact] [--tree] [--hide-menubar] [--home] [--install-desktop-entry] [--screenshot FILE.png]");
+                println!("Usage: rivet [FOLDER] [--no-decorations | --decorations] [--view icons|list|compact] [--tree] [--hide-menubar] [--home] [--install-desktop-entry] [--screenshot FILE.png] [--measure SECS]");
                 return Ok(());
             }
             _ if a.starts_with("--screenshot=") => screenshot = Some(PathBuf::from(&a["--screenshot=".len()..])),
@@ -95,7 +107,7 @@ fn main() -> eframe::Result {
     }
 
     // Checks use the default look so they are comparable from run to run.
-    let mut settings = if screenshot.is_some() { settings::Settings::default() } else { settings::Settings::load() };
+    let mut settings = if screenshot.is_some() || measuring() { settings::Settings::default() } else { settings::Settings::load() };
     // Screenshots for checks show a neutral sample folder, never the person's own files,
     // unless a folder was named on purpose.
     let mut demo: Option<PathBuf> = None;
@@ -135,7 +147,7 @@ fn main() -> eframe::Result {
         Some("icons") => settings.view = settings::ViewMode::Icons,
         _ => {}
     }
-    if screenshot.is_some() {
+    if screenshot.is_some() || measuring() {
         // Checks always use a predictable size and the default look.
         settings.window_w = 1100.0;
         settings.window_h = 700.0;
@@ -151,7 +163,7 @@ fn main() -> eframe::Result {
         let rgba = img.pixels.iter().flat_map(|p| p.to_srgba_unmultiplied()).collect();
         viewport = viewport.with_icon(egui::IconData { rgba, width: 128, height: 128 });
     }
-    if screenshot.is_some() {
+    if screenshot.is_some() || measuring() {
         // A fixed size (min = max) so tiling window managers float the window at
         // exactly this size instead of stretching it to fill a tall tile.
         let size = [settings.window_w, settings.window_h];

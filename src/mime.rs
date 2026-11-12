@@ -8,10 +8,12 @@ pub struct MimeDb {
     ext: HashMap<String, (u32, String)>,  // "png" -> mime  (from *.png)
     literal: HashMap<String, String>,     // "makefile" -> mime
     patterns: Vec<(u32, String, String)>, // other globs (weight, pattern, mime)
+    /// For each pattern: the literal text before its first and after its last wildcard.
+    pattern_fix: Vec<(String, String)>,
     generic_icons: HashMap<String, String>,
     icons: HashMap<String, String>,
     parents: HashMap<String, Vec<String>>,
-    comments: std::cell::RefCell<HashMap<String, String>>,
+    comments: std::sync::Mutex<HashMap<String, String>>,
     roots: Vec<PathBuf>,
 }
 
@@ -37,6 +39,7 @@ impl MimeDb {
             ext: HashMap::new(),
             literal: HashMap::new(),
             patterns: Vec::new(),
+            pattern_fix: Vec::new(),
             generic_icons: HashMap::new(),
             icons: HashMap::new(),
             parents: HashMap::new(),
@@ -91,10 +94,50 @@ impl MimeDb {
                 }
             }
         }
+        db.pattern_fix = db
+            .patterns
+            .iter()
+            .map(|(_, pat, _)| {
+                let is_wild = |c: char| matches!(c, '*' | '?' | '[');
+                let pre: String = pat.chars().take_while(|c| !is_wild(*c)).collect();
+                let suf: String = {
+                    let mut v: Vec<char> = pat.chars().rev().take_while(|c| !is_wild(*c) && *c != ']').collect();
+                    v.reverse();
+                    v.into_iter().collect()
+                };
+                (pre, suf)
+            })
+            .collect();
         db
     }
 
     /// Guess a type from the file name; falls back to a quick look at the content.
+    /// Type from the file name alone (no disk access); None if the name says nothing.
+    pub fn guess_by_name(&self, path: &Path) -> Option<String> {
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_lowercase();
+        if let Some(m) = self.literal.get(&name) {
+            return Some(m.clone());
+        }
+        let mut idx = 0;
+        while let Some(pos) = name[idx..].find('.') {
+            if let Some((_, m)) = self.ext.get(&name[idx + pos + 1..]) {
+                return Some(m.clone());
+            }
+            idx += pos + 1;
+        }
+        let mut best: Option<&(u32, String, String)> = None;
+        for (p, (pre, suf)) in self.patterns.iter().zip(&self.pattern_fix) {
+            // Cheap check on the fixed start/end before the full wildcard match.
+            if !name.starts_with(pre.as_str()) || !name.ends_with(suf.as_str()) || name.len() < pre.len() + suf.len() {
+                continue;
+            }
+            if glob_match(&p.1, &name) && best.is_none_or(|b| p.0 > b.0) {
+                best = Some(p);
+            }
+        }
+        best.map(|b| b.2.clone())
+    }
+
     pub fn guess(&self, path: &Path, is_dir: bool, executable: bool) -> String {
         if is_dir {
             return "inode/directory".into();
@@ -113,7 +156,11 @@ impl MimeDb {
             idx += pos + 1;
         }
         let mut best: Option<&(u32, String, String)> = None;
-        for p in &self.patterns {
+        for (p, (pre, suf)) in self.patterns.iter().zip(&self.pattern_fix) {
+            // Cheap check on the fixed start/end before the full wildcard match.
+            if !name.starts_with(pre.as_str()) || !name.ends_with(suf.as_str()) || name.len() < pre.len() + suf.len() {
+                continue;
+            }
             if glob_match(&p.1, &name) && best.is_none_or(|b| p.0 > b.0) {
                 best = Some(p);
             }
@@ -188,7 +235,7 @@ impl MimeDb {
 
     /// Human-readable description, e.g. "PNG image".
     pub fn describe(&self, mime: &str) -> String {
-        if let Some(c) = self.comments.borrow().get(mime) {
+        if let Some(c) = self.comments.lock().unwrap().get(mime) {
             return c.clone();
         }
         let mut desc = None;
@@ -207,7 +254,7 @@ impl MimeDb {
             "inode/directory" => "Folder".into(),
             _ => mime.to_string(),
         });
-        self.comments.borrow_mut().insert(mime.to_string(), d.clone());
+        self.comments.lock().unwrap().insert(mime.to_string(), d.clone());
         d
     }
 

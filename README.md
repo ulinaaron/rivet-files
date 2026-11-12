@@ -24,7 +24,7 @@ A classic Linux file manager in the same family as Nemo, Thunar and Caja — wri
 - 💜 **Built-in icon set** recoloured from your palette (primary, secondary or tertiary)
 - 🧰 **Make it yours** — custom toolbar, fonts, text size, hideable menu bar
 - 🪟 **Optional window decorations** — system title bar or a built-in one
-- ⚡ **Fast** — ~0.2 s to open, ~1 ms per frame, thousands of files without a stutter
+- ⚡ **Fast** — 100,000 files open in under 0.4 s, and an idle Rivet uses no CPU
 - 🦀 **Light** — one 12 MB program, no toolkit to install
 
 ## 🎨 Follows your colours
@@ -78,6 +78,52 @@ Grab the latest from the [Releases page](https://github.com/ulinaaron/rivet-file
 | `Ctrl+M` · `Alt` | Toggle · peek at the menu bar |
 | `F1` | All shortcuts |
 
+## ⚡ Performance
+
+**100,000 files** — one folder of empty files on btrfs, a fresh launch each time, median of five runs
+(`python3 docs/bench-100k.py`). *First window* is when the compositor lists the window,
+*settled* is when the process has used no CPU for 500 ms, *PSS* is memory, *CPU* is total
+processor time up to that point — the same method as [Flea's benchmark](https://github.com/thisisgm/flea#performance).
+
+| | First window | Settled | PSS | CPU |
+| --- | ---: | ---: | ---: | ---: |
+| **Rivet** 0.1.1, list | 385 ms | 0.42 s | 76.8 MiB | 1.05 s |
+| **Rivet** 0.1.1, icons | 385 ms | 0.43 s | 76.9 MiB | 1.05 s |
+
+For context, Flea publishes these figures from **their own machine** with the same method
+(we have not run these apps here, so treat it as a rough comparison):
+
+| | First window | Settled | PSS | CPU |
+| --- | ---: | ---: | ---: | ---: |
+| Flea 0.4.0 | 319 ms | 0.75 s | 63.0 MiB | 0.53 s |
+| Dolphin 26.08 | 791 ms | 5.25 s | 235.1 MiB | 8.18 s |
+| Nautilus 51.1 | 931 ms | 20.33 s | 337.2 MiB | 21.67 s |
+| Nemo 6.6 | 928 ms | 22.61 s | 479.3 MiB | 26.03 s |
+| PCManFM 1.4 | 479 ms | 35.29 s | 124.4 MiB | 24.25 s |
+| Thunar 4.20 | 601 ms | 19.71 s | 394.9 MiB | 19.82 s |
+
+Rivet reads big folders on all CPU cores, so its CPU total is higher than its wall-clock time.
+When idle it uses no CPU at all: a small background watcher wakes the window only when a
+folder, your colours or your drives actually change.
+
+<details>
+<summary><b>More numbers</b></summary>
+
+Release build on Fedora, Wayland, NVMe SSD:
+
+| | |
+| --- | --- |
+| Drawing a frame (100,000 items) | ~2 ms |
+| Reading 2,092 / 100,000 items | ~19 ms / ~156 ms |
+| Sorting 100,000 items by name / type | ~17 ms / ~27 ms |
+| Indexing icon themes (once) | ~26 ms |
+| Binary size (stripped) | ~12 MB |
+
+Reproduce with `rivet --bench [FOLDER…]`, `RIVET_FRAME_STATS=1 rivet --screenshot out.png`
+and `python3 docs/bench-100k.py`.
+
+</details>
+
 ## 🛠️ For developers
 
 <details>
@@ -109,25 +155,6 @@ In order of priority:
 3. the defaults of the installed GTK theme
 
 Preferences → *Add Rivet template to matugen* registers a dedicated template if you prefer one.
-
-</details>
-
-<details>
-<summary><b>Performance numbers</b></summary>
-
-Release build on Fedora, Wayland, NVMe SSD:
-
-| | |
-| --- | --- |
-| Start to first drawn frame | ~0.2 s |
-| Peak memory (2,000-item folder) | ~80 MB, mostly the GPU driver |
-| Drawing a frame | ~0.8–1 ms |
-| Reading a 2,092 / 8,365-item folder | ~19 ms / ~52 ms |
-| Sorting 8,365 items by name / type | ~5 ms / ~9 ms |
-| Indexing icon themes (once) | ~26 ms |
-| Binary size (stripped) | ~12 MB |
-
-Reproduce with `rivet --bench [FOLDER…]` and `RIVET_FRAME_STATS=1 rivet --screenshot out.png`.
 
 </details>
 

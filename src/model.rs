@@ -74,7 +74,14 @@ impl Entry {
         let is_dir = meta.is_dir();
         let mode = meta.permissions().mode();
         let executable = !is_dir && mode & 0o111 != 0;
-        let mime = if broken_link { "inode/symlink".to_string() } else { db.guess(&path, is_dir, executable) };
+        let mime = if broken_link {
+            "inode/symlink".to_string()
+        } else if !is_dir && meta.len() == 0 {
+            // Empty file: nothing to sniff, so don't open it — the name decides.
+            db.guess_by_name(&path).unwrap_or_else(|| "application/x-zerosize".into())
+        } else {
+            db.guess(&path, is_dir, executable)
+        };
         let child_count = if is_dir {
             std::fs::read_dir(&path).ok().map(|r| r.count())
         } else {
@@ -152,11 +159,8 @@ impl Tab {
                 self.dir_mtime = std::fs::metadata(p).and_then(|m| m.modified()).ok();
                 match std::fs::read_dir(p) {
                     Ok(rd) => {
-                        for e in rd.flatten() {
-                            if let Some(en) = Entry::from_path(e.path(), db) {
-                                entries.push(en);
-                            }
-                        }
+                        let paths: Vec<PathBuf> = rd.flatten().map(|e| e.path()).collect();
+                        entries = inspect_all(paths, db);
                     }
                     Err(e) => {
                         self.error = Some(match e.kind() {
@@ -261,10 +265,16 @@ impl Tab {
     }
 
     /// Re-read the folder if it changed on disk (cheap polling instead of a watcher).
-    pub fn needs_refresh(&mut self) -> bool {
-        if self.last_check.elapsed().as_millis() < 1500 {
-            return false;
+    /// The folder this tab shows, if it lives on disk (for the watcher).
+    pub fn watched_dir(&self) -> Option<PathBuf> {
+        match &self.loc {
+            Location::Dir(p) => Some(p.clone()),
+            Location::Trash => Some(places::trash_dir().join("files")),
+            _ => None,
         }
+    }
+
+    pub fn needs_refresh(&mut self) -> bool {
         self.last_check = Instant::now();
         let p = match &self.loc {
             Location::Dir(p) => p.clone(),
@@ -274,6 +284,22 @@ impl Tab {
         let m = std::fs::metadata(&p).and_then(|m| m.modified()).ok();
         m != self.dir_mtime
     }
+}
+
+/// Inspect many paths, spread over the CPU cores for big folders.
+pub fn inspect_all(paths: Vec<PathBuf>, db: &MimeDb) -> Vec<Entry> {
+    let threads = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1).min(16);
+    if paths.len() < 2_000 || threads < 2 {
+        return paths.into_iter().filter_map(|p| Entry::from_path(p, db)).collect();
+    }
+    let chunk = paths.len().div_ceil(threads);
+    std::thread::scope(|s| {
+        let handles: Vec<_> = paths
+            .chunks(chunk)
+            .map(|part| s.spawn(move || part.iter().filter_map(|p| Entry::from_path(p.clone(), db)).collect::<Vec<_>>()))
+            .collect();
+        handles.into_iter().flat_map(|h| h.join().unwrap_or_default()).collect()
+    })
 }
 
 /// Natural sort: "file2" before "file10", case-insensitive.

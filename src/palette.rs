@@ -459,10 +459,12 @@ impl Watcher {
         Watcher { files, sig, last: Instant::now() }
     }
 
+    /// The files being watched (the background watcher wakes the window when they change).
+    pub fn files(&self) -> &[PathBuf] {
+        &self.files
+    }
+
     pub fn changed(&mut self) -> bool {
-        if self.last.elapsed().as_millis() < 900 {
-            return false;
-        }
         self.last = Instant::now();
         let sig: Vec<_> = self.files.iter().map(|f| stamp(f)).collect();
         if sig != self.sig {
