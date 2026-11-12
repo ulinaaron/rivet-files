@@ -325,11 +325,13 @@ impl RivetApp {
         if let Some(p) = std::env::var_os("RIVET_EXTRA_TAB") {
             app.new_tab(Location::Dir(PathBuf::from(p)));
         }
-        if let Some(n) = std::env::var("RIVET_SELECT").ok().and_then(|v| v.parse::<usize>().ok()) {
+        if let Ok(list) = std::env::var("RIVET_SELECT") {
             let t = &mut app.tabs[app.active];
-            if let Some(&i) = t.visible.get(n) {
-                let p = t.entries[i].path.clone();
-                t.selected.insert(p);
+            for n in list.split(',').filter_map(|v| v.trim().parse::<usize>().ok()) {
+                if let Some(&i) = t.visible.get(n) {
+                    let p = t.entries[i].path.clone();
+                    t.selected.insert(p);
+                }
             }
         }
         match std::env::var("RIVET_DIALOG").as_deref() {

@@ -175,7 +175,10 @@ impl RivetApp {
                 })
                 .collect();
             self.background(ui, ctx, rect, &bg_resp, &item_rects);
-            let mut overlay: Option<(Rect, Arc<egui::Galley>, Pos2, Color32)> = None;
+            // One tile style for hover and selection: a rounded box around icon + name.
+            // Only a single selected item grows to show its full name (drawn on top).
+            let single = self.tab().selected.len() == 1;
+            let mut expanded: Option<(Rect, Option<egui::TextureHandle>, Rect, Color32, Arc<egui::Galley>, Pos2, Color32, bool)> = None;
             for (vi, item) in item_rects {
                 let e = {
                     let t = self.tab();
@@ -192,43 +195,61 @@ impl RivetApp {
                 let resp = ui.interact(item, Id::unique(("item", &e.path)), Sense::click_and_drag());
                 let v = ui.visuals().clone();
                 let icon_rect = Rect::from_center_size(Pos2::new(item.center().x, item.top() + 4.0 + z / 2.0), Vec2::splat(z));
-                let fg = if selected { v.selection.stroke.color } else { v.text_color() };
                 let text_pos = Pos2::new(item.center().x, icon_rect.bottom() + 6.0);
-                if resp.hovered() && !selected {
-                    ui.painter().rect_filled(item.shrink(1.0), R_SM, v.widgets.hovered.weak_bg_fill.gamma_multiply(0.7));
-                }
-                if selected {
-                    ui.painter().rect_filled(icon_rect.expand(4.0), R_SM, v.selection.bg_fill.gamma_multiply(0.22));
-                }
-                self.drop_highlight(ui, item, &resp, e.is_dir);
+                let tile = item.shrink(1.0);
+                let sel_fill = crate::palette::mix(v.extreme_bg_color, v.selection.bg_fill, 0.30);
+                let sel_stroke = Stroke::new(1.0, v.selection.bg_fill.gamma_multiply(0.65));
+                let fg = v.strong_text_color();
                 let tint = self.tint_for(&e);
-                if let Some(t) = self.entry_texture(ctx, &e, z) {
-                    paint_tex(ui.painter(), &t, icon_rect, tint);
-                }
-                if e.is_link {
-                    let er = Rect::from_min_size(icon_rect.right_bottom() - Vec2::splat(z * 0.35), Vec2::splat(z * 0.35));
-                    if let Some(t) = self.icon(ctx, &["emblem-symbolic-link", "emblem-shared"], er.width()) {
-                        paint_tex(ui.painter(), &t, er, Color32::WHITE);
-                    }
-                }
-                if selected {
-                    // Selected names show in full (up to 5 lines) above neighbours.
+                let tex = self.entry_texture(ctx, &e, z);
+                if selected && single {
+                    // Drawn after everything else so the full name can overlap the next row.
                     let galley = self.name_galley(ui, &e.name, cell_w - 8.0, 5, fg);
-                    let tr = Rect::from_min_size(Pos2::new(item.center().x - galley.size().x / 2.0 - 4.0, text_pos.y - 1.0), galley.size() + Vec2::new(8.0, 3.0));
-                    overlay = Some((tr, galley, text_pos, fg));
+                    let bottom = (text_pos.y + galley.size().y + 6.0).max(tile.bottom());
+                    expanded = Some((Rect::from_min_max(tile.min, Pos2::new(tile.right(), bottom)), tex, icon_rect, tint, galley, text_pos, fg, e.is_link));
                 } else {
-                    let galley = self.name_galley(ui, &e.name, cell_w - 8.0, text_rows, fg);
+                    if selected {
+                        ui.painter().rect_filled(tile, R_SM, sel_fill);
+                        ui.painter().rect_stroke(tile, R_SM, sel_stroke, StrokeKind::Inside);
+                    } else if resp.hovered() {
+                        ui.painter().rect_filled(tile, R_SM, v.widgets.hovered.weak_bg_fill.gamma_multiply(0.8));
+                    }
+                    if let Some(t) = &tex {
+                        paint_tex(ui.painter(), t, icon_rect, tint);
+                    }
+                    if e.is_link {
+                        let er = Rect::from_min_size(icon_rect.right_bottom() - Vec2::splat(z * 0.35), Vec2::splat(z * 0.35));
+                        if let Some(t) = self.icon(ctx, &["emblem-symbolic-link", "emblem-shared"], er.width()) {
+                            paint_tex(ui.painter(), &t, er, Color32::WHITE);
+                        }
+                    }
+                    let galley = self.name_galley(ui, &e.name, cell_w - 8.0, text_rows, if selected { fg } else { v.text_color() });
                     ui.painter().galley(text_pos, galley, fg);
                 }
+                self.drop_highlight(ui, item, &resp, e.is_dir);
                 self.click_item(vi, ctx, &resp);
                 self.dnd_item(ctx, vi, &resp);
                 let resp = resp.on_hover_text_at_pointer(self.tooltip(&e));
                 resp.context_menu(|ui| self.item_menu(ui, &e));
             }
-            if let Some((tr, g, pos, fg)) = overlay {
+            if let Some((tile, tex, icon_rect, tint, galley, pos, fg, is_link)) = expanded {
+                let v = ui.visuals().clone();
                 let p = ui.painter();
-                p.rect_filled(tr, R_SM, ui.visuals().selection.bg_fill);
-                p.galley(pos, g, fg);
+                // Opaque base first so neighbours underneath don't show through.
+                p.rect_filled(tile, R_SM, v.extreme_bg_color);
+                p.rect_filled(tile, R_SM, crate::palette::mix(v.extreme_bg_color, v.selection.bg_fill, 0.30));
+                p.rect_stroke(tile, R_SM, Stroke::new(1.0, v.selection.bg_fill.gamma_multiply(0.65)), StrokeKind::Inside);
+                if let Some(t) = &tex {
+                    paint_tex(p, t, icon_rect, tint);
+                }
+                if is_link {
+                    let z = icon_rect.width();
+                    let er = Rect::from_min_size(icon_rect.right_bottom() - Vec2::splat(z * 0.35), Vec2::splat(z * 0.35));
+                    if let Some(t) = self.icon(ctx, &["emblem-symbolic-link", "emblem-shared"], er.width()) {
+                        paint_tex(ui.painter(), &t, er, Color32::WHITE);
+                    }
+                }
+                ui.painter().galley(pos, galley, fg);
             }
         });
         cols
