@@ -77,7 +77,8 @@ pub(super) fn show<R>(ctx: &egui::Context, st: &mut WinState, chrome: &Chrome, a
             paint_tex(ui.painter(), t, Rect::from_center_size(Pos2::new(hrect.left() + 20.0, hrect.center().y), Vec2::splat(16.0)), Color32::WHITE);
         }
         ui.painter().text(hrect.center(), Align2::CENTER_CENTER, &chrome.title, crate::fonts::ui_font(13.5), v.strong_text_color());
-        let buttons: [(&Option<egui::TextureHandle>, u8); 3] = [(&chrome.shade, 0), (&chrome.max, 1), (&chrome.close, 2)];
+        // Pop-up windows only get a close button (no roll-up or maximise).
+        let buttons: [(&Option<egui::TextureHandle>, u8); 1] = [(&chrome.close, 2)];
         let mut x = hrect.right() - 8.0;
         for (tex, kind) in buttons.iter().rev() {
             let r = Rect::from_center_size(Pos2::new(x - 12.0, hrect.center().y), Vec2::splat(24.0));
@@ -123,9 +124,6 @@ pub(super) fn show<R>(ctx: &egui::Context, st: &mut WinState, chrome: &Chrome, a
         }
         if hresp.dragged() && !maximized {
             drag = hresp.drag_delta();
-        }
-        if hresp.double_clicked() {
-            toggle_max = true;
         }
         if shaded {
             return None;
