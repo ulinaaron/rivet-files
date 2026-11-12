@@ -361,7 +361,11 @@ impl RivetApp {
             }
         });
         ui.menu_button("Help", |ui| {
-            if ui.button("Keyboard Shortcuts & About").clicked() {
+            if ui.add(egui::Button::new("Keyboard Shortcuts").shortcut_text("F1")).clicked() {
+                self.dialog = Dialog::Shortcuts;
+            }
+            ui.separator();
+            if ui.button("About Rivet").clicked() {
                 self.dialog = Dialog::About;
             }
         });

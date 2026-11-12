@@ -65,6 +65,7 @@ enum Dialog {
     RenameBookmark { idx: usize, text: String },
     Message(String, String),
     About,
+    Shortcuts,
 }
 
 struct PropsState {
@@ -128,6 +129,8 @@ pub struct RivetApp {
     /// Bumped whenever a movable window opens so it starts centred again.
     popup_serial: u64,
     menu_peek: bool,
+    /// Rivet's own icon, for the About window.
+    app_icon: Option<egui::TextureHandle>,
     /// The sample folder used for screenshots (removed on exit).
     demo_dir: Option<PathBuf>,
     /// The font choice currently loaded (to avoid reloading every frame) and its resolved name.
@@ -292,6 +295,7 @@ impl RivetApp {
             sidebar_fill: None,
             popup_serial: 0,
             menu_peek: false,
+            app_icon: None,
             applied_font: None,
             font_name: String::new(),
             font_families: Vec::new(),
@@ -324,6 +328,11 @@ impl RivetApp {
                 let p = t.entries[i].path.clone();
                 t.selected.insert(p);
             }
+        }
+        match std::env::var("RIVET_DIALOG").as_deref() {
+            Ok("about") => app.dialog = Dialog::About,
+            Ok("shortcuts") => app.dialog = Dialog::Shortcuts,
+            _ => {}
         }
         if std::env::var_os("RIVET_SEARCH").is_some() {
             app.search_open = true;
@@ -1101,6 +1110,9 @@ impl RivetApp {
         if m.ctrl && pressed(Key::Tab) && self.tabs.len() > 1 {
             let n = self.tabs.len();
             self.active = if m.shift { (self.active + n - 1) % n } else { (self.active + 1) % n };
+        }
+        if pressed(Key::F1) {
+            self.dialog = Dialog::Shortcuts;
         }
         if pressed(Key::F9) {
             self.s.show_sidebar = !self.s.show_sidebar;

@@ -1,28 +1,43 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
   <defs>
     <linearGradient id="front" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#8ecdff"/>
-      <stop offset="1" stop-color="#4f9fe0"/>
+      <stop offset="0" stop-color="#a77bff"/>
+      <stop offset="1" stop-color="#6d3fd6"/>
     </linearGradient>
-    <linearGradient id="rivet" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="back" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5a2fb8"/>
+      <stop offset="1" stop-color="#4a2399"/>
+    </linearGradient>
+    <!-- domed rivet head: bright top-left, soft lilac shade bottom-right -->
+    <radialGradient id="dome" cx="0.38" cy="0.32" r="0.75">
       <stop offset="0" stop-color="#ffffff"/>
-      <stop offset="1" stop-color="#cfe6ff"/>
+      <stop offset="0.6" stop-color="#f4effd"/>
+      <stop offset="1" stop-color="#d9cdf2"/>
+    </radialGradient>
+    <linearGradient id="shank" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#d6c9f0"/>
     </linearGradient>
   </defs>
-  <!-- back of the folder -->
-  <path d="M14 30a10 10 0 0 1 10-10h27.5a8 8 0 0 1 5.7 2.4L64 29.5h40a10 10 0 0 1 10 10V54H14z" fill="#2f6fb0"/>
-  <!-- front -->
-  <rect x="14" y="40" width="100" height="70" rx="11" fill="url(#front)"/>
-  <rect x="14" y="40" width="100" height="6" rx="3" fill="#ffffff" fill-opacity="0.28"/>
-  <!-- a row of rivets -->
-  <g fill="url(#rivet)" stroke="#2f6fb0" stroke-width="2.5">
-    <circle cx="40" cy="78" r="8"/>
-    <circle cx="64" cy="78" r="8"/>
-    <circle cx="88" cy="78" r="8"/>
-  </g>
-  <g fill="#ffffff" fill-opacity="0.85">
-    <circle cx="37.5" cy="75.5" r="2.4"/>
-    <circle cx="61.5" cy="75.5" r="2.4"/>
-    <circle cx="85.5" cy="75.5" r="2.4"/>
+
+  <!-- folder back and tab -->
+  <path d="M12 30a10 10 0 0 1 10-10h28.5a8 8 0 0 1 5.7 2.4L63 29.5h43a10 10 0 0 1 10 10V56H12z" fill="url(#back)"/>
+  <!-- folder front -->
+  <rect x="12" y="40" width="104" height="72" rx="12" fill="url(#front)"/>
+  <rect x="12" y="40" width="104" height="6" rx="3" fill="#ffffff" fill-opacity="0.22"/>
+
+  <!-- the rivet, tilted: shank going down-left into the folder, domed head up-right -->
+  <g transform="rotate(-40 64 76)">
+    <!-- soft shadow on the folder -->
+    <ellipse cx="68" cy="103" rx="16" ry="4" fill="#2a1060" fill-opacity="0.3"/>
+    <!-- long, slim shank with a chamfered tip -->
+    <path d="M59 72h10v30.5l-1.5 2.5h-7l-1.5-2.5z" fill="url(#shank)"/>
+    <path d="M66 74v28" stroke="#c4b3ea" stroke-width="2" stroke-linecap="round"/>
+    <!-- underside of the head (a flat washer face) -->
+    <ellipse cx="64" cy="72" rx="20" ry="4.2" fill="#c3b1ea"/>
+    <!-- low, wide dome -->
+    <path d="M44 72a20 9.5 0 0 1 40 0z" fill="url(#dome)"/>
+    <!-- highlight -->
+    <ellipse cx="57" cy="67" rx="6" ry="2.2" fill="#ffffff" fill-opacity="0.95" transform="rotate(-10 57 67)"/>
   </g>
 </svg>

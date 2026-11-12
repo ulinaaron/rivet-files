@@ -1,3 +1,5 @@
+<img src="data/rivet-files.svg" width="96" alt="Rivet Files icon" align="right">
+
 # Rivet Files
 
 A Nemo-style file manager for Linux, written in Rust with [egui](https://github.com/emilk/egui).

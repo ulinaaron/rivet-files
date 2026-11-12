@@ -213,40 +213,96 @@ impl RivetApp {
             Dialog::OpenWith { .. } => {
                 close = self.open_with_dialog(ctx);
             }
-            Dialog::About => {
-                let theme = self.icons.name.clone();
-                let r = egui::Modal::new(Id::unique("about")).show(ctx, |ui| {
-                    ui.set_width(440.0);
-                    ui.heading("Rivet Files");
-                    ui.label(egui::RichText::new(format!("Version {}", env!("CARGO_PKG_VERSION"))).small().weak());
-                    ui.label("A file manager written in Rust. No GTK or Qt — it reads your desktop's icon theme, file types, bookmarks and default applications directly.");
-                    ui.add_space(8.0);
-                    ui.label(egui::RichText::new("Keyboard shortcuts").strong());
-                    egui::Grid::new("keys").striped(true).show(ui, |ui| {
-                        for (k, d) in [
-                            ("Ctrl+L", "Type a location"),
-                            ("Ctrl+F or just type", "Filter; Enter searches subfolders"),
-                            ("Ctrl+T / Ctrl+W", "New tab / close tab"),
-                            ("Ctrl+H", "Show hidden files"),
-                            ("Ctrl+1 / 2 / 3", "Icon / list / compact view"),
-                            ("Ctrl+C / X / V", "Copy / cut / paste"),
-                            ("F2", "Rename"),
-                            ("Delete / Shift+Delete", "Trash / delete permanently"),
-                            ("Alt+Left / Right / Up", "Back / forward / parent"),
-                            ("Ctrl+Shift+N", "New folder"),
-                            ("Ctrl+D", "Bookmark this folder"),
-                            ("F9", "Show or hide the sidebar"),
-                            ("Ctrl+M or F10", "Show or hide the menu bar"),
-                        ] {
-                            ui.label(k);
-                            ui.label(d);
-                            ui.end_row();
+            Dialog::Shortcuts => {
+                const GROUPS: [(&str, &[(&str, &str)]); 4] = [
+                    ("Navigation", &[
+                        ("Alt+Left / Alt+Right", "Back / forward"),
+                        ("Alt+Up or Backspace", "Parent folder"),
+                        ("Alt+Home", "Home folder"),
+                        ("Ctrl+L", "Type a location"),
+                        ("Ctrl+F or just type", "Filter; Enter searches subfolders"),
+                        ("Ctrl+T / Ctrl+W", "New tab / close tab"),
+                        ("Ctrl+Tab", "Next tab"),
+                    ]),
+                    ("Files", &[
+                        ("Enter", "Open"),
+                        ("Ctrl+C / X / V", "Copy / cut / paste"),
+                        ("F2", "Rename"),
+                        ("Delete", "Move to Trash"),
+                        ("Shift+Delete", "Delete permanently"),
+                        ("Ctrl+Shift+N", "New folder"),
+                        ("Ctrl+A", "Select all"),
+                        ("Ctrl+I or Alt+Enter", "Properties"),
+                        ("Ctrl+D", "Bookmark this folder"),
+                    ]),
+                    ("View", &[
+                        ("Ctrl+1 / 2 / 3", "Icon / list / compact view"),
+                        ("Ctrl+ + / Ctrl+ −", "Zoom in / out"),
+                        ("Ctrl+H", "Show hidden files"),
+                        ("F5 or Ctrl+R", "Reload"),
+                    ]),
+                    ("Window", &[
+                        ("F9", "Show or hide the sidebar"),
+                        ("Ctrl+M or F10", "Show or hide the menu bar"),
+                        ("Alt (hold or tap)", "Peek at a hidden menu bar"),
+                        ("F1", "This list"),
+                        ("Ctrl+Q", "Close the window"),
+                    ]),
+                ];
+                let r = egui::Modal::new(Id::unique("shortcuts")).show(ctx, |ui| {
+                    ui.set_width(460.0);
+                    ui.heading("Keyboard Shortcuts");
+                    ui.add_space(4.0);
+                    let weak = ui.visuals().weak_text_color();
+                    egui::ScrollArea::vertical().max_height((ctx.content_rect().height() - 180.0).max(240.0)).show(ui, |ui| {
+                        for (gi, (title, rows)) in GROUPS.iter().enumerate() {
+                            ui.add_space(6.0);
+                            ui.label(egui::RichText::new(*title).strong().color(weak));
+                            egui::Grid::new(("keys", gi)).num_columns(2).spacing([24.0, 6.0]).min_col_width(170.0).show(ui, |ui| {
+                                for (k, d) in rows.iter() {
+                                    ui.label(egui::RichText::new(*k).monospace());
+                                    ui.label(*d);
+                                    ui.end_row();
+                                }
+                            });
                         }
                     });
-                    ui.add_space(6.0);
-                    ui.label(format!("Icon theme in use: {theme}"));
-                    ui.add_space(6.0);
+                    ui.add_space(10.0);
                     ui.button("Close").clicked()
+                });
+                if r.inner || r.should_close() {
+                    close = true;
+                }
+            }
+            Dialog::About => {
+                let theme = self.icons.name.clone();
+                if self.app_icon.is_none() {
+                    let ppp = ctx.pixels_per_point();
+                    let px = (96.0 * ppp) as u32;
+                    self.app_icon = crate::icons::render_svg(crate::desktop::ICON_SVG.as_bytes(), px)
+                        .map(|img| ctx.load_texture("rivet-app-icon", img, egui::TextureOptions::LINEAR));
+                }
+                let icon = self.app_icon.clone();
+                let r = egui::Modal::new(Id::unique("about")).show(ctx, |ui| {
+                    ui.set_width(380.0);
+                    ui.vertical_centered(|ui| {
+                        if let Some(t) = &icon {
+                            ui.add(egui::Image::from_texture(t).fit_to_exact_size(Vec2::splat(96.0)));
+                        }
+                        ui.add_space(4.0);
+                        ui.heading("Rivet Files");
+                        ui.label(egui::RichText::new(format!("Version {}", env!("CARGO_PKG_VERSION"))).weak());
+                        ui.add_space(8.0);
+                        ui.label("A file manager written in Rust. No GTK or Qt — it reads your desktop's icon theme, file types, bookmarks and default applications directly.");
+                        ui.add_space(8.0);
+                        ui.hyperlink_to("github.com/ulinaaron/rivet-files", "https://github.com/ulinaaron/rivet-files");
+                        ui.add_space(4.0);
+                        ui.label(egui::RichText::new("Licensed under MIT or Apache-2.0").small().weak());
+                        ui.label(egui::RichText::new(format!("Icon theme in use: {theme}")).small().weak());
+                        ui.add_space(10.0);
+                        ui.button("Close").clicked()
+                    })
+                    .inner
                 });
                 if r.inner || r.should_close() {
                     close = true;
