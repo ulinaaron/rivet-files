@@ -391,7 +391,8 @@ impl RivetApp {
             Some(t) => egui::Button::image(egui::Image::from_texture(&t).fit_to_exact_size(Vec2::splat(16.0)).tint(fg)),
             None => egui::Button::new(fallback),
         };
-        let btn = btn.selected(selected).min_size(Vec2::new(30.0, 28.0));
+        let size = if self.toolbar_drawing { Vec2::new(34.0, 32.0) } else { Vec2::new(30.0, 28.0) };
+        let btn = btn.selected(selected).min_size(size);
         ui.add_enabled(enabled, btn).on_hover_text(tip).clicked()
     }
 
@@ -399,7 +400,7 @@ impl RivetApp {
     fn toolbar_item(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, item: ToolItem) {
         use ToolItem::*;
         if item == Separator {
-            ui.add_space(3.0);
+            ui.add_space(7.0);
             return;
         }
         let (icons, fb) = item.icons();
@@ -481,12 +482,13 @@ impl RivetApp {
     }
 
     pub(super) fn toolbar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+        self.toolbar_drawing = true;
         let fill = ctx.global_style().visuals.panel_fill;
         let layout = self.s.toolbar.clone();
         let split = layout.iter().position(|t| *t == ToolItem::PathBar).unwrap_or(layout.len());
         let (left, right) = (layout[..split].to_vec(), layout[(split + 1).min(layout.len())..].to_vec());
         egui::Panel::top("toolbar")
-            .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin::symmetric(6, 5)))
+            .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin::symmetric(12, 9)))
             .show(ui, |ui| {
                 // Right-click on empty toolbar space to customise it.
                 let bg = ui.interact(ui.max_rect(), Id::unique("toolbar-bg"), Sense::click());
@@ -500,15 +502,15 @@ impl RivetApp {
                     }
                 });
                 ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 3.0;
+                    ui.spacing_mut().item_spacing.x = 5.0;
                     for item in &left {
                         self.toolbar_item(ui, ctx, *item);
                     }
-                    ui.add_space(4.0);
-                    let menu_w = if self.s.show_menubar { 0.0 } else { 39.0 };
-                    let right_w: f32 = right.iter().map(|t| t.width()).sum::<f32>() + menu_w + 8.0;
+                    ui.add_space(8.0);
+                    let menu_w = if self.s.show_menubar { 0.0 } else { 45.0 };
+                    let right_w: f32 = right.iter().map(|t| t.width()).sum::<f32>() + menu_w + 14.0;
                     let path_w = (ui.available_width() - right_w).max(80.0);
-                    ui.allocate_ui_with_layout(Vec2::new(path_w, 28.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                    ui.allocate_ui_with_layout(Vec2::new(path_w, 32.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
                         ui.set_min_width(path_w);
                         if self.search_open {
                             self.search_bar(ui, ctx);
@@ -523,7 +525,7 @@ impl RivetApp {
                             // With the menu bar hidden, its menus live behind this button.
                             // A drawn hamburger (three bars), so it looks the same in every icon theme.
                             let fg = ui.visuals().text_color();
-                            let btn = egui::Button::new("").min_size(Vec2::new(30.0, 28.0));
+                            let btn = egui::Button::new("").min_size(Vec2::new(34.0, 32.0));
                             let r = egui::containers::menu::MenuButton::from_button(btn).ui(ui, |ui| {
                                 if ui.add(egui::Button::new("Show Menubar").shortcut_text("Ctrl+M")).clicked() {
                                     self.s.show_menubar = true;
@@ -546,15 +548,35 @@ impl RivetApp {
                     });
                 });
             });
+        self.toolbar_drawing = false;
+    }
+
+    pub(super) fn start_path_editing(&mut self) {
+        self.path_editing = true;
+        self.path_focus = true;
+        self.path_text = self.current_dir().map(|d| d.display().to_string()).unwrap_or_default();
     }
 
     fn location_entry(&mut self, ui: &mut egui::Ui) {
         let resp = ui.add(egui::TextEdit::singleline(&mut self.path_text).desired_width(f32::INFINITY).hint_text("Type a path, e.g. /home or ~/Documents"));
         if self.path_focus {
             resp.request_focus();
+            // Select the whole path so typing replaces it.
+            if let Some(mut st) = egui::TextEdit::load_state(ui.ctx(), resp.id) {
+                st.cursor.set_char_range(Some(egui::text::CCursorRange::two(
+                    egui::text::CCursor::new(0),
+                    egui::text::CCursor::new(self.path_text.chars().count()),
+                )));
+                st.store(ui.ctx(), resp.id);
+            }
             self.path_focus = false;
         }
-        if resp.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter)) {
+        let enter = ui.input(|i| i.key_pressed(Key::Enter));
+        if resp.lost_focus() && !enter {
+            // Clicked elsewhere or pressed Escape: back to the folder buttons.
+            self.path_editing = false;
+        }
+        if resp.lost_focus() && enter {
             let txt = self.path_text.trim().to_string();
             let p = if let Some(rest) = txt.strip_prefix('~') {
                 places::home().join(rest.trim_start_matches('/'))
@@ -666,6 +688,16 @@ impl RivetApp {
             }
         }
         let last = crumbs.len() - 1;
+        // Clicking the empty part of the location bar turns it into a text field.
+        let area = ui.max_rect();
+        let bg = ui.interact(area, Id::unique("crumbs-bg"), Sense::click());
+        if bg.hovered() {
+            ui.painter().rect_stroke(area.shrink(1.0), 5.0, Stroke::new(1.0, ui.visuals().widgets.hovered.bg_stroke.color), StrokeKind::Inside);
+            ui.ctx().set_cursor_icon(egui::CursorIcon::Text);
+        }
+        if bg.clicked() {
+            self.start_path_editing();
+        }
         egui::ScrollArea::horizontal()
             .id_salt("crumbs")
             .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)

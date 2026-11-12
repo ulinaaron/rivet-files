@@ -300,9 +300,9 @@ impl ToolItem {
     /// Approximate width on the toolbar, used to size the location bar.
     pub fn width(self) -> f32 {
         match self {
-            ToolItem::Separator => 9.0,
+            ToolItem::Separator => 12.0,
             ToolItem::PathBar => 0.0,
-            _ => 33.0,
+            _ => 39.0,
         }
     }
 }

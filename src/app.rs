@@ -117,6 +117,7 @@ pub struct RivetApp {
     /// Bumped whenever a movable window opens so it starts centred again.
     popup_serial: u64,
     menu_peek: bool,
+    toolbar_drawing: bool,
     alt_was_down: bool,
     alt_combo: bool,
     peek_popup_was_open: bool,
@@ -276,6 +277,7 @@ impl RivetApp {
             sidebar_fill: None,
             popup_serial: 0,
             menu_peek: false,
+            toolbar_drawing: false,
             alt_was_down: false,
             alt_combo: false,
             peek_popup_was_open: false,
