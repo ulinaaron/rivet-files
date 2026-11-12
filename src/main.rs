@@ -117,7 +117,10 @@ fn main() -> eframe::Result {
         .with_min_inner_size([520.0, 340.0])
         .with_decorations(settings.decorations);
     if screenshot.is_some() {
-        viewport = viewport.with_active(false);
+        // A fixed size (min = max) so tiling window managers float the window at
+        // exactly this size instead of stretching it to fill a tall tile.
+        let size = [settings.window_w, settings.window_h];
+        viewport = viewport.with_active(false).with_min_inner_size(size).with_max_inner_size(size).with_resizable(false);
         #[cfg(target_os = "windows")]
         {
             viewport = viewport.with_window_level(egui::WindowLevel::AlwaysOnBottom);
