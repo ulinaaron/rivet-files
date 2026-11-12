@@ -296,6 +296,9 @@ impl RivetApp {
             app.prefs_open = true;
             app.popup_serial += 1;
         }
+        if std::env::var_os("RIVET_EDIT_PATH").is_some() {
+            app.start_path_editing();
+        }
         if let Some(p) = std::env::var_os("RIVET_OPEN_PROPERTIES") {
             app.open_properties(PathBuf::from(p));
         }

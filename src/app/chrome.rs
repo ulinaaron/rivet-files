@@ -392,7 +392,8 @@ impl RivetApp {
             None => egui::Button::new(fallback),
         };
         let size = if self.toolbar_drawing { Vec2::new(34.0, 32.0) } else { Vec2::new(30.0, 28.0) };
-        let btn = btn.selected(selected).min_size(size);
+        // In the toolbar, buttons are flat: a background only on hover or when active.
+        let btn = btn.selected(selected).min_size(size).frame_when_inactive(!self.toolbar_drawing || selected);
         ui.add_enabled(enabled, btn).on_hover_text(tip).clicked()
     }
 
@@ -510,15 +511,20 @@ impl RivetApp {
                     let menu_w = if self.s.show_menubar { 0.0 } else { 45.0 };
                     let right_w: f32 = right.iter().map(|t| t.width()).sum::<f32>() + menu_w + 14.0;
                     let path_w = (ui.available_width() - right_w).max(80.0);
+                    // The location bar sits on its own raised surface.
+                    let elevated = ui.visuals().window_fill;
                     ui.allocate_ui_with_layout(Vec2::new(path_w, 32.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                        ui.set_min_width(path_w);
-                        if self.search_open {
-                            self.search_bar(ui, ctx);
-                        } else if self.path_editing {
-                            self.location_entry(ui);
-                        } else {
-                            self.breadcrumbs(ui, ctx);
-                        }
+                        egui::Frame::NONE.fill(elevated).corner_radius(9.0).inner_margin(egui::Margin::symmetric(6, 3)).show(ui, |ui| {
+                            ui.set_min_width(ui.available_width());
+                            ui.set_min_height(26.0);
+                            if self.search_open {
+                                self.search_bar(ui, ctx);
+                            } else if self.path_editing {
+                                self.location_entry(ui);
+                            } else {
+                                self.breadcrumbs(ui, ctx);
+                            }
+                        });
                     });
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if !self.s.show_menubar {
@@ -558,7 +564,7 @@ impl RivetApp {
     }
 
     fn location_entry(&mut self, ui: &mut egui::Ui) {
-        let resp = ui.add(egui::TextEdit::singleline(&mut self.path_text).desired_width(f32::INFINITY).hint_text("Type a path, e.g. /home or ~/Documents"));
+        let resp = ui.add(egui::TextEdit::singleline(&mut self.path_text).frame(egui::Frame::NONE).vertical_align(egui::Align::Center).min_size(Vec2::new(0.0, 26.0)).desired_width(f32::INFINITY).hint_text("Type a path, e.g. /home or ~/Documents"));
         if self.path_focus {
             resp.request_focus();
             // Select the whole path so typing replaces it.
@@ -606,6 +612,7 @@ impl RivetApp {
             let t = &mut self.tabs[self.active];
             let resp = ui.add(
                 egui::TextEdit::singleline(&mut t.filter)
+                    .frame(egui::Frame::NONE).vertical_align(egui::Align::Center).min_size(Vec2::new(0.0, 26.0))
                     .desired_width((ui.available_width() - 150.0).max(80.0))
                     .hint_text("Filter this folder — press Enter to search all subfolders"),
             );
@@ -692,7 +699,8 @@ impl RivetApp {
         let area = ui.max_rect();
         let bg = ui.interact(area, Id::unique("crumbs-bg"), Sense::click());
         if bg.hovered() {
-            ui.painter().rect_stroke(area.shrink(1.0), 5.0, Stroke::new(1.0, ui.visuals().widgets.hovered.bg_stroke.color), StrokeKind::Inside);
+            // Lift the bar a touch on hover instead of drawing an outline.
+            ui.painter().rect_filled(area.expand2(Vec2::new(6.0, 3.0)), 9.0, ui.visuals().text_color().gamma_multiply(0.05));
             ui.ctx().set_cursor_icon(egui::CursorIcon::Text);
         }
         if bg.clicked() {
@@ -714,7 +722,7 @@ impl RivetApp {
                             Some(t) => egui::Button::image_and_text(egui::Image::from_texture(&t).fit_to_exact_size(Vec2::splat(16.0)).tint(fg), text),
                             None => egui::Button::new(text),
                         };
-                        let resp = ui.add(btn.selected(sel).min_size(Vec2::new(0.0, 26.0)));
+                        let resp = ui.add(btn.selected(sel).frame_when_inactive(sel).min_size(Vec2::new(0.0, 26.0)));
                         if resp.clicked() {
                             if let Some(t) = target.clone() {
                                 self.pending.push(Action::Navigate(t));
