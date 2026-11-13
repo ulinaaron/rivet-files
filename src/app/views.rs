@@ -554,6 +554,14 @@ impl RivetApp {
             });
         }
         ui.separator();
+        let archives: Vec<PathBuf> = sel.iter().filter(|p| crate::archive::is_archive(p)).cloned().collect();
+        if !archives.is_empty() && archives.len() == sel.len() && ui.button("Extract Here").clicked() {
+            self.pending.push(Action::ExtractHere(archives));
+        }
+        if ui.button("Compress…").clicked() {
+            self.pending.push(Action::Compress(sel.clone()));
+        }
+        ui.separator();
         if ui.button("Cut").clicked() {
             self.pending.push(Action::Cut);
         }

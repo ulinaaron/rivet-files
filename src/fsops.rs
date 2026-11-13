@@ -14,6 +14,8 @@ pub enum OpKind {
     Delete,
     Restore,
     EmptyTrash,
+    Compress,
+    Extract,
 }
 
 impl OpKind {
@@ -25,6 +27,8 @@ impl OpKind {
             OpKind::Delete => "Deleting",
             OpKind::Restore => "Restoring",
             OpKind::EmptyTrash => "Emptying Trash",
+            OpKind::Compress => "Compressing",
+            OpKind::Extract => "Extracting",
         }
     }
 }
@@ -47,7 +51,7 @@ pub struct Progress {
 }
 
 impl Progress {
-    fn blank(kind: OpKind, total: usize, role: u8) -> Progress {
+    pub(crate) fn blank(kind: OpKind, total: usize, role: u8) -> Progress {
         Progress {
             kind,
             total_items: total.max(1),
@@ -127,7 +131,8 @@ pub fn spawn_op_role(kind: OpKind, sources: Vec<PathBuf>, dest: Option<PathBuf>,
                 OpKind::Trash => trash(&src).map(Some),
                 OpKind::Delete => remove_recursive(&src).map(|_| None),
                 OpKind::Restore => restore_from_trash(&src).map(Some),
-                OpKind::EmptyTrash => Ok(None),
+                // These run through archive::spawn_compress / spawn_extract.
+                OpKind::EmptyTrash | OpKind::Compress | OpKind::Extract => Ok(None),
             };
             match res {
                 Ok(Some(c)) => {

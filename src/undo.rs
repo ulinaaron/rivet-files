@@ -52,6 +52,11 @@ impl Step {
             OpKind::Move => Step::Moved(done),
             OpKind::Trash => Step::Trashed(done),
             OpKind::Restore => Step::Restored(done),
+            // Undoing a compress or extract moves what it made to the Trash.
+            OpKind::Compress | OpKind::Extract => {
+                let mut made: Vec<PathBuf> = done.into_iter().map(|(_, m)| m).collect();
+                if made.len() == 1 { Step::Created(made.remove(0)) } else { Step::Copied(made) }
+            }
             OpKind::Delete | OpKind::EmptyTrash => return None,
         })
     }

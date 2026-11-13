@@ -4,6 +4,7 @@
 //! Usage: `rivet --help`.
 
 mod app;
+mod archive;
 mod cli;
 mod bench;
 mod builtin_icons;

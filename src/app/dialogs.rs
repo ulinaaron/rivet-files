@@ -77,6 +77,104 @@ fn danger_button(ui: &mut egui::Ui, label: &str) -> bool {
 }
 
 impl RivetApp {
+    /// Compress…: a name, a format (with a one-line hint each), and where it goes.
+    /// Returns true when the dialog should close.
+    fn compress_dialog(&mut self, ctx: &egui::Context) -> bool {
+        use crate::archive::Format;
+        let Dialog::Compress { paths, name, format, focus } = &mut self.dialog else { return true };
+        let mut ok = false;
+        let mut cancel = false;
+        let frame = egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(22)).corner_radius(super::R_LG);
+        let r = egui::Modal::new(Id::unique("compress")).frame(frame).show(ctx, |ui| {
+            ui.set_width(420.0);
+            let v = ui.visuals().clone();
+            ui.label(egui::RichText::new("Compress").heading());
+            ui.add_space(2.0);
+            let what = match paths.len() {
+                1 => format!("“{}”", paths[0].file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default()),
+                n => format!("{n} items"),
+            };
+            ui.label(egui::RichText::new(format!("Make an archive of {what}")).color(v.weak_text_color()));
+            ui.add_space(14.0);
+            ui.label(egui::RichText::new("Archive name").small().color(v.weak_text_color()));
+            let field_bg = crate::palette::mix(v.window_fill, v.text_color(), 0.06);
+            egui::Frame::NONE.fill(field_bg).corner_radius(super::R_MD).inner_margin(egui::Margin::symmetric(10, 5)).show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    let ext_w = ui.painter().layout_no_wrap(format.ext().into(), egui::TextStyle::Body.resolve(ui.style()), Color32::WHITE).size().x;
+                    let resp = ui.add(egui::TextEdit::singleline(name).frame(egui::Frame::NONE).desired_width(ui.available_width() - ext_w - 8.0));
+                    if *focus {
+                        resp.request_focus();
+                        *focus = false;
+                    }
+                    if resp.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter)) {
+                        ok = true;
+                    }
+                    ui.label(egui::RichText::new(format.ext()).color(v.weak_text_color()));
+                });
+            });
+            ui.add_space(12.0);
+            ui.label(egui::RichText::new("Format").small().color(v.weak_text_color()));
+            ui.add_space(2.0);
+            for f in Format::ALL {
+                let avail = f.available();
+                let chosen = *format == f;
+                let (rect, resp) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 40.0), if avail { Sense::click() } else { Sense::hover() });
+                if chosen {
+                    let (fill, stroke) = super::selected_tile(&v, v.window_fill);
+                    ui.painter().rect(rect, super::R_SM, fill, stroke, egui::StrokeKind::Inside);
+                } else if resp.hovered() {
+                    ui.painter().rect_filled(rect, super::R_SM, v.widgets.hovered.weak_bg_fill);
+                }
+                let fg = if avail { v.text_color() } else { v.weak_text_color().gamma_multiply(0.6) };
+                let sub = v.weak_text_color();
+                let dot = if chosen { v.selection.bg_fill } else { fg };
+                // radio dot
+                let c = Pos2::new(rect.left() + 18.0, rect.center().y);
+                ui.painter().circle_stroke(c, 6.5, Stroke::new(1.5, dot));
+                if chosen {
+                    ui.painter().circle_filled(c, 3.5, dot);
+                }
+                let x = rect.left() + 36.0;
+                ui.painter().text(Pos2::new(x, rect.top() + 6.0), egui::Align2::LEFT_TOP, f.ext().trim_start_matches('.'), egui::FontId::proportional(13.5), fg);
+                let hint = if avail { f.hint().to_string() } else { "Not installed on this system".into() };
+                ui.painter().text(Pos2::new(x, rect.top() + 22.0), egui::Align2::LEFT_TOP, hint, egui::FontId::proportional(11.5), sub);
+                if resp.clicked() {
+                    *format = f;
+                }
+            }
+            ui.add_space(14.0);
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.spacing_mut().item_spacing.x = 8.0;
+                ui.spacing_mut().button_padding = Vec2::new(14.0, 5.0);
+                let create = egui::Button::new(egui::RichText::new("Create").color(v.selection.stroke.color)).fill(v.selection.bg_fill);
+                if ui.add_enabled(!name.trim().is_empty() && format.available(), create).clicked() {
+                    ok = true;
+                }
+                if ui.button("Cancel").clicked() {
+                    cancel = true;
+                }
+            });
+        });
+        if cancel || r.should_close() {
+            return true;
+        }
+        if !ok {
+            return false;
+        }
+        let name = name.trim().to_string();
+        if name.contains('/') {
+            self.dialog = Dialog::Message("Invalid name".into(), "Names cannot contain “/”.".into());
+            return false;
+        }
+        let (paths, format) = (paths.clone(), *format);
+        let Some(dir) = paths.first().and_then(|p| p.parent()).map(|d| d.to_path_buf()) else { return true };
+        let archive = crate::fsops::unique_target(&dir, &dir.join(format!("{name}{}", format.ext())));
+        self.s.compress_format = format.ext().trim_start_matches('.').to_string();
+        self.dirty_settings = true;
+        self.ops.push(crate::archive::spawn_compress(paths, archive, format));
+        true
+    }
+
     pub(super) fn dialogs(&mut self, ctx: &egui::Context) {
         let mut close = false;
         let mut next: Option<Dialog> = None;
@@ -177,6 +275,9 @@ impl RivetApp {
             }
             Dialog::ConfirmDelete(_) => {
                 close = self.delete_dialog(ctx);
+            }
+            Dialog::Compress { .. } => {
+                close = self.compress_dialog(ctx);
             }
             Dialog::ConfirmEmptyTrash => {
                 let r = egui::Modal::new(Id::unique("emptytrash")).show(ctx, |ui| {

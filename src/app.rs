@@ -58,6 +58,10 @@ enum Action {
     CloseTab(usize),
     NewTab,
     Run(PathBuf),
+    /// Ask for a name and format, then make an archive of these items.
+    Compress(Vec<PathBuf>),
+    /// Unpack these archives next to themselves.
+    ExtractHere(Vec<PathBuf>),
 }
 
 enum Dialog {
@@ -71,6 +75,7 @@ enum Dialog {
     Message(String, String),
     About,
     Shortcuts,
+    Compress { paths: Vec<PathBuf>, name: String, format: crate::archive::Format, focus: bool },
 }
 
 /// What the delete confirmation shows.
@@ -360,6 +365,10 @@ impl RivetApp {
             Ok("about") => app.dialog = Dialog::About,
             Ok("shortcuts") => app.dialog = Dialog::Shortcuts,
             Ok("connect") => app.open_connect_dialog(),
+            Ok("compress") => {
+                let sel = app.tab().selected_paths();
+                app.pending.push(Action::Compress(sel));
+            }
             Ok("openwith") => {
                 let sel = app.tab().selected_paths();
                 app.pending.push(Action::OpenWithDialog(sel));
@@ -976,6 +985,19 @@ impl RivetApp {
                 Action::NewTab => {
                     let loc = self.tab().loc.clone();
                     self.new_tab(loc);
+                }
+                Action::Compress(paths) => {
+                    if !paths.is_empty() {
+                        let format = crate::archive::Format::from_id(&self.s.compress_format);
+                        let format = if format.available() { format } else { crate::archive::Format::ALL.into_iter().find(|f| f.available()).unwrap_or(format) };
+                        self.dialog = Dialog::Compress { name: crate::archive::suggest_name(&paths), paths, format, focus: true };
+                    }
+                }
+                Action::ExtractHere(archives) => {
+                    let into = archives.first().and_then(|a| a.parent()).map(|d| d.to_path_buf());
+                    if let Some(into) = into {
+                        self.ops.push(crate::archive::spawn_extract(archives, into));
+                    }
                 }
                 Action::Run(p) => {
                     if let Err(e) = launch::run_executable(&p) {
