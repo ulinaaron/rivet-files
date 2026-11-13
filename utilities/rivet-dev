@@ -1,0 +1,68 @@
+#!/bin/sh
+# Rivet's developer utilities — one entry point.
+#
+#   utilities/rivet-dev <command> [options]
+#
+# Run it from anywhere; every command works from the repository root.
+# The scripts behind each command live in utilities/lib/.
+set -e
+HERE=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
+LIB="$HERE/lib"
+
+usage() {
+    cat <<'EOF'
+Rivet developer utilities
+
+Usage: utilities/rivet-dev <command> [options]
+
+Releasing
+  bump [patch|minor|major|X.Y.Z]   Set the next version; "## Unreleased" in CHANGELOG.md
+                                   becomes its section; commits "Release X.Y.Z"
+  release [--publish]              Build the tarball + AppImage in dist/ and tag vX.Y.Z;
+                                   --publish also pushes the tag and makes the GitHub release
+  publish                          Push main (or create the GitHub repo the first time)
+  aur-bump X.Y.Z                   Update the AUR PKGBUILDs for a published release
+
+Building
+  appimage                         dist/Rivet_Files-VERSION-ARCH.AppImage (needs squashfs-tools)
+  portable                         Release binary linked against glibc 2.31 (via Zig)
+  portable-bin                     Print the path of that binary
+  check-glibc --max V FILE…        Fail if FILE needs a GLIBC symbol newer than V
+
+Using your build
+  install [--default]              Install for this user (~/.local/bin + app launcher);
+                                   --default also makes Rivet the default file manager
+  link [--user] [--remove]         A `rivet` command that always runs this build
+                                   (/usr/bin, or ~/.local/bin with --user)
+
+Docs and checks
+  screenshots                      Regenerate the README screenshots (sample home folder)
+  bench [--runs N] [--views …]     The 100,000-file benchmark (see the README)
+
+  help                             This text
+EOF
+}
+
+cmd=${1:-help}
+[ $# -gt 0 ] && shift
+case "$cmd" in
+    bump)          exec sh "$LIB/bump.sh" "$@" ;;
+    release)       exec sh "$LIB/release.sh" "$@" ;;
+    publish)       exec sh "$LIB/publish.sh" "$@" ;;
+    aur-bump)      exec sh "$HERE/../packaging/aur/bump.sh" "$@" ;;
+    appimage)      exec sh "$LIB/appimage.sh" "$@" ;;
+    portable)      exec sh "$LIB/portable-build.sh" "$@" ;;
+    portable-bin)  exec sh "$LIB/portable-bin.sh" "$@" ;;
+    check-glibc)   exec sh "$LIB/check-glibc.sh" "$@" ;;
+    install)       exec sh "$LIB/install.sh" "$@" ;;
+    link)          exec sh "$LIB/link.sh" "$@" ;;
+    screenshots)   exec sh "$LIB/screenshots.sh" "$@" ;;
+    bench)         exec python3 "$LIB/bench-100k.py" "$@" ;;
+    help|-h|--help) usage ;;
+    *)
+        echo "Unknown command: $cmd" >&2
+        echo >&2
+        usage >&2
+        exit 1
+        ;;
+esac

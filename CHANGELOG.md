@@ -22,6 +22,10 @@
   title / sentence case — on the name, the extension or both, with a live preview that flags
   clashes before anything changes. One Ctrl+Z undoes the whole batch.
 
+### Developer
+- All developer scripts live in `utilities/` behind one command: `utilities/rivet-dev <command>`
+  (bump, release, publish, appimage, portable, install, link, screenshots, bench…; `help` lists them).
+
 ## 0.3.0
 
 ### New

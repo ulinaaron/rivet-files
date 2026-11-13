@@ -2,7 +2,7 @@
 # Put Rivet on GitHub as a public repo (first time), or push new commits (later).
 # Safe to run from any folder: it switches to the folder this script lives in.
 set -e
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/../.."
 if git remote get-url origin >/dev/null 2>&1; then
     git push origin main
 else

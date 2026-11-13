@@ -5,7 +5,7 @@
 # program at the front of every AppImage) is downloaded once from the AppImage
 # project and cached in ~/.cache/rivet-build/.
 set -e
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/../.."
 
 VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
 ARCH=$(uname -m)
@@ -26,15 +26,15 @@ if [ ! -s "$RUNTIME" ]; then
 fi
 
 # Linked for glibc 2.31, not whatever this machine's libm exports.
-./scripts/portable-build.sh >/dev/null
-RIVET_BIN=$(./scripts/portable-bin.sh)
+./utilities/lib/portable-build.sh >/dev/null
+RIVET_BIN=$(./utilities/lib/portable-bin.sh)
 APPDIR="dist/AppDir"
 rm -rf "$APPDIR"
 mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/lib" "$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons"
 strip -o "$APPDIR/usr/bin/rivet" "$RIVET_BIN"
 # winit dlopens these; ldd on rivet does not see them. Ubuntu 22.04 builds,
 # so the bundle itself does not need glibc 2.43.
-./scripts/bundle-runtime-libs.sh "$APPDIR/usr/lib"
+./utilities/lib/bundle-runtime-libs.sh "$APPDIR/usr/lib"
 cp data/rivet-files.desktop "$APPDIR/rivet-files.desktop"
 cp data/rivet-files.desktop "$APPDIR/usr/share/applications/"
 cp data/rivet-files.svg "$APPDIR/rivet-files.svg"
@@ -53,13 +53,13 @@ chmod +x "$APPDIR/AppRun"
 # The file we ship, plus every bundled library, must stay under the ceiling.
 ROOT=$(pwd)
 # shellcheck disable=SC1091
-. ./scripts/ensure-zigbuild.sh
+. ./utilities/lib/ensure-zigbuild.sh
 set -- "$APPDIR/usr/bin/rivet"
 for lib in "$APPDIR"/usr/lib/lib*.so.*; do
     [ -f "$lib" ] || continue
     set -- "$@" "$lib"
 done
-./scripts/check-glibc.sh --max "$GLIBC_MAX_VERSION" --record dist/glibc-highest "$@"
+./utilities/lib/check-glibc.sh --max "$GLIBC_MAX_VERSION" --record dist/glibc-highest "$@"
 
 rm -f "$OUT" dist/AppDir.squashfs
 mksquashfs "$APPDIR" dist/AppDir.squashfs -root-owned -noappend -comp zstd -quiet

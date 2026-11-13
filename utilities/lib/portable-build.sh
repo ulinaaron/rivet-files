@@ -5,16 +5,16 @@
 # is GLIBC_2.43, and the binary then refuses to start on Debian 13 and older.
 # cargo-zigbuild links those symbols against glibc 2.31 instead.
 set -eu
-ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
+ROOT=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 cd "$ROOT"
 # shellcheck disable=SC1091
-. "$ROOT/scripts/ensure-zigbuild.sh"
+. "$ROOT/utilities/lib/ensure-zigbuild.sh"
 
-triple=$("$ROOT/scripts/gnu-triple.sh")
+triple=$("$ROOT/utilities/lib/gnu-triple.sh")
 target=$triple.$GLIBC_LINK_VERSION
 echo "Linking rivet for glibc $GLIBC_LINK_VERSION ($target) with $($CARGO_ZIGBUILD_ZIG_PATH version)"
 cargo zigbuild --release --locked --target "$target"
-bin=$("$ROOT/scripts/portable-bin.sh")
+bin=$("$ROOT/utilities/lib/portable-bin.sh")
 [ -x "$bin" ] || { echo "expected $bin" >&2; exit 1; }
-"$ROOT/scripts/check-glibc.sh" --max "$GLIBC_MAX_VERSION" "$bin"
+"$ROOT/utilities/lib/check-glibc.sh" --max "$GLIBC_MAX_VERSION" "$bin"
 echo "$bin"

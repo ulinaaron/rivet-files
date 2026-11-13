@@ -1,10 +1,10 @@
 #!/bin/sh
 # Make the `rivet` command open the build in this folder (rebuilds are picked up automatically).
-#   ./link.sh          -> system-wide command in /usr/bin  (asks for your password)
-#   ./link.sh --user   -> ~/.local/bin/rivet                (no password)
-#   ./link.sh --remove [--user]
+#   utilities/rivet-dev link          -> system-wide command in /usr/bin  (asks for your password)
+#   utilities/rivet-dev link --user   -> ~/.local/bin/rivet                (no password)
+#   utilities/rivet-dev link --remove [--user]
 set -e
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/../.."
 EXE="$(pwd)/target/debug/rivet"
 [ -x "$EXE" ] || cargo build
 DEST="/usr/bin/rivet"

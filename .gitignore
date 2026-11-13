@@ -2,3 +2,4 @@
 /shots
 *.swp
 /dist
+__pycache__/

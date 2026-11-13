@@ -104,7 +104,7 @@ Grab the latest from the [Releases page](https://github.com/ulinaaron/rivet-file
 - **Archive** — unpack `rivet-files-*-linux.tar.gz` and run `./install.sh`
   (add `--default` to make Rivet your default file manager). Same glibc baseline as the AppImage.
   Install the libraries below if the desktop does not already have them.
-- **From source** — `cargo build --release && ./install.sh`
+- **From source** — `utilities/rivet-dev install` (builds a release and adds Rivet to your app launcher)
 - **Flatpak** — a `.flatpak` bundle is attached to GitHub releases once CI has built it.
   It is not on Flathub until that submission is done; the manifest and the steps are in [packaging/README.md](packaging/README.md).
   Inside the sandbox, home, other disks, Trash and `~/.config` theme files are the real ones. Host `/usr` and `/etc` are under **Host system files** (`/run/host`).
@@ -142,7 +142,7 @@ Rivet talks to X11 or Wayland directly. It does not use GTK or Qt. A normal desk
 ## ⚡ Performance
 
 **100,000 files** — one folder of empty files on btrfs, a fresh launch each time, median of five runs
-(`python3 docs/bench-100k.py`). *First window* is when the compositor lists the window,
+(`utilities/rivet-dev bench`). *First window* is when the compositor lists the window,
 *settled* is when the process has used no CPU for 500 ms, *PSS* is memory, *CPU* is total
 processor time up to that point — the same method as [Flea's benchmark](https://github.com/thisisgm/flea#performance).
 
@@ -181,7 +181,7 @@ Release build on Fedora, Wayland, NVMe SSD:
 | Binary size (stripped) | ~14 MB (AppImage ~6 MB) |
 
 Reproduce with `rivet --bench [FOLDER…]`, `RIVET_FRAME_STATS=1 rivet --screenshot out.png`
-and `python3 docs/bench-100k.py`.
+and `utilities/rivet-dev bench`.
 
 </details>
 
@@ -219,8 +219,8 @@ cargo build --release
 | `--export-icons [DIR]` | Write the logo icons and exit (default `data/icons`) |
 | `--install-desktop-entry` | Add Rivet to the app launcher and exit |
 
-A global `rivet` command that always runs your latest build: `./link.sh` (system-wide, asks for
-your password) or `./link.sh --user` (`~/.local/bin`). Preferences → System has the same buttons.
+A global `rivet` command that always runs your latest build: `utilities/rivet-dev link` (system-wide, asks for
+your password) or `utilities/rivet-dev link --user` (`~/.local/bin`). Preferences → System has the same buttons.
 
 </details>
 
@@ -242,12 +242,13 @@ Preferences → *Add Rivet template to matugen* registers a dedicated template i
 <details>
 <summary><b>Screenshots, logo and releases</b></summary>
 
-- **Screenshots** come from a throwaway sample home folder: `docs/make-screenshots.sh`
+- **All developer tasks** run through one command: `utilities/rivet-dev help` lists them (the scripts behind it live in `utilities/lib/`).
+- **Screenshots** come from a throwaway sample home folder: `utilities/rivet-dev screenshots`
 - **Logo** master is `data/rivet-files.svg`; regenerate the PNG set with
   `rivet --export-icons data/icons` and copy the 512 px one to `docs/logo.png`
-- **AppImage**: `./appimage.sh` (needs `squashfs-tools`). It links for glibc 2.31 and bundles the keyboard libraries, so the one file runs on Ubuntu 22.04 and Debian 12.
-- **Release**: keep notes under `## Unreleased` in `CHANGELOG.md`. `./bump.sh` (patch, or `minor` / `major` / `X.Y.Z`)
-  sets the version, turns that section into the release's (or writes one from the commits) and commits; then `./release.sh --publish`. The release binary is linked with Zig against glibc 2.31 (not the build machine's libc). CI rejects an ELF that needs a GLIBC symbol newer than 2.35.
+- **AppImage**: `utilities/rivet-dev appimage` (needs `squashfs-tools`). It links for glibc 2.31 and bundles the keyboard libraries, so the one file runs on Ubuntu 22.04 and Debian 12.
+- **Release**: keep notes under `## Unreleased` in `CHANGELOG.md`. `utilities/rivet-dev bump` (patch, or `minor` / `major` / `X.Y.Z`)
+  sets the version, turns that section into the release's (or writes one from the commits) and commits; then `utilities/rivet-dev release --publish`. The release binary is linked with Zig against glibc 2.31 (not the build machine's libc). CI rejects an ELF that needs a GLIBC symbol newer than 2.35.
 
 </details>
 

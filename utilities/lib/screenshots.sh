@@ -2,7 +2,7 @@
 # Regenerate the README screenshots from a throwaway sample home folder, so they
 # never show anyone's real files, bookmarks, drives or desktop colours.
 set -e
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 cargo build
 OUT="docs/screenshots"
 mkdir -p "$OUT"

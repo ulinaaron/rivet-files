@@ -1,14 +1,14 @@
 #!/bin/sh
 # Make a release of Rivet Files.
 #
-#   ./release.sh            build dist/rivet-files-VERSION-ARCH-linux.tar.gz (+ .sha256)
+#   utilities/rivet-dev release            build dist/rivet-files-VERSION-ARCH-linux.tar.gz (+ .sha256)
 #                           and tag the current commit vVERSION (locally)
-#   ./release.sh --publish  …then push the tag and create the GitHub release with that file
+#   utilities/rivet-dev release --publish  …then push the tag and create the GitHub release with that file
 #
 # The version comes from Cargo.toml; the release notes from its section in CHANGELOG.md.
-# For a new release: run ./bump.sh first (sets the version, changelog section, commits), then this.
+# For a new release: run utilities/rivet-dev bump first (sets the version, changelog section, commits), then this.
 set -e
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/../.."
 
 VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
 ARCH=$(uname -m)
@@ -33,8 +33,8 @@ for T in "$LOCAL_TAG" "$REMOTE_TAG"; do
     fi
 done
 
-./scripts/portable-build.sh
-RIVET_BIN=$(./scripts/portable-bin.sh)
+./utilities/lib/portable-build.sh
+RIVET_BIN=$(./utilities/lib/portable-bin.sh)
 mkdir -p dist
 STAGE="dist/$NAME"
 rm -rf "$STAGE"
@@ -43,15 +43,15 @@ strip -o "$STAGE/rivet" "$RIVET_BIN"
 # Check the stripped file that goes into the tarball, not only the unstripped build.
 ROOT=$(pwd)
 # shellcheck disable=SC1091
-. ./scripts/ensure-zigbuild.sh
-./scripts/check-glibc.sh --max "$GLIBC_MAX_VERSION" "$STAGE/rivet"
+. ./utilities/lib/ensure-zigbuild.sh
+./utilities/lib/check-glibc.sh --max "$GLIBC_MAX_VERSION" "$STAGE/rivet"
 BIN_GLIBC=$(objdump -T "$STAGE/rivet" | sed -n 's/.*GLIBC_\([0-9][0-9.]*\).*/\1/p' | sort -Vu | tail -n 1)
-cp data/rivet-files.desktop data/rivet-files.svg install.sh README.md CHANGELOG.md LICENSE-MIT LICENSE-APACHE "$STAGE/"
+cp data/rivet-files.desktop data/rivet-files.svg utilities/lib/install.sh README.md CHANGELOG.md LICENSE-MIT LICENSE-APACHE "$STAGE/"
 cp -r data/icons "$STAGE/icons"
 tar -C dist -czf "dist/$NAME.tar.gz" "$NAME"
 rm -rf "$STAGE"
 (cd dist && sha256sum "$NAME.tar.gz" > "$NAME.tar.gz.sha256")
-./appimage.sh
+./utilities/lib/appimage.sh
 APPIMAGE="dist/Rivet_Files-$VERSION-$ARCH.AppImage"
 
 # Release notes = this version's CHANGELOG section.

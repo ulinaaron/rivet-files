@@ -1,7 +1,7 @@
 #!/bin/sh
 # Fail if an ELF needs a GLIBC symbol version newer than the ceiling.
 #
-#   ./scripts/check-glibc.sh --max 2.35 path/to/rivet [more ELFs...]
+#   utilities/rivet-dev check-glibc --max 2.35 path/to/rivet [more ELFs...]
 #
 # Prints every GLIBC version objdump -T finds, then the highest. The release
 # ceiling is 2.35 so the binary still starts on Ubuntu 22.04 and Debian 12.

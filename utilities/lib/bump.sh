@@ -1,17 +1,17 @@
 #!/bin/sh
 # Bump the version for a new release.
 #
-#   ./bump.sh            patch: 0.1.1 -> 0.1.2
-#   ./bump.sh minor      0.1.1 -> 0.2.0
-#   ./bump.sh major      0.1.1 -> 1.0.0
-#   ./bump.sh 0.3.0      an exact version
+#   utilities/rivet-dev bump            patch: 0.1.1 -> 0.1.2
+#   utilities/rivet-dev bump minor      0.1.1 -> 0.2.0
+#   utilities/rivet-dev bump major      0.1.1 -> 1.0.0
+#   utilities/rivet-dev bump 0.3.0      an exact version
 #
 # Updates Cargo.toml and Cargo.lock, starts a CHANGELOG.md section from the commit
 # messages since the last release tag, and commits it all as "Release X.Y.Z".
 # Edit the changelog afterwards if you like (then `git commit --amend -a --no-edit`),
-# and publish with ./release.sh --publish
+# and publish with utilities/rivet-dev release --publish
 set -e
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/../.."
 
 if [ -n "$(git status --porcelain)" ]; then
     echo "Commit your changes first." >&2
@@ -27,7 +27,7 @@ case "${1:-patch}" in
     minor) NEW="$MAJOR.$((MINOR + 1)).0" ;;
     major) NEW="$((MAJOR + 1)).0.0" ;;
     [0-9]*.[0-9]*.[0-9]*) NEW="$1" ;;
-    *) echo "Usage: ./bump.sh [patch|minor|major|X.Y.Z]" >&2; exit 1 ;;
+    *) echo "Usage: utilities/rivet-dev bump [patch|minor|major|X.Y.Z]" >&2; exit 1 ;;
 esac
 if git rev-parse -q --verify "refs/tags/v$NEW" >/dev/null; then
     echo "v$NEW already exists." >&2
@@ -58,4 +58,4 @@ fi
 
 git add Cargo.toml Cargo.lock CHANGELOG.md
 git commit -q -m "Release $NEW"
-echo "Bumped $OLD -> $NEW and committed. Review CHANGELOG.md, then run ./release.sh --publish"
+echo "Bumped $OLD -> $NEW and committed. Review CHANGELOG.md, then run utilities/rivet-dev release --publish"

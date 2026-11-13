@@ -62,17 +62,17 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends binutils squashfs-tools curl ca-certificates xz-utils shared-mime-info
 
       - name: Build the portable release binary
-        run: ./scripts/portable-build.sh
+        run: ./utilities/rivet-dev portable
 
       - name: Assert GLIBC symbol versions
-        run: ./scripts/check-glibc.sh --max 2.35 "$(./scripts/portable-bin.sh)"
+        run: ./utilities/rivet-dev check-glibc --max 2.35 "$(./utilities/rivet-dev portable-bin)"
 
       - name: Build the AppImage (bundles keyboard libraries, checks their glibc)
-        run: ./appimage.sh
+        run: ./utilities/rivet-dev appimage
 
       - name: Smoke-test on this glibc
         run: |
-          bin=$(./scripts/portable-bin.sh)
+          bin=$(./utilities/rivet-dev portable-bin)
           "$bin" --version
           "$bin" --help | grep -q -- '--measure'
           "$bin" --help | grep -q -- '--bench'

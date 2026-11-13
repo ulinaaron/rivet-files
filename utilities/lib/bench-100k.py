@@ -7,13 +7,13 @@
   PSS           proportional memory at settle (/proc/PID/smaps_rollup)
   CPU           user + system CPU time used up to settle
 
-Usage: python3 docs/bench-100k.py [--runs 3] [--views list,icons] [--files 100000]
+Usage: utilities/rivet-dev bench [--runs 3] [--views list,icons] [--files 100000]
 Run from the repository; needs a release build (cargo build --release).
 """
 import argparse, json, os, shutil, statistics, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
+ROOT = os.path.dirname(os.path.dirname(HERE))
 BIN = os.path.join(ROOT, "target", "release", "rivet")
 TICK = os.sysconf("SC_CLK_TCK")
 QUIET = 0.5

@@ -6,6 +6,8 @@
 # Pass --default to also make it the default file manager.
 set -e
 cd "$(dirname "$0")"
+# Run from utilities/lib in a source checkout: work from the repository root.
+[ -f ../../Cargo.toml ] && cd ../..
 if [ -x ./rivet ] && [ ! -d ./src ]; then
     SRC=./rivet                                  # release download
 else
