@@ -5,7 +5,8 @@
 ### New
 - **Preview**: a full-window light box for pictures, videos (muted playback), music covers and
   text. Right-click → Preview or press Space; ← / → (or the side arrows) step through the folder,
-  Esc, Space or a click outside closes it.
+  Esc, Space or a click outside closes it. Its bottom split button opens with the default app
+  (named, with its icon) or picks another one.
 - **Preferences** has a sidebar of pages: Appearance (with Window), Views, Behavior, Menu (with the
   toolbar), System and About. Appearance is split into roomy groups: desktop colors, style and accent,
   icons, typography, window. Help → About opens the About page.
@@ -21,6 +22,7 @@
   General, Dates, Ownership and Access cards.
 - Clearer System page (name · status · action rows) and no filler text in Preferences.
 - Roomier Rename window.
+- The status bar no longer repeats the free disk space (the sidebar's drive bars show it).
 - Peek's split *Open with* button: full-height divider and an apps icon for choosing another app.
 - README: Rivet's goals and a short roadmap.
 - Code tidy-up: no compiler warnings, unused code removed.

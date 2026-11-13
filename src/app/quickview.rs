@@ -109,6 +109,19 @@ impl RivetApp {
 
     /// Draw Preview (if open) over everything and handle its keys.
     pub(super) fn quick_view(&mut self, ctx: &egui::Context) {
+        // The default app for the current file (name + icon) for the Open button.
+        let Some(cur) = self.quick.as_ref().map(|q| q.current().clone()) else { return };
+        let app = crate::launch::default_app(&self.apps, &cur.mime).map(|a| (a.name.clone(), a.icon.clone()));
+        let app_icon = match &app {
+            Some((_, icon)) if icon.starts_with('/') => self.icons.texture_from_path(ctx, std::path::Path::new(icon), (18.0 * ctx.pixels_per_point()) as u32),
+            Some((_, icon)) => self.icon(ctx, &[icon.as_str(), "application-x-executable"], 18.0),
+            None => None,
+        };
+        let open_label = match &app {
+            Some((name, _)) => format!("Open with {name}"),
+            None => "Open".to_string(),
+        };
+        let accent = super::accent_color(&self.s);
         let Some(q) = &mut self.quick else { return };
         q.poll(ctx);
         let (idx, n) = (q.idx, q.items.len());
@@ -136,6 +149,7 @@ impl RivetApp {
         let mut go: Option<usize> = None;
         let mut shut = close;
         let mut open_with = false;
+        let mut choose_app = false;
         let mut toggle_play = false;
         let e = q.current().clone();
         let kind = preview::kind_of(&e.mime);
@@ -210,13 +224,48 @@ impl RivetApp {
                 if cresp.clicked() {
                     shut = true;
                 }
-                // "Open with …" at the bottom.
-                let ob = Rect::from_center_size(Pos2::new(screen.center().x, screen.bottom() - 30.0), Vec2::new(132.0, 32.0));
-                let oresp = ui.interact(ob, egui::Id::unique("quick-open"), Sense::click());
-                ui.painter().rect_filled(ob, R_MD, if oresp.hovered() { Color32::from_white_alpha(46) } else { Color32::from_white_alpha(26) });
-                ui.painter().text(ob.center(), egui::Align2::CENTER_CENTER, "Open", crate::fonts::ui_font(13.5), white);
-                if oresp.on_hover_text("Open with the default app").clicked() {
-                    open_with = true;
+                // ---- bottom: a split button like Peek's — "Open with <app>" | choose another app.
+                {
+                    let font = crate::fonts::ui_font(13.5);
+                    let text_w = ui.painter().layout_no_wrap(open_label.clone(), font.clone(), white).size().x;
+                    let icon_w = if app_icon.is_some() { 26.0 } else { 0.0 };
+                    let chev_w = 38.0;
+                    let main_w = 14.0 + icon_w + text_w + 16.0;
+                    let full = Rect::from_center_size(Pos2::new(screen.center().x, screen.bottom() - 30.0), Vec2::new(main_w + chev_w, 36.0));
+                    let main_r = Rect::from_min_max(full.min, Pos2::new(full.left() + main_w, full.bottom()));
+                    let chev_r = Rect::from_min_max(Pos2::new(main_r.right(), full.top()), full.max);
+                    let mresp = ui.interact(main_r, egui::Id::unique("quick-open"), Sense::click());
+                    let cresp = ui.interact(chev_r, egui::Id::unique("quick-open-with"), Sense::click());
+                    // Accent-tinted glass that stands out on the dark backdrop.
+                    let base = crate::palette::mix(Color32::from_gray(24), accent, 0.42);
+                    let hover = crate::palette::mix(Color32::from_gray(24), accent, 0.6);
+                    let border = Stroke::new(1.0, accent.gamma_multiply(0.85));
+                    ui.painter().rect_filled(full, R_MD, base);
+                    if mresp.hovered() {
+                        ui.painter().rect_filled(main_r, egui::CornerRadius { nw: R_MD, sw: R_MD, ne: 0, se: 0 }, hover);
+                    }
+                    if cresp.hovered() {
+                        ui.painter().rect_filled(chev_r, egui::CornerRadius { nw: 0, sw: 0, ne: R_MD, se: R_MD }, hover);
+                    }
+                    ui.painter().rect_stroke(full, R_MD, border, egui::StrokeKind::Inside);
+                    ui.painter().line_segment([Pos2::new(chev_r.left(), full.top() + 1.0), Pos2::new(chev_r.left(), full.bottom() - 1.0)], border);
+                    let mut x = main_r.left() + 14.0;
+                    if let Some(t) = &app_icon {
+                        super::paint_tex(ui.painter(), t, Rect::from_center_size(Pos2::new(x + 9.0, full.center().y), Vec2::splat(18.0)), Color32::WHITE);
+                        x += icon_w;
+                    }
+                    ui.painter().text(Pos2::new(x, full.center().y), egui::Align2::LEFT_CENTER, &open_label, font, Color32::WHITE);
+                    // The apps grid: pick another application.
+                    let c = chev_r.center();
+                    for (dx, dy) in [(-1.0, -1.0), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0)] {
+                        ui.painter().rect_filled(Rect::from_center_size(c + Vec2::new(dx * 3.4, dy * 3.4), Vec2::splat(5.0)), 1.5, Color32::WHITE);
+                    }
+                    if mresp.on_hover_text(&open_label).clicked() {
+                        open_with = true;
+                    }
+                    if cresp.on_hover_text("Open with another application…").clicked() {
+                        choose_app = true;
+                    }
                 }
 
                 // ---- the stage
@@ -321,6 +370,11 @@ impl RivetApp {
         }
         if open_with {
             self.pending.push(Action::Open(e.path.clone()));
+            shut = true;
+        }
+        if choose_app {
+            // The Open With window opens over the folder, so Preview steps aside.
+            self.pending.push(Action::OpenWithDialog(vec![e.path.clone()]));
             shut = true;
         }
         if shut {

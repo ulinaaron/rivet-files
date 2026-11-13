@@ -1023,21 +1023,20 @@ impl RivetApp {
         }
         let t = self.tab();
         let sel = t.selected_entries();
-        let free = t.loc.dir().and_then(places::disk_space).map(|(_, f)| format!(", Free space: {}", fsops::human_size(f))).unwrap_or_default();
         if t.searching {
             return format!("Searching… {} found", t.visible.len());
         }
         if sel.is_empty() {
             let n = t.visible.len();
-            return format!("{n} item{}{free}", if n == 1 { "" } else { "s" });
+            return format!("{n} item{}", if n == 1 { "" } else { "s" });
         }
         if sel.len() == 1 {
             let e = sel[0];
             if e.is_dir {
                 let c = e.child_count.unwrap_or(0);
-                return format!("“{}” selected (containing {c} item{}){free}", e.name, if c == 1 { "" } else { "s" });
+                return format!("“{}” selected (containing {c} item{})", e.name, if c == 1 { "" } else { "s" });
             }
-            return format!("“{}” selected ({}){free}", e.name, fsops::human_size(e.size));
+            return format!("“{}” selected ({})", e.name, fsops::human_size(e.size));
         }
         let folders = sel.iter().filter(|e| e.is_dir).count();
         let files: Vec<_> = sel.iter().filter(|e| !e.is_dir).collect();
@@ -1049,7 +1048,7 @@ impl RivetApp {
         if !files.is_empty() {
             parts.push(format!("{} other item{} selected ({})", files.len(), if files.len() == 1 { "" } else { "s" }, fsops::human_size(bytes)));
         }
-        format!("{}{free}", parts.join(", "))
+        parts.join(", ")
     }
 
     // -------------------------------------------------------------- sidebar
