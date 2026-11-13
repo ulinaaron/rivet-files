@@ -1,9 +1,10 @@
 #!/bin/sh
 # Make a release of Rivet Files.
 #
-#   utilities/rivet-dev release            build dist/rivet-files-VERSION-ARCH-linux.tar.gz (+ .sha256)
-#                           and tag the current commit vVERSION (locally)
-#   utilities/rivet-dev release --publish  …then push the tag and create the GitHub release with that file
+#   utilities/rivet-dev release            build the tarball and AppImage in dist/ and tag the
+#                                          current commit vVERSION — on this computer only
+#   utilities/rivet-dev release --publish  the same, then send the code and the tag to GitHub and
+#                                          create the GitHub release with the files attached
 #
 # The version comes from Cargo.toml; the release notes from its section in CHANGELOG.md.
 # For a new release: run utilities/rivet-dev bump first (sets the version, changelog section, commits), then this.
@@ -18,6 +19,11 @@ TAG="v$VERSION"
 if [ -n "$(git status --porcelain)" ]; then
     echo "Commit your changes first (the release is built from the current commit)." >&2
     exit 1
+fi
+# Publishing: take in GitHub's commits first (e.g. the automatic "aur: X.Y.Z" one), so the
+# tag goes on a commit that GitHub will accept.
+if [ "$1" = "--publish" ] && git remote get-url origin >/dev/null 2>&1; then
+    git pull --rebase origin main
 fi
 grep -q "^## $VERSION" CHANGELOG.md || { echo "CHANGELOG.md has no section for $VERSION." >&2; exit 1; }
 

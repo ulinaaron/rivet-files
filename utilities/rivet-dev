@@ -18,9 +18,12 @@ Usage: utilities/rivet-dev <command> [options]
 Releasing
   bump [patch|minor|major|X.Y.Z]   Set the next version; "## Unreleased" in CHANGELOG.md
                                    becomes its section; commits "Release X.Y.Z"
-  release [--publish]              Build the tarball + AppImage in dist/ and tag vX.Y.Z;
-                                   --publish also pushes the tag and makes the GitHub release
-  publish                          Push main (or create the GitHub repo the first time)
+  release                          Build the tarball + AppImage in dist/ and tag vX.Y.Z —
+                                   on this computer only, nothing goes online
+  release --publish                The same, then send code + tag to GitHub and create the
+                                   GitHub release with the files (what users download)
+  push                             Send your latest commits to GitHub — no release
+                                   (creates the GitHub repo the first time)
   aur-bump X.Y.Z                   Update the AUR PKGBUILDs for a published release
 
 Building
@@ -48,7 +51,7 @@ cmd=${1:-help}
 case "$cmd" in
     bump)          exec sh "$LIB/bump.sh" "$@" ;;
     release)       exec sh "$LIB/release.sh" "$@" ;;
-    publish)       exec sh "$LIB/publish.sh" "$@" ;;
+    push|publish)  exec sh "$LIB/push.sh" "$@" ;;   # "publish" was its old name
     aur-bump)      exec sh "$HERE/../packaging/aur/bump.sh" "$@" ;;
     appimage)      exec sh "$LIB/appimage.sh" "$@" ;;
     portable)      exec sh "$LIB/portable-build.sh" "$@" ;;
