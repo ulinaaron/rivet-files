@@ -44,62 +44,47 @@ impl RivetApp {
 
     // -------------------------------------------------------------- menu bar / title bar
 
-    /// Alt shows a hidden menu bar: held, it peeks; a quick tap keeps it open until a
-    /// menu item is chosen, Escape is pressed or you click elsewhere.
-    pub(super) fn update_menu_peek(&mut self, ctx: &egui::Context) {
-        if self.s.show_menubar || self.screenshot.is_some() {
-            self.menu_peek = false;
-            self.alt_was_down = false;
-            return;
+    /// A menu toggle: an ordinary menu item (so its shortcut lines up with the others)
+    /// with a check box drawn in front of the label.
+    pub(super) fn menu_toggle(ui: &mut egui::Ui, value: &mut bool, label: &str, shortcut: &str) -> bool {
+        let btn = egui::Button::new(format!("        {label}"));
+        let btn = if shortcut.is_empty() { btn } else { btn.shortcut_text(shortcut) };
+        let resp = ui.add(btn);
+        let v = ui.visuals();
+        let r = Rect::from_center_size(Pos2::new(resp.rect.left() + 13.0, resp.rect.center().y), Vec2::splat(13.0));
+        if *value {
+            ui.painter().rect_filled(r, 3.0, v.selection.bg_fill);
+            let c = r.center();
+            let s = Stroke::new(1.6, v.selection.stroke.color);
+            ui.painter().line_segment([c + Vec2::new(-3.5, 0.0), c + Vec2::new(-1.0, 2.8)], s);
+            ui.painter().line_segment([c + Vec2::new(-1.0, 2.8), c + Vec2::new(3.8, -2.8)], s);
+        } else {
+            ui.painter().rect_stroke(r, 3.0, Stroke::new(1.2, v.weak_text_color()), StrokeKind::Inside);
         }
-        let (alt, other_input, esc, press_pos) = ctx.input(|i| {
-            let other = i.events.iter().any(|e| matches!(e, egui::Event::Key { pressed: true, .. } | egui::Event::Text(_)))
-                || i.pointer.any_pressed();
-            let esc = i.key_pressed(egui::Key::Escape);
-            let press = if i.pointer.primary_pressed() { i.pointer.interact_pos() } else { None };
-            (i.modifiers.alt, other, esc, press)
-        });
-        if alt && !self.alt_was_down {
-            self.alt_combo = false;
+        if resp.clicked() {
+            *value = !*value;
+            return true;
         }
-        if alt && other_input {
-            self.alt_combo = true; // Alt+Left etc. are shortcuts, not a menu request
-        }
-        if !alt && self.alt_was_down && !self.alt_combo {
-            self.menu_peek = !self.menu_peek;
-        }
-        self.alt_was_down = alt;
-        let popup_open = egui::Popup::is_any_open(ctx);
-        if self.menu_peek {
-            if esc && !popup_open {
-                self.menu_peek = false;
-            }
-            if let Some(p) = press_pos {
-                if !popup_open && !self.menubar_rect.is_some_and(|r| r.contains(p)) {
-                    self.menu_peek = false;
-                }
-            }
-            // A menu was open and has just closed (an item was chosen): hide again.
-            if self.peek_popup_was_open && !popup_open && !alt {
-                self.menu_peek = false;
-            }
-        }
-        self.peek_popup_was_open = popup_open && self.menu_peek;
+        false
     }
 
-    fn menubar_visible(&self) -> bool {
-        self.s.show_menubar || self.menu_peek || (self.alt_was_down && !self.alt_combo)
+    /// Roomier items for menus opened from the hamburger button.
+    fn roomy_menu(&self, ui: &mut egui::Ui) {
+        if self.roomy_menus {
+            ui.set_min_width(220.0);
+            ui.spacing_mut().button_padding = Vec2::new(10.0, 6.0);
+            ui.spacing_mut().item_spacing.y = 4.0;
+        }
     }
 
     pub(super) fn header(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         let csd = !self.s.decorations;
-        let show_menu = self.menubar_visible();
+        let show_menu = self.s.show_menubar;
         if !show_menu && !csd {
-            self.menubar_rect = None;
             return;
         }
         let fill = ctx.global_style().visuals.panel_fill;
-        let panel = egui::Panel::top("menubar").show_separator_line(false)
+        egui::Panel::top("menubar").show_separator_line(false)
             .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin::symmetric(6, if csd { 4 } else { 2 })))
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
@@ -150,7 +135,6 @@ impl RivetApp {
                     }
                 });
             });
-        self.menubar_rect = Some(panel.response.rect);
     }
 
     fn window_buttons(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
@@ -204,6 +188,7 @@ impl RivetApp {
         let sel = self.tab().selected_paths();
         let in_trash = matches!(self.tab().loc, Location::Trash);
         ui.menu_button("File", |ui| {
+            self.roomy_menu(ui);
             if ui.add_enabled(in_dir.is_some(), egui::Button::new("Create New Folder").shortcut_text("Shift+Ctrl+N")).clicked() {
                 self.pending.push(Action::NewFolder);
             }
@@ -235,7 +220,17 @@ impl RivetApp {
             }
         });
         ui.menu_button("Edit", |ui| {
+            self.roomy_menu(ui);
             let has = !sel.is_empty();
+            let undo_label = self.history.next_undo().map(|s| format!("Undo {}", s.describe())).unwrap_or_else(|| "Undo".into());
+            let redo_label = self.history.next_redo().map(|s| format!("Redo {}", s.describe())).unwrap_or_else(|| "Redo".into());
+            if ui.add_enabled(self.history.next_undo().is_some(), egui::Button::new(undo_label).shortcut_text("Ctrl+Z")).clicked() {
+                self.pending.push(Action::Undo);
+            }
+            if ui.add_enabled(self.history.next_redo().is_some(), egui::Button::new(redo_label).shortcut_text("Shift+Ctrl+Z")).clicked() {
+                self.pending.push(Action::Redo);
+            }
+            ui.separator();
             if ui.add_enabled(has && !in_trash, egui::Button::new("Cut").shortcut_text("Ctrl+X")).clicked() {
                 self.pending.push(Action::Cut);
             }
@@ -272,6 +267,7 @@ impl RivetApp {
             }
         });
         ui.menu_button("View", |ui| {
+            self.roomy_menu(ui);
             if ui.add(egui::Button::new("Reload").shortcut_text("F5")).clicked() {
                 self.reload_all();
             }
@@ -283,14 +279,14 @@ impl RivetApp {
                 }
             }
             ui.separator();
-            if ui.checkbox(&mut self.s.show_hidden, "Show Hidden Files").changed() {
+            if Self::menu_toggle(ui, &mut self.s.show_hidden, "Show Hidden Files", "Ctrl+H") {
                 self.resort_all();
             }
             let mut c = false;
-            c |= ui.checkbox(&mut self.s.show_sidebar, "Sidebar").changed();
-            c |= ui.checkbox(&mut self.s.show_statusbar, "Statusbar").changed();
-            c |= ui.checkbox(&mut self.s.show_menubar, "Menubar (Ctrl+M)").changed();
-            c |= ui.checkbox(&mut self.s.show_thumbnails, "Picture Thumbnails").changed();
+            c |= Self::menu_toggle(ui, &mut self.s.show_sidebar, "Sidebar", "F9");
+            c |= Self::menu_toggle(ui, &mut self.s.show_statusbar, "Statusbar", "");
+            c |= Self::menu_toggle(ui, &mut self.s.show_menubar, "Menubar", "Ctrl+M");
+            c |= Self::menu_toggle(ui, &mut self.s.show_thumbnails, "Picture Thumbnails", "");
             if c {
                 self.dirty_settings = true;
             }
@@ -305,6 +301,7 @@ impl RivetApp {
             }
         });
         ui.menu_button("Go", |ui| {
+            self.roomy_menu(ui);
             if ui.add_enabled(!self.tab().back.is_empty(), egui::Button::new("Back").shortcut_text("Alt+Left")).clicked() {
                 self.go_back();
             }
@@ -342,6 +339,7 @@ impl RivetApp {
             }
         });
         ui.menu_button("Bookmarks", |ui| {
+            self.roomy_menu(ui);
             if ui.add_enabled(in_dir.is_some(), egui::Button::new("Add to Bookmarks").shortcut_text("Ctrl+D")).clicked() {
                 if let Some(d) = in_dir.clone() {
                     self.pending.push(Action::AddBookmark(d));
@@ -357,6 +355,7 @@ impl RivetApp {
             }
         });
         ui.menu_button("Help", |ui| {
+            self.roomy_menu(ui);
             if ui.add(egui::Button::new("Keyboard Shortcuts").shortcut_text("F1")).clicked() {
                 self.dialog = Dialog::Shortcuts;
             }
@@ -505,7 +504,9 @@ impl RivetApp {
     fn hamburger_menu(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         let fg = ui.visuals().text_color();
         let btn = egui::Button::new("").min_size(Vec2::new(34.0, 32.0)).frame_when_inactive(false);
+        self.roomy_menus = true;
         let r = egui::containers::menu::MenuButton::from_button(btn).ui(ui, |ui| {
+            self.roomy_menu(ui);
             if ui.add(egui::Button::new("Show Menubar").shortcut_text("Ctrl+M")).clicked() {
                 self.s.show_menubar = true;
                 self.dirty_settings = true;
@@ -518,7 +519,8 @@ impl RivetApp {
         for dy in [-4.5f32, 0.0, 4.5] {
             ui.painter().line_segment([c + Vec2::new(-6.5, dy), c + Vec2::new(6.5, dy)], Stroke::new(1.8, fg));
         }
-        r.0.on_hover_text("Menu — Ctrl+M shows the menu bar again, Alt shows it briefly");
+        self.roomy_menus = false;
+        r.0.on_hover_text("Menu — Ctrl+M shows the menu bar again");
     }
 
     pub(super) fn toolbar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {

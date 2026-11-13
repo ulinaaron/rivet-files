@@ -634,7 +634,7 @@ impl RivetApp {
         }
         ui.separator();
         ui.menu_button("Sort Items", |ui| self.sort_menu(ui));
-        if ui.checkbox(&mut self.s.show_hidden, "Show Hidden Files").changed() {
+        if Self::menu_toggle(ui, &mut self.s.show_hidden, "Show Hidden Files", "Ctrl+H") {
             self.resort_all();
         }
         if ui.button("Add to Bookmarks").clicked() {

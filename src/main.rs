@@ -19,6 +19,7 @@ mod palette;
 mod places;
 mod settings;
 mod thumbs;
+mod undo;
 mod watch;
 
 use eframe::egui;

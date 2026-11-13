@@ -1,6 +1,6 @@
 //! Pop-up dialogs: rename, new item, delete confirmations, open with, properties, preferences.
 
-use eframe::egui::{self, Color32, Id, Key, Sense, Stroke, Vec2};
+use eframe::egui::{self, Color32, Id, Key, Pos2, Rect, Sense, Stroke, Vec2};
 use std::path::Path;
 
 use super::{Action, Dialog, PropsState, RivetApp, ACCENTS};
@@ -111,6 +111,7 @@ impl RivetApp {
                             } else if let Err(e) = std::fs::rename(&*path, &target) {
                                 next = Some(Dialog::Message("Could not rename".into(), e.to_string()));
                             } else {
+                                self.history.record(crate::undo::Step::Renamed(path.clone(), target.clone()));
                                 let t = &mut self.tabs[self.active];
                                 t.reload(&self.mime, &self.s);
                                 t.selected.clear();
@@ -158,6 +159,7 @@ impl RivetApp {
                         };
                         match res {
                             Ok(()) => {
+                                self.history.record(crate::undo::Step::Created(p.clone()));
                                 let t = &mut self.tabs[self.active];
                                 t.reload(&self.mime, &self.s);
                                 t.selected.clear();
@@ -242,6 +244,7 @@ impl RivetApp {
                     ("Files", &[
                         ("Enter", "Open"),
                         ("Ctrl+C / X / V", "Copy / cut / paste"),
+                        ("Ctrl+Z / Ctrl+Shift+Z", "Undo / redo"),
                         ("F2", "Rename"),
                         ("Delete", "Move to Trash or delete (asks)"),
                         ("Shift+Delete", "Delete permanently"),
@@ -259,7 +262,6 @@ impl RivetApp {
                     ("Window", &[
                         ("F9", "Show or hide the sidebar"),
                         ("Ctrl+M or F10", "Show or hide the menu bar"),
-                        ("Alt (hold or tap)", "Peek at a hidden menu bar"),
                         ("F1", "This list"),
                         ("Ctrl+Q", "Close the window"),
                     ]),
@@ -455,64 +457,173 @@ impl RivetApp {
     }
 
     fn open_with_dialog(&mut self, ctx: &egui::Context) -> bool {
-        let Dialog::OpenWith { mime, show_all, filter, .. } = &self.dialog else { return true };
-        let desc = self.mime.describe(mime);
-        let list: Vec<(usize, String, String)> = if *show_all {
-            self.apps.iter().enumerate().map(|(i, a)| (i, a.name.clone(), a.icon.clone())).collect()
-        } else {
-            launch::apps_for(&self.apps, mime)
-                .into_iter()
-                .filter_map(|a| self.apps.iter().position(|x| x.id == a.id).map(|i| (i, a.name.clone(), a.icon.clone())))
-                .collect()
+        // Gather everything first (needs &mut self for icons), then draw.
+        let (paths, mime, show_all, filter) = match &self.dialog {
+            Dialog::OpenWith { paths, mime, show_all, filter, .. } => (paths.clone(), mime.clone(), *show_all, filter.to_lowercase()),
+            _ => return true,
         };
-        let f = filter.to_lowercase();
-        let mut list: Vec<_> = list.into_iter().filter(|(_, n, _)| f.is_empty() || n.to_lowercase().contains(&f)).collect();
-        list.truncate(300);
-        let ppp = ctx.pixels_per_point();
-        let px = (24.0 * ppp) as u32;
-        let textures: Vec<_> = list
-            .iter()
-            .map(|(_, _, icon)| {
-                if icon.starts_with('/') {
-                    self.icons.texture_from_path(ctx, Path::new(icon), px)
-                } else {
-                    self.icons.texture(ctx, &[icon.as_str(), "application-x-executable"], px)
-                }
-            })
+        let desc = self.mime.describe(&mime);
+        let default_id = launch::default_app(&self.apps, &mime).map(|a| a.id.clone());
+        let recommended: Vec<usize> = launch::apps_for(&self.apps, &mime)
+            .into_iter()
+            .filter_map(|a| self.apps.iter().position(|x| x.id == a.id))
             .collect();
-        let Dialog::OpenWith { paths, show_all, filter, .. } = &mut self.dialog else { return true };
-        let mut launch_idx = None;
-        let r = egui::Modal::new(Id::unique("openwith")).show(ctx, |ui| {
-            ui.set_width(420.0);
-            ui.heading("Open With");
-            let what = if paths.len() == 1 { paths[0].file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default() } else { format!("{} files", paths.len()) };
-            ui.label(format!("Choose an application for “{what}” ({desc})"));
-            ui.add_space(4.0);
-            ui.add(egui::TextEdit::singleline(filter).hint_text("Filter applications").desired_width(f32::INFINITY));
-            ui.checkbox(show_all, "Show all applications");
-            egui::ScrollArea::vertical().max_height(320.0).show(ui, |ui| {
-                if list.is_empty() {
-                    ui.label("No suggested applications. Tick “Show all applications”.");
+        let matches = |i: &usize| filter.is_empty() || self.apps[*i].name.to_lowercase().contains(&filter);
+        let mut rec: Vec<usize> = recommended.iter().copied().filter(matches).collect();
+        // The current default goes first.
+        rec.sort_by_key(|i| Some(&self.apps[*i].id) != default_id.as_ref());
+        let others: Vec<usize> = if show_all || rec.is_empty() && !filter.is_empty() {
+            (0..self.apps.len()).filter(|i| !recommended.contains(i)).filter(matches).take(300).collect()
+        } else {
+            Vec::new()
+        };
+        let ppp = ctx.pixels_per_point();
+        let px = (28.0 * ppp) as u32;
+        let mut icons: std::collections::HashMap<usize, Option<egui::TextureHandle>> = Default::default();
+        for i in rec.iter().chain(others.iter()) {
+            let icon = self.apps[*i].icon.clone();
+            let t = if icon.starts_with('/') {
+                self.icons.texture_from_path(ctx, Path::new(&icon), px)
+            } else {
+                self.icons.texture(ctx, &[icon.as_str(), "application-x-executable"], px)
+            };
+            icons.insert(*i, t);
+        }
+        let file_icon = paths.first().and_then(|p| crate::model::Entry::from_path(p.clone(), &self.mime)).and_then(|e| self.entry_texture(ctx, &e, 48.0));
+        let search_icon = self.icon(ctx, &["edit-find-symbolic", "system-search-symbolic"], 16.0);
+        let names: Vec<(usize, String, bool)> = rec
+            .iter()
+            .chain(others.iter())
+            .map(|i| (*i, self.apps[*i].name.clone(), Some(&self.apps[*i].id) == default_id.as_ref()))
+            .collect();
+        let n_rec = rec.len();
+
+        let Dialog::OpenWith { show_all, filter, chosen, remember, focus, .. } = &mut self.dialog else { return true };
+        let mut launch_now = false;
+        let mut cancel = false;
+        let frame = egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(22)).corner_radius(super::R_LG);
+        let r = egui::Modal::new(Id::unique("openwith")).frame(frame).show(ctx, |ui| {
+            ui.set_width(460.0);
+            let v = ui.visuals().clone();
+            // ---- header: the file and its type
+            ui.horizontal(|ui| {
+                if let Some(t) = &file_icon {
+                    let (r, _) = ui.allocate_exact_size(Vec2::splat(48.0), Sense::hover());
+                    super::paint_tex(ui.painter(), t, r, Color32::WHITE);
+                    ui.add_space(8.0);
                 }
-                for ((i, name, _), tex) in list.iter().zip(textures.iter()) {
-                    let btn = match tex {
-                        Some(t) => egui::Button::image_and_text(egui::Image::from_texture(t).fit_to_exact_size(Vec2::splat(24.0)), name.as_str()),
-                        None => egui::Button::new(name.as_str()),
+                ui.vertical(|ui| {
+                    let what = if paths.len() == 1 {
+                        format!("Open “{}”", paths[0].file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default())
+                    } else {
+                        format!("Open {} files", paths.len())
                     };
-                    if ui.add(btn.frame(false).min_size(Vec2::new(ui.available_width(), 30.0))).clicked() {
-                        launch_idx = Some(*i);
+                    ui.add(egui::Label::new(egui::RichText::new(what).heading()).truncate());
+                    ui.label(egui::RichText::new(&desc).color(v.weak_text_color()));
+                });
+            });
+            ui.add_space(12.0);
+            // ---- search
+            let field = crate::palette::mix(v.window_fill, v.text_color(), 0.06);
+            egui::Frame::NONE.fill(field).corner_radius(super::R_MD).inner_margin(egui::Margin::symmetric(10, 4)).show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    if let Some(t) = &search_icon {
+                        let (r, _) = ui.allocate_exact_size(Vec2::new(18.0, 24.0), Sense::hover());
+                        super::paint_tex(ui.painter(), t, Rect::from_center_size(r.center(), Vec2::splat(15.0)), v.weak_text_color());
+                    }
+                    let resp = ui.add(egui::TextEdit::singleline(filter).frame(egui::Frame::NONE).hint_text("Search applications").desired_width(f32::INFINITY));
+                    if *focus {
+                        resp.request_focus();
+                        *focus = false;
+                    }
+                });
+            });
+            ui.add_space(10.0);
+            // ---- list
+            egui::ScrollArea::vertical().max_height(300.0).auto_shrink([false, true]).show(ui, |ui| {
+                ui.spacing_mut().item_spacing.y = 2.0;
+                if names.is_empty() {
+                    ui.add_space(20.0);
+                    ui.vertical_centered(|ui| ui.label(egui::RichText::new("No matching applications").color(v.weak_text_color())));
+                    ui.add_space(20.0);
+                }
+                for (row, (i, name, is_default)) in names.iter().enumerate() {
+                    if row == 0 && n_rec > 0 {
+                        ui.label(egui::RichText::new("Recommended").small().strong().color(v.weak_text_color()));
+                    }
+                    if row == n_rec {
+                        ui.add_space(6.0);
+                        ui.label(egui::RichText::new("Other applications").small().strong().color(v.weak_text_color()));
+                    }
+                    let (rect, resp) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 40.0), Sense::click());
+                    let selected = *chosen == Some(*i);
+                    if selected {
+                        let (fill, stroke) = super::selected_tile(&v, v.window_fill);
+                        ui.painter().rect_filled(rect, super::R_SM, fill);
+                        ui.painter().rect_stroke(rect, super::R_SM, stroke, egui::StrokeKind::Inside);
+                    } else if resp.hovered() {
+                        ui.painter().rect_filled(rect, super::R_SM, v.widgets.hovered.weak_bg_fill);
+                    }
+                    let ir = Rect::from_center_size(Pos2::new(rect.left() + 24.0, rect.center().y), Vec2::splat(28.0));
+                    if let Some(Some(t)) = icons.get(i) {
+                        super::paint_tex(ui.painter(), t, ir, Color32::WHITE);
+                    }
+                    let galley = ui.painter().layout_no_wrap(name.clone(), crate::fonts::ui_font(13.5), v.text_color());
+                    ui.painter().galley(Pos2::new(ir.right() + 12.0, rect.center().y - galley.size().y / 2.0), galley, v.text_color());
+                    if *is_default {
+                        let tag = ui.painter().layout_no_wrap("Default".into(), crate::fonts::ui_font(11.0), v.weak_text_color());
+                        let tr = Rect::from_min_size(Pos2::new(rect.right() - tag.size().x - 22.0, rect.center().y - 9.0), Vec2::new(tag.size().x + 14.0, 18.0));
+                        ui.painter().rect_filled(tr, 9.0, crate::palette::mix(v.window_fill, v.text_color(), 0.08));
+                        ui.painter().galley(Pos2::new(tr.left() + 7.0, tr.center().y - tag.size().y / 2.0), tag, v.weak_text_color());
+                    }
+                    if resp.clicked() {
+                        *chosen = Some(*i);
+                    }
+                    if resp.double_clicked() {
+                        *chosen = Some(*i);
+                        launch_now = true;
                     }
                 }
             });
-            ui.add_space(6.0);
-            ui.button("Cancel").clicked()
+            ui.add_space(12.0);
+            // ---- footer
+            ui.horizontal(|ui| {
+                ui.checkbox(remember, "Always use for this file type");
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.spacing_mut().item_spacing.x = 8.0;
+                    ui.spacing_mut().button_padding = Vec2::new(14.0, 5.0);
+                    let open = egui::Button::new(egui::RichText::new("Open").color(v.selection.stroke.color)).fill(v.selection.bg_fill);
+                    if ui.add_enabled(chosen.is_some(), open).clicked() {
+                        launch_now = true;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        cancel = true;
+                    }
+                });
+            });
+            ui.add_space(2.0);
+            let label = if *show_all { "Show recommended only" } else { "Show all applications" };
+            if ui.add(egui::Label::new(egui::RichText::new(label).small().color(v.hyperlink_color)).sense(Sense::click())).on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
+                *show_all = !*show_all;
+            }
         });
-        if let Some(i) = launch_idx {
-            let p = paths.clone();
-            self.pending.push(Action::Launch(i, p));
-            return true;
+        if ctx.input(|i| i.key_pressed(Key::Enter)) && chosen.is_some() {
+            launch_now = true;
         }
-        r.inner || r.should_close()
+        if launch_now {
+            if let Some(i) = *chosen {
+                if *remember {
+                    let id = self.apps[i].id.clone();
+                    match launch::set_default_app(&id, &mime) {
+                        Ok(()) => self.flash(&format!("{} is now the default for {desc}", self.apps[i].name)),
+                        Err(e) => self.flash(&e),
+                    }
+                }
+                self.pending.push(Action::Launch(i, paths));
+                return true;
+            }
+        }
+        cancel || r.should_close()
     }
 
     /// All open Properties windows.
@@ -667,6 +778,7 @@ impl RivetApp {
                     }
                     match std::fs::rename(&path, &target) {
                         Ok(()) => {
+                            self.history.record(crate::undo::Step::Renamed(path.clone(), target.clone()));
                             st.path = target;
                             self.reload_all();
                         }

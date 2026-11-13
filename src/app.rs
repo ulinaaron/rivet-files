@@ -37,6 +37,8 @@ enum Action {
     Rename(PathBuf),
     Trash,
     Delete,
+    Undo,
+    Redo,
     /// The Delete key: ask, offering Move to Trash (default) or Delete Permanently.
     AskDelete,
     Restore,
@@ -63,7 +65,7 @@ enum Dialog {
     NewItem { folder: bool, text: String, focus: bool, template: Option<PathBuf> },
     ConfirmDelete(Box<DeleteAsk>),
     ConfirmEmptyTrash,
-    OpenWith { paths: Vec<PathBuf>, mime: String, show_all: bool, filter: String },
+    OpenWith { paths: Vec<PathBuf>, mime: String, show_all: bool, filter: String, chosen: Option<usize>, remember: bool, focus: bool },
     RenameBookmark { idx: usize, text: String },
     Message(String, String),
     About,
@@ -107,6 +109,8 @@ pub struct RivetApp {
     tabs: Vec<Tab>,
     active: usize,
     clipboard: Option<(Vec<PathBuf>, bool)>,
+    /// Undo / redo for file actions.
+    history: crate::undo::History,
     ops: Vec<Arc<Progress>>,
     dialog: Dialog,
     prefs_open: bool,
@@ -146,7 +150,6 @@ pub struct RivetApp {
     sidebar_fill: Option<Color32>,
     /// Bumped whenever a movable window opens so it starts centred again.
     popup_serial: u64,
-    menu_peek: bool,
     /// Rivet's own icon, for the About window.
     app_icon: Option<egui::TextureHandle>,
     /// The sample folder used for screenshots (removed on exit).
@@ -156,12 +159,10 @@ pub struct RivetApp {
     font_name: String,
     font_families: Vec<String>,
     toolbar_drawing: bool,
+    /// Menus opened from the hamburger button get roomier items.
+    roomy_menus: bool,
     /// Draw tool buttons without a background (toolbar, status bar).
     flat_buttons: bool,
-    alt_was_down: bool,
-    alt_combo: bool,
-    peek_popup_was_open: bool,
-    menubar_rect: Option<Rect>,
     last_decorations: bool,
     collapsed: std::collections::HashSet<String>,
     tree_expanded: std::collections::HashSet<PathBuf>,
@@ -277,6 +278,7 @@ impl RivetApp {
             tabs: vec![tab],
             active: 0,
             clipboard: None,
+            history: Default::default(),
             ops: Vec::new(),
             dialog: Dialog::None,
             prefs_open: false,
@@ -312,17 +314,13 @@ impl RivetApp {
             watch: crate::watch::Watch::spawn(ctx.clone()),
             sidebar_fill: None,
             popup_serial: 0,
-            menu_peek: false,
             app_icon: None,
             applied_font: None,
             font_name: String::new(),
             font_families: Vec::new(),
             toolbar_drawing: false,
+            roomy_menus: false,
             flat_buttons: false,
-            alt_was_down: false,
-            alt_combo: false,
-            peek_popup_was_open: false,
-            menubar_rect: None,
             last_decorations,
             collapsed: Default::default(),
             tree_expanded: [places::home()].into_iter().collect(),
@@ -352,6 +350,10 @@ impl RivetApp {
         match std::env::var("RIVET_DIALOG").as_deref() {
             Ok("about") => app.dialog = Dialog::About,
             Ok("shortcuts") => app.dialog = Dialog::Shortcuts,
+            Ok("openwith") => {
+                let sel = app.tab().selected_paths();
+                app.pending.push(Action::OpenWithDialog(sel));
+            }
             Ok("delete") | Ok("delete-permanently") => {
                 let sel = app.tab().selected_paths();
                 let perm = std::env::var("RIVET_DIALOG").as_deref() == Ok("delete-permanently");
@@ -796,7 +798,8 @@ impl RivetApp {
                 Action::Navigate(l) => self.navigate(l),
                 Action::OpenWithDialog(paths) => {
                     let mime = paths.first().and_then(|p| Entry::from_path(p.clone(), &self.mime)).map(|e| e.mime).unwrap_or_default();
-                    self.dialog = Dialog::OpenWith { paths, mime, show_all: false, filter: String::new() };
+                    let chosen = launch::default_app(&self.apps, &mime).and_then(|d| self.apps.iter().position(|a| a.id == d.id));
+                    self.dialog = Dialog::OpenWith { paths, mime, show_all: false, filter: String::new(), chosen, remember: false, focus: true };
                 }
                 Action::Launch(i, paths) => {
                     if let Some(app) = self.apps.get(i).cloned() {
@@ -858,6 +861,18 @@ impl RivetApp {
                     let sel = self.tab().selected_paths();
                     if !sel.is_empty() {
                         self.ask_delete(sel, true);
+                    }
+                }
+                Action::Undo | Action::Redo => {
+                    let undoing = matches!(a, Action::Undo);
+                    let step = if undoing { self.history.pop_undo() } else { self.history.pop_redo() };
+                    match step {
+                        Some(step) => {
+                            let what = step.describe();
+                            self.run_inverse(step, if undoing { 1 } else { 2 });
+                            self.flash(&format!("{} {what}", if undoing { "Undo:" } else { "Redo:" }));
+                        }
+                        None => self.flash(if undoing { "Nothing to undo" } else { "Nothing to redo" }),
                     }
                 }
                 Action::Restore => {
@@ -987,6 +1002,36 @@ impl RivetApp {
         self.app_icon.clone()
     }
 
+    /// Run the opposite of a recorded step. `role` 1 = undo, 2 = redo; the result is
+    /// recorded on the other stack when it finishes.
+    fn run_inverse(&mut self, step: crate::undo::Step, role: u8) {
+        use crate::undo::Step;
+        match step {
+            Step::Copied(paths) => self.ops.push(fsops::spawn_op_role(OpKind::Trash, paths, None, role)),
+            Step::Created(p) => self.ops.push(fsops::spawn_op_role(OpKind::Trash, vec![p], None, role)),
+            Step::Moved(pairs) => self.ops.push(fsops::spawn_move_pairs(pairs.into_iter().map(|(from, to)| (to, from)).collect(), role)),
+            Step::Trashed(pairs) => self.ops.push(fsops::spawn_op_role(OpKind::Restore, pairs.into_iter().map(|(_, t)| t).collect(), None, role)),
+            Step::Restored(pairs) => self.ops.push(fsops::spawn_op_role(OpKind::Trash, pairs.into_iter().map(|(_, r)| r).collect(), None, role)),
+            Step::Renamed(old, new) => {
+                if old.symlink_metadata().is_ok() {
+                    self.message("Can't undo the rename", &format!("“{}” already exists.", old.display()));
+                    return;
+                }
+                match std::fs::rename(&new, &old) {
+                    Ok(()) => {
+                        self.history.record_role(Step::Renamed(new, old.clone()), role);
+                        self.reload_all();
+                        let t = self.tab_mut();
+                        t.selected.clear();
+                        t.selected.insert(old.clone());
+                        t.scroll_to = Some(old);
+                    }
+                    Err(e) => self.message("Can't undo the rename", &e.to_string()),
+                }
+            }
+        }
+    }
+
     /// Open the delete confirmation for these items (counts and size measured up front).
     fn ask_delete(&mut self, paths: Vec<PathBuf>, permanent_default: bool) {
         let allow_trash = !matches!(self.tab().loc, Location::Trash);
@@ -1064,9 +1109,15 @@ impl RivetApp {
         let mut changed = false;
         let mut created: Vec<PathBuf> = Vec::new();
         let mut errors: Vec<String> = Vec::new();
+        let history = &mut self.history;
         self.ops.retain(|op| {
             if op.finished.load(Ordering::Acquire) {
                 changed = true;
+                if op.kind == OpKind::EmptyTrash {
+                    history.forget_trash();
+                } else if let Some(step) = crate::undo::Step::from_op(op.kind, op.done.lock().unwrap().clone()) {
+                    history.record_role(step, op.role);
+                }
                 created.extend(op.created.lock().unwrap().iter().cloned());
                 errors.extend(op.errors.lock().unwrap().iter().cloned());
                 false
@@ -1275,6 +1326,11 @@ impl RivetApp {
         if cmd && pressed(Key::H) {
             self.s.show_hidden = !self.s.show_hidden;
             self.resort_all();
+        }
+        if cmd && (pressed(Key::Y) || (m.shift && pressed(Key::Z))) {
+            self.pending.push(Action::Redo);
+        } else if cmd && pressed(Key::Z) {
+            self.pending.push(Action::Undo);
         }
         if cmd && pressed(Key::A) {
             self.pending.push(Action::SelectAll);
@@ -1529,7 +1585,6 @@ impl eframe::App for RivetApp {
         if !self.s.decorations {
             self.window_resize_edges(&ctx);
         }
-        self.update_menu_peek(&ctx);
         self.header(ui, &ctx);
         self.toolbar(ui, &ctx);
         if self.s.show_statusbar {
@@ -1576,6 +1631,28 @@ impl eframe::App for RivetApp {
             }
         }
         self.screenshot_step(&ctx);
+    }
+
+    /// Test hook for screenshots: RIVET_CLICKS="x,y@frame;x,y@frame" clicks there.
+    fn raw_input_hook(&mut self, _ctx: &egui::Context, raw: &mut egui::RawInput) {
+        if self.screenshot.is_none() {
+            return;
+        }
+        let Ok(list) = std::env::var("RIVET_CLICKS") else { return };
+        for item in list.split(';') {
+            let Some((xy, f)) = item.split_once('@') else { continue };
+            let Some((x, y)) = xy.split_once(',') else { continue };
+            let (Ok(x), Ok(y), Ok(f)) = (x.trim().parse::<f32>(), y.trim().parse::<f32>(), f.trim().parse::<u32>()) else { continue };
+            let pos = Pos2::new(x, y);
+            if self.frames + 1 == f {
+                raw.events.push(egui::Event::PointerMoved(pos));
+                raw.events.push(egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed: true, modifiers: Default::default() });
+            } else if self.frames + 1 == f + 1 {
+                raw.events.push(egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed: false, modifiers: Default::default() });
+            } else if self.frames + 1 > f + 1 {
+                raw.events.push(egui::Event::PointerMoved(pos));
+            }
+        }
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {

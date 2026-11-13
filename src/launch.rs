@@ -124,6 +124,18 @@ pub(crate) fn mimeapps_default(mime: &str) -> Option<String> {
     None
 }
 
+/// Make an app the default for a file type (writes ~/.config/mimeapps.list via xdg-mime).
+pub fn set_default_app(app_id: &str, mime: &str) -> Result<(), String> {
+    let ok = Command::new("xdg-mime")
+        .args(["default", app_id, mime])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+    if ok { Ok(()) } else { Err("Could not change the default application.".into()) }
+}
+
 pub fn default_app<'a>(apps: &'a [DesktopApp], mime: &str) -> Option<&'a DesktopApp> {
     if let Some(id) = mimeapps_default(mime) {
         if let Some(a) = apps.iter().find(|a| a.id == id) {

@@ -92,7 +92,8 @@ Rivet talks to X11 or Wayland directly. It does not use GTK or Qt. A normal desk
 | `Ctrl+H` | Show hidden files |
 | `Ctrl+1` `2` `3` | Icon / list / compact view |
 | `F2` · `Delete` | Rename · move to Trash |
-| `Ctrl+M` · `Alt` | Toggle · peek at the menu bar |
+| `Ctrl+M` | Show or hide the menu bar |
+| `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / redo |
 | `F1` | All shortcuts |
 
 ## ⚡ Performance

@@ -40,20 +40,61 @@ pub struct Progress {
     pub cancel: AtomicBool,
     pub errors: Mutex<Vec<String>>,
     pub created: Mutex<Vec<PathBuf>>,
+    /// (source, result) for every item that succeeded — what undo needs.
+    pub done: Mutex<Vec<(PathBuf, PathBuf)>>,
+    /// Why this operation runs: 0 = you did it, 1 = an undo, 2 = a redo.
+    pub role: u8,
+}
+
+impl Progress {
+    fn blank(kind: OpKind, total: usize, role: u8) -> Progress {
+        Progress {
+            kind,
+            total_items: total.max(1),
+            done_items: AtomicU64::new(0),
+            bytes_done: AtomicU64::new(0),
+            current: Mutex::new(String::new()),
+            finished: AtomicBool::new(false),
+            cancel: AtomicBool::new(false),
+            errors: Mutex::new(Vec::new()),
+            created: Mutex::new(Vec::new()),
+            done: Mutex::new(Vec::new()),
+            role,
+        }
+    }
 }
 
 pub fn spawn_op(kind: OpKind, sources: Vec<PathBuf>, dest: Option<PathBuf>) -> Arc<Progress> {
-    let p = Arc::new(Progress {
-        kind,
-        total_items: sources.len().max(1),
-        done_items: AtomicU64::new(0),
-        bytes_done: AtomicU64::new(0),
-        current: Mutex::new(String::new()),
-        finished: AtomicBool::new(false),
-        cancel: AtomicBool::new(false),
-        errors: Mutex::new(Vec::new()),
-        created: Mutex::new(Vec::new()),
+    spawn_op_role(kind, sources, dest, 0)
+}
+
+/// Move each item to an exact path (used to undo a move). Recorded as a Move.
+pub fn spawn_move_pairs(pairs: Vec<(PathBuf, PathBuf)>, role: u8) -> Arc<Progress> {
+    let p = Arc::new(Progress::blank(OpKind::Move, pairs.len(), role));
+    let pp = p.clone();
+    std::thread::spawn(move || {
+        for (src, dst) in pairs {
+            *pp.current.lock().unwrap() = src.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+            let target = if dst.symlink_metadata().is_ok() { unique_target(dst.parent().unwrap_or(Path::new("/")), &dst) } else { dst };
+            if let Some(parent) = target.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            match move_path(&src, &target, &pp) {
+                Ok(()) => {
+                    pp.created.lock().unwrap().push(target.clone());
+                    pp.done.lock().unwrap().push((src, target));
+                }
+                Err(e) => pp.errors.lock().unwrap().push(format!("{}: {e}", src.display())),
+            }
+            pp.done_items.fetch_add(1, Ordering::Relaxed);
+        }
+        pp.finished.store(true, Ordering::Release);
     });
+    p
+}
+
+pub fn spawn_op_role(kind: OpKind, sources: Vec<PathBuf>, dest: Option<PathBuf>, role: u8) -> Arc<Progress> {
+    let p = Arc::new(Progress::blank(kind, sources.len(), role));
     let pp = p.clone();
     std::thread::spawn(move || {
         if kind == OpKind::EmptyTrash {
@@ -83,13 +124,19 @@ pub fn spawn_op(kind: OpKind, sources: Vec<PathBuf>, dest: Option<PathBuf>) -> A
                         move_path(&src, &target, &pp).map(|_| Some(target))
                     }
                 }
-                OpKind::Trash => trash(&src).map(|_| None),
+                OpKind::Trash => trash(&src).map(Some),
                 OpKind::Delete => remove_recursive(&src).map(|_| None),
                 OpKind::Restore => restore_from_trash(&src).map(Some),
                 OpKind::EmptyTrash => Ok(None),
             };
             match res {
-                Ok(Some(c)) => pp.created.lock().unwrap().push(c),
+                Ok(Some(c)) => {
+                    pp.done.lock().unwrap().push((src.clone(), c.clone()));
+                    // Trashed items aren't "created" in the folder you're looking at.
+                    if kind != OpKind::Trash {
+                        pp.created.lock().unwrap().push(c);
+                    }
+                }
                 Ok(None) => {}
                 Err(e) => pp.errors.lock().unwrap().push(format!(
                     "{}: {}",
@@ -200,7 +247,7 @@ pub fn remove_recursive(p: &Path) -> std::io::Result<()> {
 
 /// Move to ~/.local/share/Trash following the freedesktop trash spec so the
 /// desktop's own trash (and other file managers) can see and restore it.
-pub fn trash(src: &Path) -> std::io::Result<()> {
+pub fn trash(src: &Path) -> std::io::Result<PathBuf> {
     let tdir = places::trash_dir();
     let files = tdir.join("files");
     let info = tdir.join("info");
@@ -221,22 +268,13 @@ pub fn trash(src: &Path) -> std::io::Result<()> {
     let content = format!("[Trash Info]\nPath={}\nDeletionDate={}\n", places::percent_encode_path(&abs), date);
     let info_path = info.join(format!("{tname}.trashinfo"));
     std::fs::write(&info_path, content)?;
-    let dummy = Progress {
-        kind: OpKind::Trash,
-        total_items: 1,
-        done_items: AtomicU64::new(0),
-        bytes_done: AtomicU64::new(0),
-        current: Mutex::new(String::new()),
-        finished: AtomicBool::new(false),
-        cancel: AtomicBool::new(false),
-        errors: Mutex::new(vec![]),
-        created: Mutex::new(vec![]),
-    };
-    if let Err(e) = move_path(src, &files.join(&tname), &dummy) {
+    let dummy = Progress::blank(OpKind::Trash, 1, 0);
+    let trashed = files.join(&tname);
+    if let Err(e) = move_path(src, &trashed, &dummy) {
         let _ = std::fs::remove_file(&info_path);
         return Err(e);
     }
-    Ok(())
+    Ok(trashed)
 }
 
 /// Where a trashed item originally lived, and when it was deleted.
@@ -262,17 +300,7 @@ pub fn restore_from_trash(trashed: &Path) -> std::io::Result<PathBuf> {
     let parent = orig.parent().unwrap_or(Path::new("/")).to_path_buf();
     std::fs::create_dir_all(&parent)?;
     let target = if orig.exists() { unique_target(&parent, &orig) } else { orig };
-    let dummy = Progress {
-        kind: OpKind::Restore,
-        total_items: 1,
-        done_items: AtomicU64::new(0),
-        bytes_done: AtomicU64::new(0),
-        current: Mutex::new(String::new()),
-        finished: AtomicBool::new(false),
-        cancel: AtomicBool::new(false),
-        errors: Mutex::new(vec![]),
-        created: Mutex::new(vec![]),
-    };
+    let dummy = Progress::blank(OpKind::Restore, 1, 0);
     move_path(trashed, &target, &dummy)?;
     let name = trashed.file_name().unwrap().to_string_lossy().to_string();
     let _ = std::fs::remove_file(places::trash_dir().join("info").join(format!("{name}.trashinfo")));
