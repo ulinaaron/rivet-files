@@ -193,6 +193,8 @@ pub struct RivetApp {
     window_focus: bool,
     /// Preferences has the keyboard (opened by keyboard, or last clicked).
     prefs_focus: bool,
+    /// What was typed into the font list's search field.
+    font_filter: String,
     /// The file list's keyboard stop, and whether focus is being moved with the keyboard
     /// (then a focus ring shows where it is).
     file_list_focus: Option<egui::Id>,
@@ -408,6 +410,7 @@ impl RivetApp {
             window_rects: Vec::new(),
             window_focus: false,
             prefs_focus: false,
+            font_filter: String::new(),
             file_list_focus: None,
             kb_nav: false,
             prefs_rect: None,
@@ -1971,6 +1974,15 @@ impl eframe::App for RivetApp {
                             _ => egui::Key::Enter,
                         };
                         raw.events.push(egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers: Default::default() });
+                    }
+                }
+                continue;
+            }
+            // "type:TEXT@N" types TEXT at frame N.
+            if let Some(text) = xy.trim().strip_prefix("type:") {
+                if let Ok(f) = f.trim().parse::<u32>() {
+                    if self.frames + 1 == f {
+                        raw.events.push(egui::Event::Text(text.to_string()));
                     }
                 }
                 continue;

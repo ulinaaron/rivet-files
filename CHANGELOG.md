@@ -29,6 +29,7 @@
   own page icons are tinted with a thin edge, and secondary text, panels and controls are stronger.
 - **Properties** redesigned: big icon and name field, a Basic / Permissions switch, and roomy
   General, Dates, Ownership and Access cards.
+- **Font picker**: type in the font list to narrow it to the closest matches; Enter picks the best one.
 - Clearer System page (name · status · action rows) and no filler text in Preferences.
 - Roomier Rename window.
 - The status bar no longer repeats the free disk space (the sidebar's drive bars show it).

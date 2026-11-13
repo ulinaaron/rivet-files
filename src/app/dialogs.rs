@@ -1230,19 +1230,54 @@ impl RivetApp {
                         ui.label("Font");
                         let system_name = crate::fonts::desktop_font_cached().map(|(f, _)| f).unwrap_or_else(|| "Sans".into());
                         let current = if self.s.ui_font.is_empty() { format!("System ({system_name})") } else { self.s.ui_font.clone() };
-                        egui::ComboBox::from_id_salt("uifont").selected_text(current).width(260.0).height(320.0).show_ui(ui, |ui| {
-                            if ui.selectable_label(self.s.ui_font.is_empty(), format!("System ({system_name})")).clicked() {
+                        let opened = egui::ComboBox::from_id_salt("uifont").selected_text(current).width(260.0).height(320.0).show_ui(ui, |ui| {
+                            // Type to narrow the list to the closest matches; Enter picks the best one.
+                            let field_bg = crate::palette::mix(ui.visuals().window_fill, ui.visuals().text_color(), 0.06);
+                            let search = egui::Frame::NONE
+                                .fill(field_bg)
+                                .corner_radius(super::R_SM)
+                                .inner_margin(egui::Margin::symmetric(8, 4))
+                                .show(ui, |ui| ui.add(egui::TextEdit::singleline(&mut self.font_filter).frame(egui::Frame::NONE).hint_text("Type a font name…").desired_width(f32::INFINITY)))
+                                .inner;
+                            search.request_focus();
+                            let pick_best = ui.input(|i| i.key_pressed(Key::Enter));
+                            ui.add_space(4.0);
+                            let typed = self.font_filter.trim().to_string();
+                            let mut matches: Vec<(i32, &String)> =
+                                self.font_families.iter().filter_map(|f| super::chrome::fuzzy_score(f, &typed).map(|s| (s, f))).collect();
+                            if !typed.is_empty() {
+                                matches.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(b.1)));
+                            }
+                            let system_label = format!("System ({system_name})");
+                            let show_system = typed.is_empty() || super::chrome::fuzzy_score(&system_label, &typed).is_some();
+                            if pick_best && !typed.is_empty() {
+                                if let Some((_, best)) = matches.first() {
+                                    self.s.ui_font = (*best).clone();
+                                    changed = true;
+                                    ui.close();
+                                }
+                            }
+                            if show_system && ui.selectable_label(self.s.ui_font.is_empty(), system_label).clicked() {
                                 self.s.ui_font.clear();
                                 changed = true;
                             }
-                            ui.separator();
-                            for fam in &self.font_families {
-                                if ui.selectable_label(self.s.ui_font == *fam, fam).clicked() {
+                            if show_system && !matches.is_empty() {
+                                ui.separator();
+                            }
+                            if matches.is_empty() && !show_system {
+                                ui.label(egui::RichText::new("No matching font").color(ui.visuals().weak_text_color()));
+                            }
+                            for (_, fam) in matches {
+                                if ui.selectable_label(self.s.ui_font == *fam, fam.as_str()).clicked() {
                                     self.s.ui_font = fam.clone();
                                     changed = true;
                                 }
                             }
                         });
+                        // Start fresh the next time the list opens.
+                        if opened.inner.is_none() {
+                            self.font_filter.clear();
+                        }
                         ui.end_row();
                         ui.label("Text size");
                         ui.horizontal(|ui| {
