@@ -242,11 +242,11 @@ pub enum Scope {
 impl Scope {
     pub fn label(&self) -> String {
         match self {
-            Scope::Global => "Global".into(),
+            Scope::Global => "Everywhere".into(),
             Scope::Folder(_) => "This folder".into(),
             Scope::Tree(p) => {
                 let name = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "/".into());
-                format!("“{name}” & subfolders")
+                format!("“{name}” & below")
             }
         }
     }
