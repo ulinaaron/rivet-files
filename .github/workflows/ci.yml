@@ -110,12 +110,43 @@ jobs:
           if ! command -v flatpak-builder-lint >/dev/null; then
             flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
             flatpak install -y --noninteractive flathub org.flatpak.Builder
-            lint() { flatpak run --filesystem="$(pwd)" --command=flatpak-builder-lint org.flatpak.Builder "$@"; }
-          else
-            lint() { flatpak-builder-lint "$@"; }
           fi
-          lint manifest packaging/flatpak/io.github.ulinaaron.rivet-files.yml
-          lint repo repo
+          # host, host-os and host-etc are errors until Flathub grants an
+          # exception. A file manager cannot browse the computer without them.
+          # Any other error still fails this job.
+          python3 - <<'PY'
+          import json, shutil, subprocess, sys
+          allowed = {
+              "finish-args-host-filesystem-access",
+              "finish-args-host-os-filesystem-access",
+              "finish-args-host-etc-filesystem-access",
+          }
+          if shutil.which("flatpak-builder-lint"):
+              lint = ["flatpak-builder-lint"]
+          else:
+              lint = [
+                  "flatpak", "run", f"--filesystem={subprocess.check_output(['pwd'], text=True).strip()}",
+                  "--command=flatpak-builder-lint", "org.flatpak.Builder",
+              ]
+          def run(args):
+              proc = subprocess.run(lint + args, text=True, capture_output=True)
+              print(proc.stdout)
+              if proc.stderr:
+                  print(proc.stderr, file=sys.stderr)
+              if not proc.stdout.strip():
+                  sys.exit(proc.returncode or 1)
+              try:
+                  data = json.loads(proc.stdout)
+              except json.JSONDecodeError:
+                  sys.exit(proc.returncode or 1)
+              unexpected = set(data.get("errors") or []) - allowed
+              if unexpected:
+                  print("unexpected linter errors:", sorted(unexpected), file=sys.stderr)
+                  sys.exit(1)
+              print("file-manager permissions pending a Flathub exception:", sorted(set(data.get("errors") or [])))
+          run(["manifest", "packaging/flatpak/io.github.ulinaaron.rivet-files.yml"])
+          run(["repo", "repo"])
+          PY
 
       - name: Attach the bundle to the GitHub release
         if: github.event_name == 'release'

@@ -81,15 +81,17 @@ Wait until the Flatpak path fixes are in a tagged release. The copy in this repo
    flatpak run --command=flatpak-builder-lint org.flatpak.Builder repo repo
    ```
 
-   Fix every error. The `filesystem=host` permission is intentional; say so in the pull request.
+   Fix every error except the three filesystem permissions in the next step. Those stay.
 
-7. Commit, push the fork, and open a pull request **against `flathub/flathub`'s `new-pr` branch**, not `master`. Title: `Add io.github.ulinaaron.rivet-files`.
+7. The linter reports three errors for permissions a file manager cannot drop: `finish-args-host-filesystem-access`, `finish-args-host-os-filesystem-access`, and `finish-args-host-etc-filesystem-access`. Flathub only ignores those after an exception is merged in [flathub-infra/flatpak-builder-lint](https://github.com/flathub-infra/flatpak-builder-lint), in `flatpak_builder_lint/staticfiles/exceptions.json`. Open that pull request yourself. Flathub says not to have an agent file exception requests. One entry, with a reason in your own words, along these lines: Rivet is a file manager and has to read and write files outside the home directory, including mounted drives (`host`); host icon themes and the MIME database live on the host `/usr` (`host-os`); host `/etc` is the computer's configuration, not the runtime's (`host-etc`).
+
+8. Commit, push the fork, and open a pull request **against `flathub/flathub`'s `new-pr` branch**, not `master`. Title: `Add io.github.ulinaaron.rivet-files`.
 
    In the description, state that you are the upstream author and that you will maintain the Flatpak. Explain `filesystem=host`: Rivet has to browse, copy and trash files anywhere on the computer, and it has to read the icon theme and the color files in `~/.config`. Mention the limitations above (host `/usr` is under `/run/host`, Unmount may fail, Open With and Open in Terminal do not launch host programs).
 
-8. Answer review comments on that pull request. When a reviewer asks for a test build, comment `bot, build` on the pull request. Do not close and reopen it to update the branch.
+9. Answer review comments on that pull request. When a reviewer asks for a test build, comment `bot, build` on the pull request. Do not close and reopen it to update the branch.
 
-9. After it is merged, Flathub creates `flathub/io.github.ulinaaron.rivet-files` and invites the GitHub account. Accept within a week. Later updates are commits to that repository's `master`, not another submission through `new-pr`.
+10. After it is merged, Flathub creates `flathub/io.github.ulinaaron.rivet-files` and invites the GitHub account. Accept within a week. Later updates are commits to that repository's `master`, not another submission through `new-pr`.
 
 The app id `io.github.ulinaaron.rivet-files` is the Flathub id for `https://github.com/ulinaaron/rivet-files`.
 

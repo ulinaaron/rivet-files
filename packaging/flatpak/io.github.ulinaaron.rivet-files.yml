@@ -21,10 +21,8 @@ finish-args:
   # Network shares the desktop has already mounted (gvfs).
   - --filesystem=xdg-run/gvfs
   - --filesystem=xdg-run/gvfsd
-  # GNOME stores the icon theme in dconf, not in a text file.
-  - --filesystem=xdg-run/dconf
-  - --filesystem=~/.config/dconf:ro
-  - --talk-name=ca.desrt.dconf
+  # Read the host dconf database as a file (host already allows ~/.config).
+  # GNOME keeps the icon theme there. No dconf bus name: the linter rejects it.
   - --env=DCONF_USER_CONFIG_DIR=.config/dconf
   # Listing drives does not need this. Unmount asks udisks on the system bus.
   - --system-talk-name=org.freedesktop.UDisks2
