@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver};
 use std::time::SystemTime;
 
-use super::{fmt_time, user_name, Action, RivetApp, R_MD, R_SM};
+use super::{user_name, Action, RivetApp, R_MD, R_SM};
 use crate::fsops;
 use crate::model::Entry;
 use crate::preview::{self, Kind, Player, Preview};
@@ -425,16 +425,38 @@ impl RivetApp {
             _ if e.is_dir && here => self.icon(ctx, &["utilities-terminal", "utilities-terminal-symbolic"], 18.0),
             _ => None,
         };
-        let icons_n = if in_trash { 1.0 } else if here { 2.0 } else { 4.0 };
         let gap = 4.0;
-        let main_w = (width - icons_n * (30.0 + gap)).max(90.0);
+        // The small buttons first, on the left …
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = gap;
-            if e.is_dir && !in_trash {
-                // Folders: no Open button (double-click opens them); the small buttons
-                // keep their place on the right.
-                ui.add_space(main_w);
-            } else if !in_trash {
+            let flat = std::mem::replace(&mut self.flat_buttons, true);
+            if !in_trash {
+                if self.tool_button(ui, ctx, &["edit-copy-symbolic", "edit-copy"], "⧉", "Copy location", true, false) {
+                    ctx.copy_text(e.path.display().to_string());
+                    self.flash("Location copied");
+                }
+                if !here {
+                    if self.tool_button(ui, ctx, &["document-edit-symbolic", "edit-rename-symbolic", "text-editor-symbolic"], "✎", "Rename (F2)", true, false) {
+                        self.pending.push(Action::Rename(e.path.clone()));
+                    }
+                    if self.tool_button(ui, ctx, &["user-trash-symbolic", "user-trash"], "🗑", "Move to Trash", true, false) {
+                        self.pending.push(Action::Trash);
+                    }
+                }
+            }
+            if self.tool_button(ui, ctx, &["dialog-information-symbolic", "help-about-symbolic", "document-properties-symbolic"], "i", "Properties", true, false) {
+                self.pending.push(Action::Properties(Some(e.path.clone())));
+            }
+            self.flat_buttons = flat;
+        });
+        // … then the main button (files and trashed items), full width below them.
+        if e.is_dir && !in_trash {
+            return;
+        }
+        let main_w = width;
+        ui.add_space(4.0);
+        ui.horizontal(|ui| {
+            if !in_trash {
                 // A split button: the left part opens with the default app, the chevron on
                 // the right brings up the Open With window to pick another one.
                 let split = !e.is_dir;
@@ -501,25 +523,6 @@ impl RivetApp {
                     self.pending.push(Action::Restore);
                 }
             }
-            let flat = std::mem::replace(&mut self.flat_buttons, true);
-            if !in_trash {
-                if self.tool_button(ui, ctx, &["edit-copy-symbolic", "edit-copy"], "⧉", "Copy location", true, false) {
-                    ctx.copy_text(e.path.display().to_string());
-                    self.flash("Location copied");
-                }
-                if !here {
-                    if self.tool_button(ui, ctx, &["document-edit-symbolic", "edit-rename-symbolic", "text-editor-symbolic"], "✎", "Rename (F2)", true, false) {
-                        self.pending.push(Action::Rename(e.path.clone()));
-                    }
-                    if self.tool_button(ui, ctx, &["user-trash-symbolic", "user-trash"], "🗑", "Move to Trash", true, false) {
-                        self.pending.push(Action::Trash);
-                    }
-                }
-            }
-            if self.tool_button(ui, ctx, &["dialog-information-symbolic", "help-about-symbolic", "document-properties-symbolic"], "i", "Properties", true, false) {
-                self.pending.push(Action::Properties(Some(e.path.clone())));
-            }
-            self.flat_buttons = flat;
         });
     }
 
