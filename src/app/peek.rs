@@ -482,9 +482,9 @@ impl RivetApp {
                     if cresp.hovered() {
                         ui.painter().rect_filled(chev_r, egui::CornerRadius { nw: 0, sw: 0, ne: rad, se: rad }, hover);
                     }
-                    // divider
+                    // divider: the full height, meeting the outline top and bottom
                     ui.painter().line_segment(
-                        [Pos2::new(chev_r.left(), r.top() + 7.0), Pos2::new(chev_r.left(), r.bottom() - 7.0)],
+                        [Pos2::new(chev_r.left(), r.top() + border.width), Pos2::new(chev_r.left(), r.bottom() - border.width)],
                         border,
                     );
                     let c = chev_r.center() + Vec2::new(0.0, 1.0);
