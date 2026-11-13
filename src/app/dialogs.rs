@@ -566,10 +566,16 @@ impl RivetApp {
         };
         let desc = self.mime.describe(&mime);
         let default_id = launch::default_app(&self.apps, &mime).map(|a| a.id.clone());
-        let recommended: Vec<usize> = launch::apps_for(&self.apps, &mime)
+        let mut recommended: Vec<usize> = launch::apps_for(&self.apps, &mime)
             .into_iter()
             .filter_map(|a| self.apps.iter().position(|x| x.id == a.id))
             .collect();
+        // The current default app is always offered, even when it doesn't list this type.
+        if let Some(d) = default_id.as_ref().and_then(|id| self.apps.iter().position(|x| &x.id == id)) {
+            if !recommended.contains(&d) {
+                recommended.insert(0, d);
+            }
+        }
         let matches = |i: &usize| filter.is_empty() || self.apps[*i].name.to_lowercase().contains(&filter);
         let mut rec: Vec<usize> = recommended.iter().copied().filter(matches).collect();
         // The current default goes first.

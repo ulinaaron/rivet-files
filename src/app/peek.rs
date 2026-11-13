@@ -431,10 +431,42 @@ impl RivetApp {
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = gap;
             if !in_trash {
-                let (r, resp) = ui.allocate_exact_size(Vec2::new(main_w, 30.0), Sense::click());
-                let fill = if resp.hovered() { crate::palette::mix(v.selection.bg_fill, v.text_color(), 0.12) } else { v.selection.bg_fill };
-                ui.painter().rect_filled(r, R_MD, fill);
+                // A split button: the left part opens with the default app, the chevron on
+                // the right brings up the Open With window to pick another one.
+                let split = !e.is_dir;
+                let (r, _) = ui.allocate_exact_size(Vec2::new(main_w, 30.0), Sense::hover());
+                let chevron_w = if split { 30.0 } else { 0.0 };
+                let main_r = Rect::from_min_max(r.min, Pos2::new(r.right() - chevron_w, r.bottom()));
+                let chev_r = Rect::from_min_max(Pos2::new(main_r.right(), r.top()), r.max);
+                let resp = ui.interact(main_r, ui.scope_id().with("peek-open"), Sense::click());
+                let base = v.selection.bg_fill;
+                let hover = crate::palette::mix(base, v.text_color(), 0.14);
+                ui.painter().rect_filled(r, R_MD, base);
+                let rad = R_MD;
+                if resp.hovered() {
+                    let cr = if split { egui::CornerRadius { nw: rad, sw: rad, ne: 0, se: 0 } } else { egui::CornerRadius::same(rad) };
+                    ui.painter().rect_filled(main_r, cr, hover);
+                }
                 let fg = v.selection.stroke.color;
+                if split {
+                    let cresp = ui.interact(chev_r, ui.scope_id().with("peek-open-with"), Sense::click());
+                    if cresp.hovered() {
+                        ui.painter().rect_filled(chev_r, egui::CornerRadius { nw: 0, sw: 0, ne: rad, se: rad }, hover);
+                    }
+                    // divider
+                    ui.painter().line_segment(
+                        [Pos2::new(chev_r.left(), r.top() + 7.0), Pos2::new(chev_r.left(), r.bottom() - 7.0)],
+                        Stroke::new(1.0, fg.gamma_multiply(0.35)),
+                    );
+                    let c = chev_r.center() + Vec2::new(0.0, 1.0);
+                    let st = Stroke::new(1.8, fg);
+                    ui.painter().line_segment([c + Vec2::new(-4.5, -2.5), c + Vec2::new(0.0, 2.0)], st);
+                    ui.painter().line_segment([c + Vec2::new(0.0, 2.0), c + Vec2::new(4.5, -2.5)], st);
+                    if cresp.on_hover_text("Open with another application…").clicked() {
+                        self.pending.push(Action::OpenWithDialog(vec![e.path.clone()]));
+                    }
+                }
+                let r = main_r;
                 let mut x = r.left() + 10.0;
                 if let Some(t) = &app_icon {
                     super::paint_tex(ui.painter(), t, Rect::from_center_size(Pos2::new(x + 9.0, r.center().y), Vec2::splat(18.0)), Color32::WHITE);
