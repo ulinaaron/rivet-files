@@ -81,6 +81,14 @@ impl RivetApp {
 
     /// The Filters view of the sidebar.
     pub(super) fn filters_view(&mut self, ui: &mut egui::Ui) {
+        // One column: header, scope buttons, card and notes share the same left/right edges.
+        egui::Frame::NONE.inner_margin(egui::Margin { left: 4, right: 4, top: 0, bottom: 0 }).show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.vertical(|ui| self.filters_column(ui));
+        });
+    }
+
+    fn filters_column(&mut self, ui: &mut egui::Ui) {
         let v = ui.visuals().clone();
         let weak = v.weak_text_color();
         let accent = super::accent_color(&self.s);
@@ -88,12 +96,12 @@ impl RivetApp {
         // ---- header, like the other sidebar sections, with the folder underneath
         ui.add_space(10.0);
         let (hr, _) = ui.allocate_exact_size(Vec2::new(w, 26.0), Sense::hover());
-        paint_funnel(ui.painter(), Pos2::new(hr.left() + 12.0, hr.center().y), 13.0, v.text_color());
-        ui.painter().text(Pos2::new(hr.left() + 24.0, hr.center().y), egui::Align2::LEFT_CENTER, "Filters", crate::fonts::ui_font(13.5), v.text_color());
+        paint_funnel(ui.painter(), Pos2::new(hr.left() + 16.0, hr.center().y), 13.0, v.text_color());
+        ui.painter().text(Pos2::new(hr.left() + 28.0, hr.center().y), egui::Align2::LEFT_CENTER, "Filters", crate::fonts::ui_font(13.5), v.text_color());
         let Some(dir) = self.tab().loc.dir().map(|d| d.to_path_buf()) else {
             ui.add_space(6.0);
             ui.horizontal(|ui| {
-                ui.add_space(24.0);
+                ui.add_space(10.0);
                 ui.add(egui::Label::new(egui::RichText::new("Open a folder to filter it.").color(weak)).wrap());
             });
             return;
@@ -120,12 +128,12 @@ impl RivetApp {
             .or_else(|| active.clone())
             .unwrap_or(Scope::Folder(dir.clone()));
         // Three icon buttons: global, this folder, this folder & below.
-        ui.add_space(4.0);
-        let (bar, _) = ui.allocate_exact_size(Vec2::new(w, 40.0), Sense::hover());
+        ui.add_space(8.0);
+        let (bar, _) = ui.allocate_exact_size(Vec2::new(w, 44.0), Sense::hover());
         ui.painter().rect_filled(bar, R_MD, v.widgets.inactive.weak_bg_fill);
         let bw = bar.width() / 3.0;
         for (i, (scope, _)) in rows.iter().take(3).enumerate() {
-            let r = Rect::from_min_size(bar.min + Vec2::new(bw * i as f32, 0.0), Vec2::new(bw, bar.height())).shrink(3.0);
+            let r = Rect::from_min_size(bar.min + Vec2::new(bw * i as f32, 0.0), Vec2::new(bw, bar.height())).shrink(4.0);
             let resp = ui.interact(r, ui.scope_id().with(("filter-scope", i)), Sense::click());
             let sel = *scope == pick;
             if sel {
@@ -169,7 +177,7 @@ impl RivetApp {
             }
         }
         self.filter_scope = Some(pick.clone());
-        ui.add_space(10.0);
+        ui.add_space(14.0);
 
         // ---- the picked filter
         let before = self.s.filters.get(&pick).cloned();
@@ -334,7 +342,7 @@ fn info_note(ui: &mut egui::Ui, text: &str) {
     let v = ui.visuals().clone();
     let weak = v.weak_text_color();
     let fill = crate::palette::mix(v.panel_fill, v.text_color(), 0.035);
-    egui::Frame::NONE.fill(fill).corner_radius(R_SM).inner_margin(egui::Margin { left: 8, right: 8, top: 6, bottom: 6 }).show(ui, |ui| {
+    egui::Frame::NONE.fill(fill).corner_radius(R_SM).inner_margin(egui::Margin { left: 12, right: 12, top: 8, bottom: 8 }).show(ui, |ui| {
         ui.set_width(ui.available_width());
         ui.horizontal_top(|ui| {
             ui.spacing_mut().item_spacing.x = 7.0;
