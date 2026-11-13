@@ -750,7 +750,9 @@ impl RivetApp {
         let desc = st.entry.as_ref().map(|e| self.mime.describe(&e.mime)).unwrap_or_default();
         let mut apply_mode: Option<u32> = None;
         let mut rename: Option<String> = None;
-        let title = format!("{} — Properties", st.path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "/".into()));
+        // Just "Properties": the name is right below in the window, and long names
+        // would crowd the title bar.
+        let title = "Properties".to_string();
         let mut chrome = self.window_chrome(&title, &["document-properties-symbolic", "dialog-information-symbolic"], ctx);
         if let Some(t) = &tex {
             chrome.icon = Some(t.clone());
@@ -758,7 +760,6 @@ impl RivetApp {
         let area = self.window_area(ctx);
         let created = std::fs::metadata(&st.path).ok().and_then(|m| m.created().ok());
         let accessed = std::fs::metadata(&st.path).ok().and_then(|m| m.accessed().ok());
-        let disk = places::disk_space(&st.path);
         let shown = super::windows::show(ctx, win, &chrome, area, Vec2::new(420.0, 300.0), |ui| {
             let v = ui.visuals().clone();
             let weak = v.weak_text_color();
@@ -884,17 +885,6 @@ impl RivetApp {
                         }
                         rows(ui, "props-dates", list);
                     });
-                    if let Some((total, free)) = disk {
-                        card(ui, "Disk", &mut |ui| {
-                            let used = total.saturating_sub(free);
-                            let frac = if total > 0 { used as f32 / total as f32 } else { 0.0 };
-                            let (bar, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 6.0), Sense::hover());
-                            ui.painter().rect_filled(bar, 3.0, v.widgets.inactive.bg_fill);
-                            ui.painter().rect_filled(Rect::from_min_size(bar.min, Vec2::new(bar.width() * frac, bar.height())), 3.0, v.selection.bg_fill);
-                            ui.add_space(2.0);
-                            ui.label(format!("{} free of {}", fsops::human_size(free), fsops::human_size(total)));
-                        });
-                    }
                 } else {
                     card(ui, "Ownership", &mut |ui| {
                         rows(ui, "props-owner", vec![("Owner", st.owner.clone(), None), ("Group", st.group.clone(), None)]);
