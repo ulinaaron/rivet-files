@@ -113,7 +113,7 @@ Rivet talks to X11 or Wayland directly. It does not use GTK or Qt. A normal desk
 
 | Keys | Action |
 | --- | --- |
-| `Ctrl+L` | Type a location |
+| `Ctrl+L` · `Tab` | Type a location · complete the suggested folder |
 | `Ctrl+F` or just type | Filter this folder |
 | `Ctrl+T` / `Ctrl+W` | New / close tab |
 | `Ctrl+H` | Show hidden files |

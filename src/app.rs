@@ -183,6 +183,8 @@ pub struct RivetApp {
     prefs_win: windows::WinState,
     /// The page shown in Preferences.
     prefs_tab: PrefsTab,
+    /// Folder listing behind the location bar's suggestions (folder, its sub-folders).
+    path_suggest: Option<(PathBuf, Vec<String>)>,
     /// Open Properties windows (several at once are fine).
     props: Vec<(windows::WinState, PropsState)>,
     next_win_id: u64,
@@ -192,6 +194,8 @@ pub struct RivetApp {
     path_editing: bool,
     path_text: String,
     path_focus: bool,
+    /// Focus the location field with the caret at the end (no selection).
+    path_caret_end: bool,
     search_open: bool,
     search_focus: bool,
     user_dirs: UserDirs,
@@ -391,6 +395,7 @@ impl RivetApp {
             prefs_open: false,
             prefs_win: windows::WinState::new(1, Vec2::new(800.0, 640.0)),
             prefs_tab: PrefsTab::default(),
+            path_suggest: None,
             props: Vec::new(),
             next_win_id: 10,
             window_rects: Vec::new(),
@@ -398,6 +403,7 @@ impl RivetApp {
             path_editing: false,
             path_text: String::new(),
             path_focus: false,
+            path_caret_end: false,
             search_open: false,
             search_focus: false,
             user_dirs: places::user_dirs(),
@@ -494,8 +500,14 @@ impl RivetApp {
             app.search_open = true;
             app.search_focus = true;
         }
-        if std::env::var_os("RIVET_EDIT_PATH").is_some() {
+        if let Ok(v) = std::env::var("RIVET_EDIT_PATH") {
             app.start_path_editing();
+            // RIVET_EDIT_PATH=/some/pa types that text (for checking suggestions).
+            if v.starts_with('/') || v.starts_with('~') {
+                app.path_text = v;
+                app.path_focus = false;
+                app.path_caret_end = true;
+            }
         }
         if let Ok(list) = std::env::var("RIVET_OPEN_PROPERTIES") {
             for p in list.split(':').filter(|p| !p.is_empty()) {
@@ -1883,13 +1895,14 @@ impl eframe::App for RivetApp {
                 }
                 continue;
             }
-            // "left@N" / "right@N" / "enter@N" press that key at frame N.
-            if matches!(xy.trim(), "left" | "right" | "enter") {
+            // "left@N" / "right@N" / "enter@N" / "tab@N" press that key at frame N.
+            if matches!(xy.trim(), "left" | "right" | "enter" | "tab") {
                 if let Ok(f) = f.trim().parse::<u32>() {
                     if self.frames + 1 == f {
                         let key = match xy.trim() {
                             "left" => egui::Key::ArrowLeft,
                             "right" => egui::Key::ArrowRight,
+                            "tab" => egui::Key::Tab,
                             _ => egui::Key::Enter,
                         };
                         raw.events.push(egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers: Default::default() });

@@ -12,6 +12,8 @@
   icons, typography, window. Help → About opens the About page.
 - **Theme-tinted action colors**: info, danger, warning and success are 70% their usual hue and
   30% your theme accent. Delete Permanently, close-button hovers and errors use danger; Rename uses success.
+- **Folder suggestions** while typing a path: a fuzzy-matched list of sub-folders under the
+  location bar; Tab completes the highlighted one, Enter completes it and goes there, ↑/↓ pick.
 - **Location bar**: drag across it to select the path as text; right-click it (or any folder in it)
   for Copy Location, Open in New Tab and Edit Location.
 

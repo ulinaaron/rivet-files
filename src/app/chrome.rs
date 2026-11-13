@@ -611,7 +611,38 @@ impl RivetApp {
     }
 
     fn location_entry(&mut self, ui: &mut egui::Ui) {
-        let resp = ui.add(egui::TextEdit::singleline(&mut self.path_text).frame(egui::Frame::NONE).align(egui::Align2::LEFT_CENTER).min_size(Vec2::new(0.0, 26.0)).desired_width(f32::INFINITY).hint_text("Type a path, e.g. /home or ~/Documents"));
+        // Folder suggestions for the part after the last "/", fuzzy-matched.
+        // Tab (or Enter) takes the highlighted one; Enter also goes there.
+        let enter_down = ui.input(|i| i.key_pressed(Key::Enter));
+        let mut cache = self.path_suggest.take();
+        let edit = egui::TextEdit::singleline(&mut self.path_text)
+            .frame(egui::Frame::NONE)
+            .align(egui::Align2::LEFT_CENTER)
+            .min_size(Vec2::new(0.0, 26.0))
+            .desired_width(f32::INFINITY)
+            .hint_text("Type a path, e.g. /home or ~/Documents");
+        let out = egui::CompletionPopup::new(ui.make_persistent_id("location-entry"))
+            .word_boundary(|c| c == '/')
+            .align(egui::RectAlign::BOTTOM_START)
+            .max_height(280.0)
+            .show(ui, edit, |q| {
+                let prefix: String = q.text.chars().take(q.word_range.start.0).collect();
+                folder_suggestions(&prefix, q.word, &mut cache)
+            });
+        self.path_suggest = cache;
+        let resp = out.text_edit.response.response.clone();
+        let accepted_with_enter = out.accepted.is_some() && enter_down;
+        if std::mem::take(&mut self.path_caret_end) {
+            resp.request_focus();
+        }
+        if out.accepted.is_some() {
+            // Put the cursor at the end so the next folder level can be typed straight away.
+            if let Some(mut st) = egui::TextEdit::load_state(ui.ctx(), resp.id) {
+                let n = self.path_text.chars().count();
+                st.cursor.set_char_range(Some(egui::text::CCursorRange::one(egui::text::CCursor::new(n))));
+                st.store(ui.ctx(), resp.id);
+            }
+        }
         if self.path_focus {
             resp.request_focus();
             // Select the whole path so typing replaces it.
@@ -624,12 +655,12 @@ impl RivetApp {
             }
             self.path_focus = false;
         }
-        let enter = ui.input(|i| i.key_pressed(Key::Enter));
-        if resp.lost_focus() && !enter {
+        let enter = enter_down;
+        if resp.lost_focus() && !enter && !out.is_open {
             // Clicked elsewhere or pressed Escape: back to the folder buttons.
             self.path_editing = false;
         }
-        if resp.lost_focus() && enter {
+        if (resp.lost_focus() && enter) || accepted_with_enter {
             let txt = self.path_text.trim().to_string();
             // Network addresses: network:/// shows the Network page, smb://, sftp://… connect.
             if txt.starts_with("network:") {
@@ -1424,5 +1455,88 @@ impl RivetApp {
         if ui.button("Properties").clicked() {
             self.pending.push(Action::Properties(Some(p.to_path_buf())));
         }
+    }
+}
+
+/// How well `name` matches what was typed (higher is better), or None.
+/// Starts-with beats contains, which beats the letters appearing in order.
+pub(super) fn fuzzy_score(name: &str, typed: &str) -> Option<i32> {
+    if typed.is_empty() {
+        return Some(0);
+    }
+    let n = name.to_lowercase();
+    let t = typed.to_lowercase();
+    if n == t {
+        return Some(3000);
+    }
+    if n.starts_with(&t) {
+        return Some(2000 - n.len() as i32);
+    }
+    if let Some(pos) = n.find(&t) {
+        return Some(1000 - pos as i32 * 4 - n.len() as i32);
+    }
+    // Letters in order, with as few gaps as possible.
+    let mut gaps = 0;
+    let mut last: Option<usize> = None;
+    let mut chars = n.char_indices();
+    for tc in t.chars() {
+        let (i, _) = chars.find(|(_, c)| *c == tc)?;
+        if let Some(l) = last {
+            gaps += (i - l - 1) as i32;
+        }
+        last = Some(i);
+    }
+    Some(500 - gaps * 8 - n.len() as i32)
+}
+
+/// Sub-folders of the folder typed so far (`prefix`, up to and including the last "/")
+/// that match `word`, best first. The folder listing is cached between keystrokes.
+fn folder_suggestions(prefix: &str, word: &str, cache: &mut Option<(PathBuf, Vec<String>)>) -> Vec<egui::Suggestion> {
+    if prefix.is_empty() || !(prefix.starts_with('/') || prefix.starts_with('~')) {
+        return Vec::new();
+    }
+    let dir = if let Some(rest) = prefix.strip_prefix('~') {
+        places::home().join(rest.trim_start_matches('/'))
+    } else {
+        PathBuf::from(prefix)
+    };
+    if cache.as_ref().map(|(d, _)| d) != Some(&dir) {
+        let mut names: Vec<String> = std::fs::read_dir(&dir)
+            .into_iter()
+            .flatten()
+            .flatten()
+            .filter(|e| e.path().is_dir())
+            .map(|e| e.file_name().to_string_lossy().to_string())
+            .collect();
+        names.sort_by_key(|n| n.to_lowercase());
+        *cache = Some((dir, names));
+    }
+    let names = &cache.as_ref().unwrap().1;
+    let show_hidden = word.starts_with('.');
+    let mut scored: Vec<(i32, &String)> = names
+        .iter()
+        .filter(|n| show_hidden || !n.starts_with('.'))
+        .filter_map(|n| fuzzy_score(n, word).map(|s| (s, n)))
+        .collect();
+    // Nothing to suggest once the word is exactly a folder and nothing else matches.
+    if scored.len() == 1 && scored[0].1 == word {
+        return Vec::new();
+    }
+    scored.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.to_lowercase().cmp(&b.1.to_lowercase())));
+    scored.into_iter().take(12).map(|(_, n)| egui::Suggestion::new(format!("{n}/"))).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::fuzzy_score;
+
+    #[test]
+    fn fuzzy_order() {
+        let s = |n| fuzzy_score(n, "doc");
+        assert!(s("Documents") > s("my-docs"));
+        assert!(s("my-docs") > s("Downloads-cache"));
+        assert!(fuzzy_score("Downloads", "dwn").is_some());
+        assert!(fuzzy_score("Music", "xyz").is_none());
+        assert!(fuzzy_score("Pictures", "").is_some());
     }
 }
