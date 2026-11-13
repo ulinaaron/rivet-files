@@ -68,6 +68,10 @@ pub struct Settings {
     pub sidebar_width: f32,
     /// Put the sidebar on the right of the window instead of the left.
     pub sidebar_right: bool,
+    /// Put the toolbar at the bottom of the window.
+    pub toolbar_bottom: bool,
+    /// Put the status bar at the top of the window (under the toolbar when both are there).
+    pub statusbar_top: bool,
     /// The Peek panel: details and a large preview of the selected item.
     pub show_peek: bool,
     /// Put the Peek panel on the left (default: right).
@@ -111,6 +115,8 @@ impl Default for Settings {
             window_h: 640.0,
             sidebar_width: 190.0,
             sidebar_right: false,
+            toolbar_bottom: false,
+            statusbar_top: false,
             show_peek: false,
             peek_left: false,
             peek_width: 300.0,
@@ -170,6 +176,8 @@ impl Settings {
                 "window_h" => s.window_h = f.unwrap_or(s.window_h).max(300.0),
                 "toolbar" => s.toolbar = parse_toolbar(v),
                 "sidebar_right" => s.sidebar_right = b,
+                "toolbar_bottom" => s.toolbar_bottom = b,
+                "statusbar_top" => s.statusbar_top = b,
                 "show_peek" => s.show_peek = b,
                 "peek_left" => s.peek_left = b,
                 "peek_preview_h" => s.peek_preview_h = f.unwrap_or(PEEK_PREVIEW_H).clamp(100.0, 1200.0),
@@ -186,12 +194,12 @@ impl Settings {
         let sort = match self.sort { SortKey::Name => "name", SortKey::Size => "size", SortKey::Type => "type", SortKey::Modified => "modified" };
         let theme = match self.theme { ThemeChoice::System => "system", ThemeChoice::Light => "light", ThemeChoice::Dark => "dark" };
         let text = format!(
-            "view={view}\nsort={sort}\nsort_desc={}\nfolders_first={}\nshow_hidden={}\nzoom={}\nlist_zoom={}\ndecorations={}\nicon_theme={}\nbuiltin_icons={}\nui_font={}\nui_font_size={}\nicon_color={}\ntheme={theme}\nshow_sidebar={}\nsidebar_icon={}\nsidebar_tree={}\nshow_statusbar={}\nshow_menubar={}\nshow_thumbnails={}\nsingle_click={}\nconfirm_trash={}\nfollow_desktop_colors={}\naccent=#{:02x}{:02x}{:02x}\nwindow_w={}\nwindow_h={}\nsidebar_width={}\ntoolbar={}\ncompress_format={}\nsidebar_right={}\nshow_peek={}\npeek_left={}\npeek_width={}\npeek_preview_h={}\n",
+            "view={view}\nsort={sort}\nsort_desc={}\nfolders_first={}\nshow_hidden={}\nzoom={}\nlist_zoom={}\ndecorations={}\nicon_theme={}\nbuiltin_icons={}\nui_font={}\nui_font_size={}\nicon_color={}\ntheme={theme}\nshow_sidebar={}\nsidebar_icon={}\nsidebar_tree={}\nshow_statusbar={}\nshow_menubar={}\nshow_thumbnails={}\nsingle_click={}\nconfirm_trash={}\nfollow_desktop_colors={}\naccent=#{:02x}{:02x}{:02x}\nwindow_w={}\nwindow_h={}\nsidebar_width={}\ntoolbar={}\ncompress_format={}\nsidebar_right={}\nshow_peek={}\npeek_left={}\npeek_width={}\npeek_preview_h={}\ntoolbar_bottom={}\nstatusbar_top={}\n",
             self.sort_desc, self.folders_first, self.show_hidden, self.zoom, self.list_zoom, self.decorations,
             self.icon_theme, self.builtin_icons, self.ui_font, self.ui_font_size, self.icon_color.id(), self.show_sidebar, self.sidebar_icon, self.sidebar_tree, self.show_statusbar, self.show_menubar, self.show_thumbnails,
             self.single_click, self.confirm_trash, self.follow_desktop_colors, self.accent[0], self.accent[1], self.accent[2],
             self.window_w, self.window_h, self.sidebar_width, toolbar_string(&self.toolbar), self.compress_format,
-            self.sidebar_right, self.show_peek, self.peek_left, self.peek_width, self.peek_preview_h
+            self.sidebar_right, self.show_peek, self.peek_left, self.peek_width, self.peek_preview_h, self.toolbar_bottom, self.statusbar_top
         );
         let p = path();
         if let Some(d) = p.parent() {

@@ -167,6 +167,13 @@ fn main() -> eframe::Result {
         }
         _ => {}
     }
+    // Test hooks: toolbar at the bottom, status bar at the top.
+    if std::env::var_os("RIVET_TOOLBAR_BOTTOM").is_some() {
+        settings.toolbar_bottom = true;
+    }
+    if std::env::var_os("RIVET_STATUS_TOP").is_some() {
+        settings.statusbar_top = true;
+    }
     if std::env::var_os("RIVET_SIDEBAR_RIGHT").is_some() {
         settings.sidebar_right = true;
     }

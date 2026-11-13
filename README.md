@@ -32,7 +32,7 @@ as you like.
 - 🗜️ **Compress and extract** — zip, tar.gz, tar.xz, tar.zst and 7z
 - 🎨 **Follows your colors** — matugen, Noctalia and GTK themes, live, no restart
 - 💜 **Built-in icon set** recolored from your palette (primary, secondary or tertiary)
-- 🧰 **Make it yours** — custom toolbar, fonts, text size, hideable menu bar
+- 🧰 **Make it yours** — custom toolbar at the top or bottom, status bar top, bottom or off, fonts, text size, hideable menu bar
 - 🪟 **Title bar your way** — your desktop's, or Rivet's own with window buttons
 - ⚡ **Fast** — 100,000 files open in under 0.4 s, and an idle Rivet uses no CPU
 - 🦀 **Light** — one 14 MB program (a 6 MB AppImage download), no toolkit to install
@@ -175,7 +175,6 @@ and `python3 docs/bench-100k.py`.
 
 - Freedesktop file picker integration
 - Tagging and pinning files
-- Flexible toolbar and status bar positions
 - Zen mode
 - Bulk rename files
 

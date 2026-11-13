@@ -1236,6 +1236,28 @@ impl RivetApp {
                             changed |= ui.selectable_value(&mut self.s.decorations, false, "App").changed();
                         });
                         ui.end_row();
+                        ui.label("Toolbar");
+                        ui.horizontal(|ui| {
+                            changed |= ui.selectable_value(&mut self.s.toolbar_bottom, false, "Top").changed();
+                            changed |= ui.selectable_value(&mut self.s.toolbar_bottom, true, "Bottom").changed();
+                        });
+                        ui.end_row();
+                        ui.label("Status bar");
+                        ui.horizontal(|ui| {
+                            let mut pick = if !self.s.show_statusbar { 0 } else if self.s.statusbar_top { 1 } else { 2 };
+                            let before = pick;
+                            ui.selectable_value(&mut pick, 0, "Off");
+                            ui.selectable_value(&mut pick, 1, "Top");
+                            ui.selectable_value(&mut pick, 2, "Bottom");
+                            if pick != before {
+                                self.s.show_statusbar = pick != 0;
+                                if pick != 0 {
+                                    self.s.statusbar_top = pick == 1;
+                                }
+                                changed = true;
+                            }
+                        });
+                        ui.end_row();
                         ui.label("Sidebar");
                         ui.horizontal(|ui| {
                             changed |= ui.selectable_value(&mut self.s.sidebar_right, false, "Left").changed();

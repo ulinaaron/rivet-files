@@ -550,7 +550,8 @@ impl RivetApp {
         let layout = self.s.toolbar.clone();
         let split = layout.iter().position(|t| *t == ToolItem::PathBar).unwrap_or(layout.len());
         let (left, right) = (layout[..split].to_vec(), layout[(split + 1).min(layout.len())..].to_vec());
-        egui::Panel::top("toolbar").show_separator_line(false)
+        let panel = if self.s.toolbar_bottom { egui::Panel::bottom("toolbar") } else { egui::Panel::top("toolbar") };
+        panel.show_separator_line(false)
             .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin::symmetric(12, 9)))
             .show(ui, |ui| {
                 // Right-click on empty toolbar space to customize it.
@@ -933,8 +934,14 @@ impl RivetApp {
         // the Peek button sits on the Peek panel's side.
         let sidebar_right = self.s.sidebar_right;
         let peek_left = self.s.peek_left;
-        egui::Panel::bottom("status").show_separator_line(false)
-            .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin { left: 6, right: 6, top: 3, bottom: 6 }))
+        // A little more room on the side facing the window edge.
+        let (panel, margin) = if self.s.statusbar_top {
+            (egui::Panel::top("status"), egui::Margin { left: 6, right: 6, top: 5, bottom: 4 })
+        } else {
+            (egui::Panel::bottom("status"), egui::Margin { left: 6, right: 6, top: 3, bottom: 6 })
+        };
+        panel.show_separator_line(false)
+            .frame(egui::Frame::NONE.fill(fill).inner_margin(margin))
             .show(ui, |ui| {
                 self.flat_buttons = true;
                 ui.horizontal(|ui| {

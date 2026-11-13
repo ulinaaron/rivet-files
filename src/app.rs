@@ -1820,10 +1820,21 @@ impl eframe::App for RivetApp {
             self.window_resize_edges(&ctx);
         }
         self.header(ui, &ctx);
-        self.toolbar(ui, &ctx);
-        if self.s.show_statusbar {
+        // Toolbar and status bar can each sit at the top or the bottom. Panels added first sit
+        // nearer the window edge: at the top the toolbar comes first, at the bottom the status
+        // bar is outermost with the toolbar stacked just above it.
+        let status = self.s.show_statusbar;
+        let both_bottom = status && self.s.toolbar_bottom && !self.s.statusbar_top;
+        if both_bottom {
             self.status_bar(ui, &ctx);
             self.flat_buttons = false;
+            self.toolbar(ui, &ctx);
+        } else {
+            self.toolbar(ui, &ctx);
+            if status {
+                self.status_bar(ui, &ctx);
+                self.flat_buttons = false;
+            }
         }
         if self.s.show_sidebar {
             self.sidebar(ui, &ctx);

@@ -18,7 +18,8 @@ impl RivetApp {
         // The file area is the lowest surface; it sits inside the chrome surface with a
         // rounded corner where the toolbar and the sidebar meet (no border lines).
         let chrome = ctx.global_style().visuals.panel_fill;
-        let round_bottom = self.s.show_statusbar;
+        // Round the bottom corners where a bar (status bar or toolbar) sits below the files.
+        let round_bottom = (self.s.show_statusbar && !self.s.statusbar_top) || self.s.toolbar_bottom;
         // Round the right-hand corners too when a panel (sidebar or Peek) sits on the right.
         let right_panel = (self.s.show_sidebar && self.s.sidebar_right) || (self.s.show_peek && !self.s.peek_left);
         let r = if right_panel { R_LG } else { 0 };
