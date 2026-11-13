@@ -1452,6 +1452,14 @@ impl RivetApp {
             self.search_open = true;
             self.search_focus = true;
         }
+        // Ctrl+, opens Preferences (or closes it when it is already open).
+        if cmd && pressed(Key::Comma) {
+            if self.prefs_open {
+                self.prefs_open = false;
+            } else {
+                self.open_prefs();
+            }
+        }
         if cmd && pressed(Key::Q) {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }

@@ -276,7 +276,7 @@ impl RivetApp {
                 self.pending.push(Action::Delete);
             }
             ui.separator();
-            if ui.button("Preferences").clicked() {
+            if ui.add(egui::Button::new("Preferences").shortcut_text("Ctrl+,")).clicked() {
                 self.open_prefs();
             }
         });
