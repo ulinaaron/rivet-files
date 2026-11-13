@@ -193,6 +193,10 @@ pub struct RivetApp {
     window_focus: bool,
     /// Preferences has the keyboard (opened by keyboard, or last clicked).
     prefs_focus: bool,
+    /// The file list's keyboard stop, and whether focus is being moved with the keyboard
+    /// (then a focus ring shows where it is).
+    file_list_focus: Option<egui::Id>,
+    kb_nav: bool,
     prefs_rect: Option<Rect>,
     path_editing: bool,
     path_text: String,
@@ -404,6 +408,8 @@ impl RivetApp {
             window_rects: Vec::new(),
             window_focus: false,
             prefs_focus: false,
+            file_list_focus: None,
+            kb_nav: false,
             prefs_rect: None,
             path_editing: false,
             path_text: String::new(),
@@ -1285,6 +1291,30 @@ impl RivetApp {
         self.open_prefs();
     }
 
+    /// A clear accent ring around whatever has keyboard focus, shown once Tab is used and
+    /// hidden again on the next mouse press.
+    fn focus_ring(&mut self, ctx: &egui::Context) {
+        let (tabbed, pressed) = ctx.input(|i| {
+            (i.events.iter().any(|e| matches!(e, egui::Event::Key { key: Key::Tab, pressed: true, .. })), i.pointer.any_pressed())
+        });
+        if tabbed {
+            self.kb_nav = true;
+        }
+        if pressed {
+            self.kb_nav = false;
+        }
+        if !self.kb_nav {
+            return;
+        }
+        let Some(id) = ctx.memory(|m| m.focused()) else { return };
+        let Some(r) = ctx.read_response(id) else { return };
+        let accent = accent_color(&self.s);
+        // The file list's ring sits just inside its edge; small controls get one just outside.
+        let (rect, radius) = if Some(id) == self.file_list_focus { (r.interact_rect.shrink(2.0), R_LG) } else { (r.interact_rect.expand(2.0), R_SM) };
+        let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, egui::Id::unique("focus-ring")));
+        painter.rect_stroke(rect, radius, Stroke::new(2.0, accent), StrokeKind::Outside);
+    }
+
     fn open_prefs(&mut self) {
         if !self.prefs_open {
             self.popup_serial += 1; // a fresh window id re-centres it
@@ -1432,7 +1462,8 @@ impl RivetApp {
             // A check must not be steered by whatever the person is typing elsewhere.
             return;
         }
-        let typing = ctx.egui_wants_keyboard_input();
+        // A focused widget takes the keyboard — except the file list's own stop.
+        let typing = ctx.egui_wants_keyboard_input() && ctx.memory(|m| m.focused()) != self.file_list_focus;
         // Dialogs block shortcuts; in-app windows only while you're working in one.
         let modal = !matches!(self.dialog, Dialog::None) || self.window_focus || self.connect_ask.is_some() || self.quick.is_some();
         let (events, m) = ctx.input(|i| (i.events.clone(), i.modifiers));
@@ -1887,6 +1918,7 @@ impl eframe::App for RivetApp {
             self.window_focus = false;
         }
         self.keyboard(&ctx, cols);
+        self.focus_ring(&ctx);
         self.drag_overlay(&ctx);
         self.process_actions(&ctx);
 

@@ -20,6 +20,9 @@
   for Copy Location, Open in New Tab and Edit Location.
 
 ### Improved
+- **Keyboard focus**: Tab now shows a clear accent ring on whatever has focus (menus, toolbar,
+  sidebar, status bar, file list). The file list is a single Tab stop — arrows, Enter and Space
+  work on the files from there — instead of every file being one.
 - **Keyboard**: Ctrl+, opens Preferences with the keyboard; ↑/↓ move between its pages, Home/End
   jump, Esc closes, and the file view no longer reacts to those keys while Preferences has focus.
 - **Light mode contrast**: file icons and thumbnails get a soft shadow on light backgrounds, Rivet's

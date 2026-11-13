@@ -27,6 +27,13 @@ impl RivetApp {
         egui::CentralPanel::no_frame().frame(egui::Frame::NONE.fill(chrome)).show(ui, |ui| {
             egui::Frame::NONE.fill(bg).corner_radius(corner).inner_margin(egui::Margin { left: 6, top: 6, right: 0, bottom: 4 }).show(ui, |ui| {
             ui.set_min_size(ui.available_size());
+            // Keyboard: the whole file list is one Tab stop (files themselves aren't), and while
+            // it has focus the arrow keys move through the files instead of between widgets.
+            let anchor = ui.interact(ui.max_rect(), egui::Id::unique("file-list-focus"), Sense::FOCUSABLE);
+            ui.memory_mut(|m| {
+                m.set_focus_lock_filter(anchor.id, egui::EventFilter { tab: false, horizontal_arrows: true, vertical_arrows: true, escape: false })
+            });
+            self.file_list_focus = Some(anchor.id);
             let loc = self.tab().loc.clone();
             if matches!(loc, Location::Trash) {
                 egui::Frame::NONE.fill(ui.visuals().faint_bg_color).inner_margin(egui::Margin::symmetric(10, 6)).show(ui, |ui| {
@@ -173,7 +180,7 @@ impl RivetApp {
             let n = self.tab().visible.len();
             let rows = n.div_ceil(cols);
             let total_h = (rows as f32 * cell_h + 16.0).max(ui.available_height());
-            let (rect, bg_resp) = ui.allocate_exact_size(Vec2::new(width, total_h), Sense::click_and_drag());
+            let (rect, bg_resp) = ui.allocate_exact_size(Vec2::new(width, total_h), Sense::CLICK | Sense::DRAG);
             let clip = ui.clip_rect();
             let item_rects: Vec<(usize, Rect)> = (0..n)
                 .map(|vi| {
@@ -200,7 +207,7 @@ impl RivetApp {
                 }
                 let e = e.clone();
                 let selected = self.tab().selected.contains(&e.path);
-                let resp = ui.interact(item, Id::unique(("item", &e.path)), Sense::click_and_drag());
+                let resp = ui.interact(item, Id::unique(("item", &e.path)), Sense::CLICK | Sense::DRAG);
                 let v = ui.visuals().clone();
                 let icon_rect = Rect::from_center_size(Pos2::new(item.center().x, item.top() + 4.0 + z / 2.0), Vec2::splat(z));
                 let text_pos = Pos2::new(item.center().x, icon_rect.bottom() + 6.0);
@@ -330,7 +337,7 @@ impl RivetApp {
             let n = self.tab().visible.len();
             let width = ui.available_width();
             let total_h = (n as f32 * row_h + 8.0).max(ui.available_height());
-            let (rect, bg_resp) = ui.allocate_exact_size(Vec2::new(width, total_h), Sense::click_and_drag());
+            let (rect, bg_resp) = ui.allocate_exact_size(Vec2::new(width, total_h), Sense::CLICK | Sense::DRAG);
             let clip = ui.clip_rect();
             // Only the name column is "the item"; the rest of the row allows rubber-band selection.
             let item_rects: Vec<(usize, Rect)> = (0..n).map(|vi| (vi, Rect::from_min_size(rect.min + Vec2::new(4.0, vi as f32 * row_h), Vec2::new(name_w - 8.0, row_h)))).collect();
@@ -349,7 +356,7 @@ impl RivetApp {
                 }
                 let e = e.clone();
                 let selected = self.tab().selected.contains(&e.path);
-                let resp = ui.interact(hit, Id::unique(("item", &e.path)), Sense::click_and_drag());
+                let resp = ui.interact(hit, Id::unique(("item", &e.path)), Sense::CLICK | Sense::DRAG);
                 // Rows are inset and rounded like every other item.
                 let pill = row.shrink2(Vec2::new(4.0, 0.0));
                 if selected {
@@ -429,7 +436,7 @@ impl RivetApp {
             let n = self.tab().visible.len();
             let cols = n.div_ceil(rows_per_col);
             let total_w = (cols as f32 * col_w + 8.0).max(ui.available_width());
-            let (rect, bg_resp) = ui.allocate_exact_size(Vec2::new(total_w, height), Sense::click_and_drag());
+            let (rect, bg_resp) = ui.allocate_exact_size(Vec2::new(total_w, height), Sense::CLICK | Sense::DRAG);
             let clip = ui.clip_rect();
             let item_rects: Vec<(usize, Rect)> = (0..n)
                 .map(|vi| {
@@ -451,7 +458,7 @@ impl RivetApp {
                 }
                 let e = e.clone();
                 let selected = self.tab().selected.contains(&e.path);
-                let resp = ui.interact(item, Id::unique(("item", &e.path)), Sense::click_and_drag());
+                let resp = ui.interact(item, Id::unique(("item", &e.path)), Sense::CLICK | Sense::DRAG);
                 let v = ui.visuals().clone();
                 if selected {
                     ui.painter().rect_filled(item, R_SM, v.selection.bg_fill);
