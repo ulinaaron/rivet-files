@@ -970,6 +970,38 @@ impl RivetApp {
 
     pub(super) fn prefs_window(&mut self, ctx: &egui::Context) {
         let mut open = self.prefs_open;
+        // Keyboard: while Preferences has focus (and no text field or dialog does), ↑/↓ move
+        // between its pages, Home/End jump to the first/last, Esc closes it. Taken here so
+        // the file view behind doesn't also react.
+        if self.prefs_focus && matches!(self.dialog, Dialog::None) && !ctx.egui_wants_keyboard_input() {
+            let none = egui::Modifiers::NONE;
+            let (up, down, home, end, esc) = ctx.input_mut(|i| {
+                (
+                    i.consume_key(none, Key::ArrowUp),
+                    i.consume_key(none, Key::ArrowDown),
+                    i.consume_key(none, Key::Home),
+                    i.consume_key(none, Key::End),
+                    i.consume_key(none, Key::Escape),
+                )
+            });
+            let all = PrefsTab::ALL;
+            let at = all.iter().position(|t| *t == self.prefs_tab).unwrap_or(0);
+            if up && at > 0 {
+                self.prefs_tab = all[at - 1];
+            }
+            if down && at + 1 < all.len() {
+                self.prefs_tab = all[at + 1];
+            }
+            if home {
+                self.prefs_tab = all[0];
+            }
+            if end {
+                self.prefs_tab = all[all.len() - 1];
+            }
+            if esc {
+                open = false;
+            }
+        }
         if self.font_families.is_empty() {
             self.font_families = crate::fonts::families();
         }
@@ -1533,6 +1565,7 @@ impl RivetApp {
         self.prefs_win = win;
         if let Some(r) = shown.rect {
             self.window_rects.push(r);
+            self.prefs_rect = Some(r);
         }
         if !shown.open {
             open = false;

@@ -191,6 +191,9 @@ pub struct RivetApp {
     /// Where in-app windows are this frame, and whether one has the keyboard.
     window_rects: Vec<Rect>,
     window_focus: bool,
+    /// Preferences has the keyboard (opened by keyboard, or last clicked).
+    prefs_focus: bool,
+    prefs_rect: Option<Rect>,
     path_editing: bool,
     path_text: String,
     path_focus: bool,
@@ -400,6 +403,8 @@ impl RivetApp {
             next_win_id: 10,
             window_rects: Vec::new(),
             window_focus: false,
+            prefs_focus: false,
+            prefs_rect: None,
             path_editing: false,
             path_text: String::new(),
             path_focus: false,
@@ -452,8 +457,7 @@ impl RivetApp {
         // RIVET_PREFS_TAB=views|behavior|menu|system|about opens Preferences on that page.
         if let Some(t) = std::env::var("RIVET_PREFS_TAB").ok().and_then(|t| PrefsTab::from_id(&t)) {
             app.prefs_tab = t;
-            app.prefs_open = true;
-            app.popup_serial += 1;
+            app.open_prefs();
         }
         if let Some(p) = std::env::var_os("RIVET_EXTRA_TAB") {
             app.new_tab(Location::Dir(PathBuf::from(p)));
@@ -1286,6 +1290,9 @@ impl RivetApp {
             self.popup_serial += 1; // a fresh window id re-centres it
         }
         self.prefs_open = true;
+        // The keyboard goes to Preferences straight away (arrows move between its pages).
+        self.prefs_focus = true;
+        self.window_focus = true;
     }
 
     fn open_properties(&mut self, p: PathBuf) {
@@ -1870,6 +1877,11 @@ impl eframe::App for RivetApp {
         // The last click decides whether the keyboard belongs to a window or the file view.
         if let Some(p) = ctx.input(|i| if i.pointer.any_pressed() { i.pointer.interact_pos() } else { None }) {
             self.window_focus = self.window_rects.iter().any(|r| r.contains(p));
+            self.prefs_focus = self.prefs_open && self.prefs_rect.is_some_and(|r| r.contains(p));
+        }
+        if !self.prefs_open {
+            self.prefs_focus = false;
+            self.prefs_rect = None;
         }
         if self.window_rects.is_empty() {
             self.window_focus = false;
@@ -1914,14 +1926,16 @@ impl eframe::App for RivetApp {
                 }
                 continue;
             }
-            // "left@N" / "right@N" / "enter@N" / "tab@N" press that key at frame N.
-            if matches!(xy.trim(), "left" | "right" | "enter" | "tab") {
+            // "left@N" / "right@N" / "up@N" / "down@N" / "enter@N" / "tab@N" press that key at frame N.
+            if matches!(xy.trim(), "left" | "right" | "up" | "down" | "enter" | "tab") {
                 if let Ok(f) = f.trim().parse::<u32>() {
                     if self.frames + 1 == f {
                         let key = match xy.trim() {
                             "left" => egui::Key::ArrowLeft,
                             "right" => egui::Key::ArrowRight,
                             "tab" => egui::Key::Tab,
+                            "up" => egui::Key::ArrowUp,
+                            "down" => egui::Key::ArrowDown,
                             _ => egui::Key::Enter,
                         };
                         raw.events.push(egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers: Default::default() });

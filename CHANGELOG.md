@@ -20,6 +20,8 @@
   for Copy Location, Open in New Tab and Edit Location.
 
 ### Improved
+- **Keyboard**: Ctrl+, opens Preferences with the keyboard; ↑/↓ move between its pages, Home/End
+  jump, Esc closes, and the file view no longer reacts to those keys while Preferences has focus.
 - **Light mode contrast**: file icons and thumbnails get a soft shadow on light backgrounds, Rivet's
   own page icons are tinted with a thin edge, and secondary text, panels and controls are stronger.
 - **Properties** redesigned: big icon and name field, a Basic / Permissions switch, and roomy
