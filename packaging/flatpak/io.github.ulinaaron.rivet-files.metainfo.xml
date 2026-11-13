@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.ulinaaron.rivet-files</id>
+  <name>Rivet Files</name>
+  <summary>Classic Linux file manager</summary>
+  <developer id="io.github.ulinaaron">
+    <name>ulinaaron</name>
+  </developer>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT OR Apache-2.0</project_license>
+  <launchable type="desktop-id">io.github.ulinaaron.rivet-files.desktop</launchable>
+  <content_rating type="oars-1.1"/>
+  <url type="homepage">https://github.com/ulinaaron/rivet-files</url>
+  <url type="bugtracker">https://github.com/ulinaaron/rivet-files/issues</url>
+  <url type="vcs-browser">https://github.com/ulinaaron/rivet-files</url>
+  <description>
+    <p>
+      Rivet Files is a classic Linux file manager in the same vein as Nemo, Thunar and Caja, written in Rust. It does not use GTK or Qt.
+    </p>
+    <p>
+      Icon, list and compact views, tabs, a sidebar, Trash, and picture thumbnails. Colors follow matugen, Noctalia and GTK theme files.
+    </p>
+  </description>
+  <screenshots>
+    <screenshot type="default">
+      <image width="1100" height="700">https://raw.githubusercontent.com/ulinaaron/rivet-files/main/docs/screenshots/icons-wide.png</image>
+      <caption>Icon view</caption>
+    </screenshot>
+    <screenshot>
+      <image width="1100" height="700">https://raw.githubusercontent.com/ulinaaron/rivet-files/main/docs/screenshots/list-wide.png</image>
+      <caption>List view</caption>
+    </screenshot>
+    <screenshot>
+      <image width="1100" height="700">https://raw.githubusercontent.com/ulinaaron/rivet-files/main/docs/screenshots/preferences-wide.png</image>
+      <caption>Preferences</caption>
+    </screenshot>
+    <screenshot>
+      <image width="1100" height="700">https://raw.githubusercontent.com/ulinaaron/rivet-files/main/docs/screenshots/rivet-icons-wide.png</image>
+      <caption>Built-in icons</caption>
+    </screenshot>
+    <screenshot>
+      <image width="1100" height="700">https://raw.githubusercontent.com/ulinaaron/rivet-files/main/docs/screenshots/theme-ember-wide.png</image>
+      <caption>Ember color scheme</caption>
+    </screenshot>
+    <screenshot>
+      <image width="1100" height="700">https://raw.githubusercontent.com/ulinaaron/rivet-files/main/docs/screenshots/theme-moss-wide.png</image>
+      <caption>Moss color scheme</caption>
+    </screenshot>
+    <screenshot>
+      <image width="1100" height="700">https://raw.githubusercontent.com/ulinaaron/rivet-files/main/docs/screenshots/theme-violet-wide.png</image>
+      <caption>Violet color scheme</caption>
+    </screenshot>
+    <screenshot>
+      <image width="1100" height="700">https://raw.githubusercontent.com/ulinaaron/rivet-files/main/docs/screenshots/theme-rose-wide.png</image>
+      <caption>Rose color scheme</caption>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="0.1.2" date="2026-11-12"/>
+  </releases>
+  <recommends>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </recommends>
+</component>

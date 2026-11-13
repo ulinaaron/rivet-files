@@ -66,6 +66,10 @@ Grab the latest from the [Releases page](https://github.com/ulinaaron/rivet-file
   (add `--default` to make Rivet your default file manager). Same glibc baseline as the AppImage.
   Install the libraries below if the desktop does not already have them.
 - **From source** — `cargo build --release && ./install.sh`
+- **Flatpak** — a `.flatpak` bundle is attached to GitHub releases once CI has built it.
+  It is not on Flathub until that submission is done; the manifest and the steps are in [packaging/README.md](packaging/README.md).
+  Inside the sandbox, home, other disks, Trash and `~/.config` theme files are the real ones. Host `/usr` and `/etc` are under **Host system files** (`/run/host`).
+- **Arch Linux** — PKGBUILDs for `rivet-files-bin` (the release tarball) and `rivet-files` (built from the git tag) are in `packaging/aur`. They are not in the AUR until published; see [packaging/README.md](packaging/README.md).
 
 ### Libraries the window needs
 

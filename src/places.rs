@@ -6,12 +6,44 @@ pub fn home() -> PathBuf {
     std::env::var_os("HOME").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("/"))
 }
 
+/// True when this process is the Flatpak sandbox. Flatpak redirects
+/// `XDG_CONFIG_HOME` and `XDG_DATA_HOME` into `~/.var/app/<id>/`, which would
+/// hide the desktop's Trash, bookmarks, icon theme and color files.
+pub fn in_flatpak() -> bool {
+    std::env::var_os("FLATPAK_ID").is_some() || Path::new("/.flatpak-info").is_file()
+}
+
+/// `~/.config` or `~/.local/share`, ignoring Flatpak's per-app XDG overrides.
+pub fn xdg_base(home: &Path, from_env: Option<&Path>, flatpak: bool, relative: &str) -> PathBuf {
+    if flatpak {
+        home.join(relative)
+    } else if let Some(p) = from_env {
+        p.to_path_buf()
+    } else {
+        home.join(relative)
+    }
+}
+
 pub fn config_home() -> PathBuf {
-    std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from).unwrap_or_else(|| home().join(".config"))
+    let env = std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from);
+    xdg_base(&home(), env.as_deref(), in_flatpak(), ".config")
 }
 
 pub fn data_home() -> PathBuf {
-    std::env::var_os("XDG_DATA_HOME").map(PathBuf::from).unwrap_or_else(|| home().join(".local/share"))
+    let env = std::env::var_os("XDG_DATA_HOME").map(PathBuf::from);
+    xdg_base(&home(), env.as_deref(), in_flatpak(), ".local/share")
+}
+
+/// Host data directories Flatpak mounts under `/run/host` (icon themes, mime).
+pub fn host_data_dirs() -> Vec<PathBuf> {
+    if !in_flatpak() {
+        return Vec::new();
+    }
+    ["/run/host/usr/local/share", "/run/host/usr/share", "/run/host/share"]
+        .into_iter()
+        .map(PathBuf::from)
+        .filter(|p| p.is_dir())
+        .collect()
 }
 
 #[derive(Clone, Debug)]
@@ -300,6 +332,20 @@ pub fn remove_demo_dir(home: &Path) {
 
 pub fn trash_dir() -> PathBuf {
     data_home().join("Trash")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn flatpak_keeps_the_real_xdg_directories() {
+        let home = Path::new("/home/me");
+        let redirected = Path::new("/home/me/.var/app/io.github.ulinaaron.rivet-files/config");
+        assert_eq!(xdg_base(home, Some(redirected), true, ".config"), home.join(".config"));
+        assert_eq!(xdg_base(home, Some(redirected), false, ".config"), redirected);
+        assert_eq!(xdg_base(home, None, false, ".local/share"), home.join(".local/share"));
+    }
 }
 
 pub fn trash_is_empty() -> bool {

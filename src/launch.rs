@@ -241,6 +241,11 @@ fn spawn_detached(args: &[String], cwd: Option<&Path>) -> Result<(), String> {
 
 /// Open with the desktop's default application.
 pub fn open_default(apps: &[DesktopApp], mime: &str, path: &Path) -> Result<(), String> {
+    // Host .desktop files point at binaries outside the sandbox. The runtime's
+    // xdg-open asks the desktop portal to open the file with the real default app.
+    if places::in_flatpak() {
+        return spawn_detached(&["xdg-open".into(), path.to_string_lossy().to_string()], None);
+    }
     if let Some(a) = default_app(apps, mime) {
         return launch_app(a, &[path.to_path_buf()]);
     }

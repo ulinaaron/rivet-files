@@ -157,9 +157,11 @@ fn main() -> eframe::Result {
         settings.window_h = 700.0;
     }
 
+    // Flatpak sets this to the app id so the desktop matches the window.
+    let app_id = std::env::var("FLATPAK_ID").unwrap_or_else(|_| "rivet-files".into());
     let mut viewport = egui::ViewportBuilder::default()
         .with_title("Rivet")
-        .with_app_id("rivet-files")
+        .with_app_id(app_id)
         .with_inner_size([settings.window_w, settings.window_h])
         .with_min_inner_size([520.0, 340.0])
         .with_decorations(settings.decorations);

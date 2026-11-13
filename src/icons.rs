@@ -68,7 +68,18 @@ pub fn icon_base_dirs() -> Vec<PathBuf> {
             }
         }
     }
+    // The sandbox's /usr is the runtime, not the desktop's icon theme.
+    for d in crate::places::host_data_dirs() {
+        let p = d.join("icons");
+        if p.is_dir() && !v.contains(&p) {
+            v.push(p);
+        }
+    }
     v.push(PathBuf::from("/usr/share/pixmaps"));
+    let host_pixmaps = PathBuf::from("/run/host/usr/share/pixmaps");
+    if crate::places::in_flatpak() && host_pixmaps.is_dir() {
+        v.push(host_pixmaps);
+    }
     v
 }
 

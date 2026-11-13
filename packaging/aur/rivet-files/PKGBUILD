@@ -1,0 +1,35 @@
+# Maintainer: ulinaaron <2819298+ulinaaron@users.noreply.github.com>
+pkgname=rivet-files
+pkgver=0.1.2
+pkgrel=1
+pkgdesc='Classic Linux file manager, like Nemo, Thunar and Caja, written in Rust'
+arch=('x86_64' 'aarch64')
+url='https://github.com/ulinaaron/rivet-files'
+license=('MIT' 'Apache-2.0')
+depends=('gcc-libs' 'glibc' 'hicolor-icon-theme' 'libglvnd' 'libxkbcommon' 'libxcb' 'wayland')
+makedepends=('cargo')
+conflicts=('rivet-files-bin')
+source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/v${pkgver}.tar.gz")
+sha256sums=('a85670cefb19018f71212bec6660935325ba5d260da6c5b0db18a1270630b5b9')
+
+prepare() {
+  cd "${pkgname}-${pkgver}"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "${pkgname}-${pkgver}"
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_TARGET_DIR=target
+  cargo build --frozen --release
+}
+
+package() {
+  cd "${pkgname}-${pkgver}"
+  install -Dm755 target/release/rivet "${pkgdir}/usr/bin/rivet"
+  install -Dm644 data/rivet-files.desktop "${pkgdir}/usr/share/applications/rivet-files.desktop"
+  mkdir -p "${pkgdir}/usr/share/icons"
+  cp -a data/icons/hicolor "${pkgdir}/usr/share/icons/"
+  install -Dm644 LICENSE-MIT LICENSE-APACHE -t "${pkgdir}/usr/share/licenses/${pkgname}"
+}

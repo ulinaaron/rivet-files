@@ -1086,6 +1086,14 @@ impl RivetApp {
         let root_usage = places::disk_space(Path::new("/")).map(|(t, f)| if t > 0 { 1.0 - f as f32 / t as f32 } else { 0.0 });
         let (resp, _) = self.place_row(ui, ctx, &["drive-harddisk-system", "drive-harddisk"], "File System", Some(Location::Dir("/".into())), root_usage, false);
         resp.context_menu(|ui| self.place_menu(ui, Path::new("/")));
+        // Flatpak's /usr and /etc are the runtime. The computer's copies are under /run/host.
+        if places::in_flatpak() {
+            let host = PathBuf::from("/run/host");
+            if host.is_dir() {
+                let (resp, _) = self.place_row(ui, ctx, &["drive-harddisk", "folder"], "Host system files", Some(Location::Dir(host.clone())), None, false);
+                let _ = resp.on_hover_text("The computer's /usr, /bin and /etc. Flatpak keeps its own copies of those at the top of File System.");
+            }
+        }
         let trash_icon: &[&str] = if self.trash_empty { &["user-trash"] } else { &["user-trash-full", "user-trash"] };
         let (resp, _) = self.place_row(ui, ctx, trash_icon, "Trash", Some(Location::Trash), None, false);
         resp.context_menu(|ui| {
