@@ -1,7 +1,7 @@
 # Maintainer: ulinaaron <2819298+ulinaaron@users.noreply.github.com>
 pkgname=rivet-files-bin
 _pkgname=rivet-files
-pkgver=0.1.2
+pkgver=0.2.0
 pkgrel=1
 pkgdesc='Classic Linux file manager, like Nemo, Thunar and Caja, written in Rust'
 arch=('x86_64')
@@ -11,7 +11,7 @@ depends=('gcc-libs' 'glibc' 'hicolor-icon-theme' 'libglvnd' 'libxkbcommon' 'libx
 provides=('rivet-files')
 conflicts=('rivet-files')
 source=("${url}/releases/download/v${pkgver}/${_pkgname}-${pkgver}-x86_64-linux.tar.gz")
-sha256sums=('9c29714ecd93d7d7968be498a7d52ed17aea6afdd13fe0a036ca19fff739b215')
+sha256sums=('4abfd521bd9fdd8002ec69ae4d39817ce53d845eeed922171cd21a624e358ce5')
 
 package() {
   cd "${_pkgname}-${pkgver}-x86_64-linux"
