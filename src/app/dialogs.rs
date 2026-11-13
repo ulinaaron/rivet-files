@@ -23,6 +23,33 @@ fn select_stem(ctx: &egui::Context, id: Id, text: &str, is_dir: bool) {
     }
 }
 
+/// An on/off switch (a pill with a sliding knob), in the accent color when on.
+fn switch(ui: &mut egui::Ui, on: &mut bool, enabled: bool) -> egui::Response {
+    let size = Vec2::new(40.0, 22.0);
+    let (rect, mut resp) = ui.allocate_exact_size(size, if enabled { Sense::click() } else { Sense::hover() });
+    if enabled && resp.clicked() {
+        *on = !*on;
+        resp.mark_changed();
+    }
+    let v = ui.visuals().clone();
+    let t = ui.ctx().animate_bool_responsive(resp.id, *on);
+    let off_fill = v.widgets.inactive.bg_fill;
+    let mut track = crate::palette::mix(off_fill, v.selection.bg_fill, t);
+    let mut knob = if t > 0.5 { v.selection.stroke.color } else { v.text_color() };
+    if !enabled {
+        track = track.gamma_multiply(0.5);
+        knob = knob.gamma_multiply(0.5);
+    }
+    ui.painter().rect_filled(rect, rect.height() / 2.0, track);
+    let r = rect.height() / 2.0 - 3.0;
+    let x = egui::lerp((rect.left() + r + 3.0)..=(rect.right() - r - 3.0), t);
+    ui.painter().circle_filled(egui::Pos2::new(x, rect.center().y), r, knob);
+    if resp.hovered() && enabled {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
+    resp
+}
+
 /// A label with a drawn tick (the symbol isn't in every system font).
 fn check_label(ui: &mut egui::Ui, text: &str) {
     let (r, _) = ui.allocate_exact_size(Vec2::new(16.0, 16.0), Sense::hover());
@@ -1488,39 +1515,44 @@ impl RivetApp {
                         });
                     }
                     PrefsTab::Modules => {
-                        // Each module: what it needs, and an on/off switch.
-                        section(ui, "Bulk Rename", &mut |ui| {
-                            egui::Grid::new("prefs-mod-bulk").num_columns(2).spacing([24.0, 14.0]).min_col_width(120.0).show(ui, |ui| {
-                                ui.label("Needs");
-                                ui.horizontal(|ui| check_label(ui, "Nothing extra"));
-                                ui.end_row();
-                                ui.label("Enabled");
-                                changed |= ui.checkbox(&mut self.s.bulk_rename, "Bulk Rename… (F2 with several items selected)").changed();
-                                ui.end_row();
-                            });
-                        });
-                        section(ui, "Convert & Resize", &mut |ui| {
-                            let version = crate::media::ffmpeg_version();
-                            egui::Grid::new("prefs-mod-media").num_columns(2).spacing([24.0, 14.0]).min_col_width(120.0).show(ui, |ui| {
-                                ui.label("Needs");
-                                match version {
-                                    Some(ver) => {
-                                        ui.horizontal(|ui| check_label(ui, &format!("ffmpeg — installed ({ver})")));
-                                    }
-                                    None => {
-                                        ui.label(egui::RichText::new("ffmpeg — not installed").color(super::status(ui.ctx()).warning));
-                                    }
-                                }
-                                ui.end_row();
-                                ui.label("Enabled");
-                                ui.add_enabled_ui(version.is_some(), |ui| {
-                                    changed |= ui.checkbox(&mut self.s.media_tools, "Convert To… and Resize… in the right-click menu").changed();
+                        // One list: each module is a name, a line about it, and a switch.
+                        let ffmpeg = crate::media::ffmpeg_version();
+                        let warn = super::status(ui.ctx()).warning;
+                        let card_fill = ui.visuals().faint_bg_color;
+                        egui::Frame::NONE.fill(card_fill).corner_radius(super::R_MD).inner_margin(egui::Margin::symmetric(18, 6)).show(ui, |ui| {
+                            ui.set_width(ui.available_width());
+                            let row = |ui: &mut egui::Ui, title: &str, about: egui::RichText, on: &mut bool, enabled: bool| -> bool {
+                                let mut flipped = false;
+                                ui.horizontal(|ui| {
+                                    ui.set_min_height(58.0);
+                                    ui.vertical(|ui| {
+                                        ui.add_space(10.0);
+                                        ui.spacing_mut().item_spacing.y = 3.0;
+                                        ui.label(egui::RichText::new(title).strong().size(14.0));
+                                        ui.label(about);
+                                    });
+                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                        flipped = switch(ui, on, enabled).changed();
+                                    });
                                 });
-                                ui.end_row();
-                            });
-                            if version.is_none() {
-                                ui.add_space(4.0);
-                                hint(ui, "Install the ffmpeg package from your distribution to turn this on.");
+                                flipped
+                            };
+                            changed |= row(
+                                ui,
+                                "Bulk Rename",
+                                egui::RichText::new("Rename many items at once — F2 with several selected").color(weak),
+                                &mut self.s.bulk_rename,
+                                true,
+                            );
+                            ui.separator();
+                            let about = match ffmpeg {
+                                Some(_) => egui::RichText::new("Convert pictures, videos and audio, and resize pictures — uses ffmpeg").color(weak),
+                                None => egui::RichText::new("Needs ffmpeg, which isn't installed — add it from your distribution's packages").color(warn),
+                            };
+                            let mut media_on = self.s.media_tools && ffmpeg.is_some();
+                            if row(ui, "Convert & Resize", about, &mut media_on, ffmpeg.is_some()) {
+                                self.s.media_tools = media_on;
+                                changed = true;
                             }
                         });
                     }
