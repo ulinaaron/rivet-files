@@ -8,7 +8,7 @@
   `*.jpg, IMG_*`) and by date modified. A filter is global, for one folder, or for a folder and its
   subfolders; the most specific one is used (this folder, then a parent's “& subfolders”, then
   global). A strip above the files says when one is on and how many items it hides; its funnel,
-  the status bar funnel, View → Filters… or Ctrl+Shift+F open the Filters panel over the files
+  a Filters toolbar button, View → Filters… or Ctrl+Shift+F open the Filters panel over the files
   (the sidebar stays free for getting around). Saved in ~/.config/rivet/filters.
 - **Convert & Resize module** (needs ffmpeg; Preferences → Modules shows whether it's installed and
   turns it on or off). Right-click → Convert To… for pictures (JPEG, PNG, WebP, GIF, BMP, TIFF), videos

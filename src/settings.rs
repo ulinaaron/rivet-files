@@ -245,13 +245,14 @@ pub enum ToolItem {
     Bookmark,
     Sidebar,
     Peek,
+    Filters,
     Separator,
     /// The hamburger menu, shown only while the menu bar is hidden.
     Menu,
 }
 
 impl ToolItem {
-    pub const ALL: [ToolItem; 23] = [
+    pub const ALL: [ToolItem; 24] = [
         ToolItem::Back,
         ToolItem::Forward,
         ToolItem::Up,
@@ -273,6 +274,7 @@ impl ToolItem {
         ToolItem::Bookmark,
         ToolItem::Sidebar,
         ToolItem::Peek,
+        ToolItem::Filters,
         ToolItem::Separator,
         ToolItem::Menu,
     ];
@@ -307,6 +309,7 @@ impl ToolItem {
             Bookmark => "bookmark",
             Sidebar => "sidebar",
             Peek => "peek",
+            Filters => "filters",
             Separator => "separator",
             Menu => "menu",
         }
@@ -336,6 +339,7 @@ impl ToolItem {
             Bookmark => "Bookmark this folder",
             Sidebar => "Show/hide sidebar",
             Peek => "Show/hide Peek panel",
+            Filters => "Filters",
             Separator => "Gap",
             Menu => "Menu (when the menu bar is hidden)",
         }
@@ -366,6 +370,8 @@ impl ToolItem {
             Bookmark => (&["bookmark-new-symbolic", "starred-symbolic", "bookmark-new"], "★"),
             Sidebar => (&["sidebar-show-symbolic", "view-sidebar-symbolic", "view-dual-symbolic"], "◧"),
             Peek => (&["view-reveal-symbolic", "view-visible-symbolic", "document-properties-symbolic"], "i"),
+            // Drawn as a funnel by the toolbar (the same in every icon theme).
+            Filters => (&[], " "),
             Separator => (&[], "|"),
             Menu => (&[], "≡"),
         }

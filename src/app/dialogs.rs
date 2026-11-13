@@ -418,6 +418,7 @@ impl RivetApp {
                         ("F8", "Show or hide the status bar"),
                         ("F9", "Show or hide the sidebar"),
                         ("F11", "Show or hide the Peek panel"),
+                        ("Ctrl+Shift+F", "Filters"),
                         ("Ctrl+M or F10", "Show or hide the menu bar"),
                         ("F1", "This list"),
                         ("Ctrl+Q", "Close the window"),
@@ -1449,6 +1450,9 @@ impl RivetApp {
                                         for dy in [-4.0f32, 0.0, 4.0] {
                                             ui.painter().line_segment([c + Vec2::new(-6.0, dy), c + Vec2::new(6.0, dy)], Stroke::new(1.6, fg));
                                         }
+                                    }
+                                    None if item == ToolItem::Filters => {
+                                        super::filterview::paint_funnel(ui.painter(), r.center(), 14.0, fg);
                                     }
                                     None if item == ToolItem::Separator => {
                                         let c = r.center();

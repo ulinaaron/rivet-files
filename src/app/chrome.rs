@@ -467,10 +467,16 @@ impl RivetApp {
             ShowHidden => (true, self.s.show_hidden, "Show hidden files (Ctrl+H)".into()),
             Sidebar => (true, self.s.show_sidebar, "Show or hide the sidebar (F9)".into()),
             Peek => (true, self.s.show_peek, "Show or hide the Peek panel (F11)".into()),
+            Filters => (true, self.filters_open, "Filters (Ctrl+Shift+F)".into()),
             Trash => (true, self.tab().loc == Location::Trash, "Trash".into()),
             _ => (true, false, item.label().into()),
         };
-        if !self.tool_button(ui, ctx, icons, fb, &tip, enabled, selected) {
+        let resp = self.tool_button_resp(ui, ctx, icons, fb, &tip, enabled, selected);
+        if item == Filters {
+            let fg = ui.visuals().text_color();
+            super::filterview::paint_funnel(ui.painter(), resp.rect.center(), 15.0, fg);
+        }
+        if !resp.clicked() {
             return;
         }
         match item {
@@ -532,6 +538,7 @@ impl RivetApp {
                 self.s.show_peek = !self.s.show_peek;
                 self.dirty_settings = true;
             }
+            Filters => self.toggle_filters(),
             PathBar | Separator | Menu => {}
         }
     }
@@ -1020,13 +1027,6 @@ impl RivetApp {
             self.s.show_sidebar = true;
             self.s.sidebar_tree = true;
             self.dirty_settings = true;
-        }
-        // Filters: a drawn funnel (the same in every icon theme); opens the Filters panel.
-        let resp = self.tool_button_resp(ui, ctx, &[], " ", "Filters (Ctrl+Shift+F)", true, self.filters_open);
-        let fg = ui.visuals().text_color();
-        super::filterview::paint_funnel(ui.painter(), resp.rect.center(), 15.0, fg);
-        if resp.clicked() {
-            self.toggle_filters();
         }
         let icons: &[&str] = if self.s.sidebar_right {
             &["sidebar-show-right-symbolic", "view-right-pane-symbolic", "view-dual-symbolic"]
