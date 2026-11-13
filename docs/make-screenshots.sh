@@ -85,6 +85,15 @@ RIVET_ICON_THEME=Papirus RIVET_OPEN_PREFS=1 "$BIN" "$H" --screenshot "$OUT/prefe
 # The Peek panel: highlighted code, and a picture (items are sorted by name).
 RIVET_ICON_THEME=Papirus RIVET_PEEK=1 RIVET_SELECT=4 "$BIN" "$H/Projects" --screenshot "$OUT/peek-code-wide.png"
 RIVET_ICON_THEME=Papirus RIVET_PEEK=1 RIVET_SELECT=2 "$BIN" "$H/Pictures" --screenshot "$OUT/peek-picture-wide.png"
+# As minimal or as bloated as you like.
+# Minimal: no menu bar, no status bar, no Peek; Places in the sidebar; a short toolbar.
+RIVET_ICON_THEME=Papirus RIVET_NO_STATUSBAR=1 RIVET_TOOLBAR="menu,back,forward,path,view-icons,view-list" \
+    "$BIN" "$H" --hide-menubar --screenshot "$OUT/minimal-wide.png"
+# Bloated: menu bar, a full toolbar, tabs, status bar and Peek on a picture.
+# (The extra tab opens last and is the active one, so the picture is selected there.)
+RIVET_ICON_THEME=Papirus RIVET_PEEK=1 RIVET_SELECT=2 RIVET_EXTRA_TAB="$H/Pictures" \
+    RIVET_TOOLBAR="back,forward,up,reload,home,new-folder,new-tab,path,search,view-icons,view-list,view-compact,show-hidden,terminal,trash,peek" \
+    "$BIN" "$H/Documents" --screenshot "$OUT/bloated-wide.png"
 
 # The same window recoloured by different matugen-style schemes (Rivet's own icons).
 # palette NAME ACCENT ACCENT_FG WINDOW_BG WINDOW_FG HEADERBAR VIEW POPOVER SECONDARY TERTIARY [VIEW_OPTS]

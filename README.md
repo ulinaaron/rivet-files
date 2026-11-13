@@ -15,6 +15,17 @@ Rivet is powerful all the while being minimal. Make it your own — bloat the in
 
 ![Rivet Files showing a home folder](docs/screenshots/icons-wide.png)
 
+<table>
+  <tr>
+    <td><img src="docs/screenshots/minimal-wide.png" alt="Minimal: no menu bar, status bar or Peek; a short toolbar"></td>
+    <td><img src="docs/screenshots/bloated-wide.png" alt="Bloated: menu bar, full toolbar, tabs, status bar and Peek"></td>
+  </tr>
+  <tr>
+    <td align="center">Minimal — menu button, back / forward, location bar, two views</td>
+    <td align="center">Bloated — every bar, button and panel</td>
+  </tr>
+</table>
+
 ## ✨ Features
 
 - 🗂️ **Icon, list and compact views** with tabs and a clickable path bar

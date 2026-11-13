@@ -171,6 +171,9 @@ fn main() -> eframe::Result {
     if std::env::var_os("RIVET_TOOLBAR_BOTTOM").is_some() {
         settings.toolbar_bottom = true;
     }
+    if std::env::var_os("RIVET_NO_STATUSBAR").is_some() {
+        settings.show_statusbar = false;
+    }
     if std::env::var_os("RIVET_STATUS_TOP").is_some() {
         settings.statusbar_top = true;
     }

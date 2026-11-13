@@ -29,6 +29,9 @@
   own page icons are tinted with a thin edge, and secondary text, panels and controls are stronger.
 - **Properties** redesigned: big icon and name field, a Basic / Permissions switch, and roomy
   General, Dates, Ownership and Access cards.
+- **F8** shows or hides the status bar.
+- Esc in a Preferences text field or list only leaves it.
+- README: minimal vs bloated screenshots.
 - **Font picker**: type in the font list to narrow it to the closest matches; Enter picks the best one.
 - Clearer System page (name · status · action rows) and no filler text in Preferences.
 - Roomier Rename window.
