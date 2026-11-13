@@ -418,6 +418,8 @@ impl RivetApp {
                         ("F8", "Show or hide the status bar"),
                         ("F9", "Show or hide the sidebar"),
                         ("F11", "Show or hide the Peek panel"),
+                        ("F12", "Zen mode"),
+                        ("Ctrl+Space", "Spotlight: go to any folder"),
                         ("Ctrl+Shift+F", "Filters"),
                         ("Ctrl+M or F10", "Show or hide the menu bar"),
                         ("F1", "This list"),

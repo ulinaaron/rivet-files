@@ -27,6 +27,7 @@ mod peek;
 mod quickview;
 mod views;
 mod windows;
+mod zen;
 
 #[derive(Clone)]
 struct DragFiles(Vec<PathBuf>);
@@ -188,6 +189,12 @@ pub struct RivetApp {
     peek: peek::PeekState,
     /// The Preview light box, when open.
     quick: Option<quickview::QuickView>,
+    /// Zen mode's slide-in panels.
+    zen: zen::ZenState,
+    /// Spotlight (Ctrl+Space), while open.
+    spotlight: Option<zen::Spotlight>,
+    /// Folders visited this session, newest first (Spotlight ranks them first).
+    recent_dirs: Vec<PathBuf>,
     net_scan_rx: Option<std::sync::mpsc::Receiver<netview::NetResult>>,
     connect_ask: Option<netview::ConnectAsk>,
     /// Undo / redo for file actions.
@@ -431,6 +438,9 @@ impl RivetApp {
             net: Default::default(),
             peek: Default::default(),
             quick: None,
+            zen: Default::default(),
+            spotlight: None,
+            recent_dirs: Vec::new(),
             net_scan_rx: None,
             connect_ask: None,
             history: Default::default(),
@@ -912,6 +922,7 @@ impl RivetApp {
         if self.tab().loc == loc {
             return;
         }
+        self.remember_dir(&loc);
         let t = &mut self.tabs[self.active];
         let old = std::mem::replace(&mut t.loc, loc);
         t.back.push(old);
@@ -1590,6 +1601,21 @@ impl RivetApp {
         let pressed = |k: Key| events.iter().any(|e| matches!(e, egui::Event::Key { key, pressed: true, .. } if *key == k));
         let cmd = m.command;
 
+        // Spotlight has the keyboard while it's open; Ctrl+Space again closes it.
+        if self.spotlight.is_some() {
+            if cmd && pressed(Key::Space) {
+                self.spotlight = None;
+            }
+            return;
+        }
+        if cmd && pressed(Key::Space) && !modal {
+            self.toggle_spotlight();
+            return;
+        }
+        if pressed(Key::F12) && !modal {
+            self.toggle_zen();
+        }
+
         if pressed(Key::Escape) {
             if self.path_editing {
                 self.path_editing = false;
@@ -1994,12 +2020,17 @@ impl eframe::App for RivetApp {
             self.window_resize_edges(&ctx);
         }
         self.header(ui, &ctx);
+        let zen = self.s.zen;
+        // What's left below the title bar: Zen mode's panels slide in at its edges.
+        let zen_area = ui.available_rect_before_wrap();
         // Toolbar and status bar can each sit at the top or the bottom. Panels added first sit
         // nearer the window edge: at the top the toolbar comes first, at the bottom the status
         // bar is outermost with the toolbar stacked just above it.
         let status = self.s.show_statusbar;
         let both_bottom = status && self.s.toolbar_bottom && !self.s.statusbar_top;
-        if both_bottom {
+        if zen {
+            // No bars: the files fill the window.
+        } else if both_bottom {
             self.status_bar(ui, &ctx);
             self.flat_buttons = false;
             self.toolbar(ui, &ctx);
@@ -2010,12 +2041,12 @@ impl eframe::App for RivetApp {
                 self.flat_buttons = false;
             }
         }
-        if self.s.show_sidebar {
+        if self.s.show_sidebar && !zen {
             self.sidebar(ui, &ctx);
         }
-        if self.s.show_peek {
+        if self.s.show_peek && !zen {
             self.peek_panel(ui, &ctx);
-        } else {
+        } else if !self.s.show_peek {
             self.peek.stop();
         }
         // Added after the sidebar, so the tab strip starts where the sidebar ends.
@@ -2023,6 +2054,9 @@ impl eframe::App for RivetApp {
             self.tab_bar(ui, &ctx);
         }
         let cols = self.file_area(ui, &ctx);
+        if zen {
+            self.zen_overlays(&ctx, zen_area);
+        }
         self.dialogs(&ctx);
         self.window_rects.clear();
         if self.prefs_open {
@@ -2035,6 +2069,8 @@ impl eframe::App for RivetApp {
         self.filters_popover(&ctx);
         // Preview draws over everything else and takes the arrow keys while open.
         self.quick_view(&ctx);
+        // Spotlight: the jump-anywhere bar (Ctrl+Space).
+        self.spotlight(&ctx);
         // The last click decides whether the keyboard belongs to a window or the file view.
         if let Some(p) = ctx.input(|i| if i.pointer.any_pressed() { i.pointer.interact_pos() } else { None }) {
             self.window_focus = self.window_rects.iter().any(|r| r.contains(p));

@@ -159,7 +159,7 @@ impl RivetApp {
         }
     }
 
-    fn peek_contents(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+    pub(super) fn peek_contents(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         self.peek_poll(ctx);
         let v = ui.visuals().clone();
         let weak = v.weak_text_color();

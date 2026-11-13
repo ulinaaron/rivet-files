@@ -13,7 +13,7 @@ use crate::settings::{SortKey, ToolItem, ViewMode};
 /// Extra side padding for the top-level menu bar items.
 const MENU_EXTRA_PAD: f32 = 3.0;
 /// Left/right padding of the toolbar, shared by the status bar so the two line up.
-const TOOLBAR_SIDE_PAD: i8 = 12;
+pub(super) const TOOLBAR_SIDE_PAD: i8 = 12;
 
 impl RivetApp {
     pub(super) fn window_resize_edges(&mut self, ctx: &egui::Context) {
@@ -91,7 +91,7 @@ impl RivetApp {
 
     pub(super) fn header(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         let csd = !self.s.decorations;
-        let show_menu = self.s.show_menubar;
+        let show_menu = self.s.show_menubar && !self.s.zen;
         if !show_menu && !csd {
             return;
         }
@@ -312,6 +312,13 @@ impl RivetApp {
             if c {
                 self.dirty_settings = true;
             }
+            let mut zen = self.s.zen;
+            if Self::menu_toggle(ui, &mut zen, "Zen Mode", "F12") {
+                self.toggle_zen();
+            }
+            if ui.add(egui::Button::new("Go to Folder…").shortcut_text("Ctrl+Space")).clicked() {
+                self.toggle_spotlight();
+            }
             ui.separator();
             ui.menu_button("Sort Items", |ui| self.sort_menu(ui));
             ui.separator();
@@ -448,7 +455,7 @@ impl RivetApp {
             return;
         }
         if item == Menu {
-            if !self.s.show_menubar {
+            if !self.s.show_menubar || self.s.zen {
                 self.hamburger_menu(ui, ctx);
             }
             return;
@@ -550,7 +557,11 @@ impl RivetApp {
         self.roomy_menus = true;
         let r = egui::containers::menu::MenuButton::from_button(btn).ui(ui, |ui| {
             self.roomy_menu(ui);
-            if ui.add(egui::Button::new("Show Menubar").shortcut_text("Ctrl+M")).clicked() {
+            if self.s.zen {
+                if ui.add(egui::Button::new("Leave Zen Mode").shortcut_text("F12")).clicked() {
+                    self.toggle_zen();
+                }
+            } else if ui.add(egui::Button::new("Show Menubar").shortcut_text("Ctrl+M")).clicked() {
                 self.s.show_menubar = true;
                 self.dirty_settings = true;
             }
@@ -567,63 +578,69 @@ impl RivetApp {
     }
 
     pub(super) fn toolbar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        self.toolbar_drawing = true;
         let fill = ctx.global_style().visuals.panel_fill;
-        let layout = self.s.toolbar.clone();
-        let split = layout.iter().position(|t| *t == ToolItem::PathBar).unwrap_or(layout.len());
-        let (left, right) = (layout[..split].to_vec(), layout[(split + 1).min(layout.len())..].to_vec());
         let panel = if self.s.toolbar_bottom { egui::Panel::bottom("toolbar") } else { egui::Panel::top("toolbar") };
         panel.show_separator_line(false)
             .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin::symmetric(TOOLBAR_SIDE_PAD, 9)))
-            .show(ui, |ui| {
-                // Right-click on empty toolbar space to customize it.
-                let bg = ui.interact(ui.max_rect(), Id::unique("toolbar-bg"), Sense::click());
-                bg.context_menu(|ui| {
-                    Self::comfy_menu(ui);
-                    if ui.button("Customize Toolbar…").clicked() {
-                        self.open_prefs();
+            .show(ui, |ui| self.toolbar_contents(ui, ctx));
+    }
+
+    /// The toolbar's buttons and location bar (also drawn by Zen mode's slide-in toolbar).
+    pub(super) fn toolbar_contents(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+        self.toolbar_drawing = true;
+        let mut layout = self.s.toolbar.clone();
+        if self.s.zen && !layout.contains(&ToolItem::Menu) {
+            layout.insert(0, ToolItem::Menu);
+        }
+        let split = layout.iter().position(|t| *t == ToolItem::PathBar).unwrap_or(layout.len());
+        let (left, right) = (layout[..split].to_vec(), layout[(split + 1).min(layout.len())..].to_vec());
+        // Right-click on empty toolbar space to customize it.
+        let bg = ui.interact(ui.max_rect(), Id::unique("toolbar-bg"), Sense::click());
+        bg.context_menu(|ui| {
+            Self::comfy_menu(ui);
+            if ui.button("Customize Toolbar…").clicked() {
+                self.open_prefs();
+            }
+            if ui.button("Reset Toolbar").clicked() {
+                self.s.toolbar = ToolItem::default_layout();
+                self.dirty_settings = true;
+            }
+        });
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 5.0;
+            for item in &left {
+                self.toolbar_item(ui, ctx, *item);
+            }
+            ui.add_space(8.0);
+            let menubar = self.s.show_menubar && !self.s.zen;
+            let width = |t: &ToolItem| if *t == ToolItem::Menu && menubar { 0.0 } else { t.width() };
+            let right_w: f32 = right.iter().map(width).sum::<f32>() + 14.0;
+            let path_w = (ui.available_width() - right_w).max(80.0);
+            // The location bar sits on its own raised surface.
+            let v = ui.visuals();
+            let elevated = crate::palette::mix(v.window_fill, v.text_color(), 0.04);
+            let shadow = egui::Shadow { offset: [0, 1], blur: 6, spread: 0, color: Color32::from_black_alpha(if v.dark_mode { 90 } else { 40 }) };
+            ui.allocate_ui_with_layout(Vec2::new(path_w, 32.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                egui::Frame::NONE.fill(elevated).shadow(shadow).corner_radius(R_MD).inner_margin(egui::Margin::same(4)).show(ui, |ui| {
+                    // Even padding all round; pills inside use R_MD − 4 = R_SM, so corners nest.
+                    ui.set_min_width(ui.available_width());
+                    ui.set_min_height(24.0);
+                    if self.search_open {
+                        self.search_bar(ui, ctx);
+                    } else if self.path_editing {
+                        self.location_entry(ui);
+                    } else {
+                        self.breadcrumbs(ui, ctx);
                     }
-                    if ui.button("Reset Toolbar").clicked() {
-                        self.s.toolbar = ToolItem::default_layout();
-                        self.dirty_settings = true;
-                    }
-                });
-                ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 5.0;
-                    for item in &left {
-                        self.toolbar_item(ui, ctx, *item);
-                    }
-                    ui.add_space(8.0);
-                    let menubar = self.s.show_menubar;
-                    let width = |t: &ToolItem| if *t == ToolItem::Menu && menubar { 0.0 } else { t.width() };
-                    let right_w: f32 = right.iter().map(width).sum::<f32>() + 14.0;
-                    let path_w = (ui.available_width() - right_w).max(80.0);
-                    // The location bar sits on its own raised surface.
-                    let v = ui.visuals();
-                    let elevated = crate::palette::mix(v.window_fill, v.text_color(), 0.04);
-                    let shadow = egui::Shadow { offset: [0, 1], blur: 6, spread: 0, color: Color32::from_black_alpha(if v.dark_mode { 90 } else { 40 }) };
-                    ui.allocate_ui_with_layout(Vec2::new(path_w, 32.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                        egui::Frame::NONE.fill(elevated).shadow(shadow).corner_radius(R_MD).inner_margin(egui::Margin::same(4)).show(ui, |ui| {
-                            // Even padding all round; pills inside use R_MD − 4 = R_SM, so corners nest.
-                            ui.set_min_width(ui.available_width());
-                            ui.set_min_height(24.0);
-                            if self.search_open {
-                                self.search_bar(ui, ctx);
-                            } else if self.path_editing {
-                                self.location_entry(ui);
-                            } else {
-                                self.breadcrumbs(ui, ctx);
-                            }
-                        });
-                    });
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        // Right-to-left layout: draw in reverse so the saved order reads left to right.
-                        for item in right.iter().rev() {
-                            self.toolbar_item(ui, ctx, *item);
-                        }
-                    });
                 });
             });
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                // Right-to-left layout: draw in reverse so the saved order reads left to right.
+                for item in right.iter().rev() {
+                    self.toolbar_item(ui, ctx, *item);
+                }
+            });
+        });
         self.toolbar_drawing = false;
     }
 
@@ -1259,7 +1276,7 @@ impl RivetApp {
         (resp, eject_clicked)
     }
 
-    fn sidebar_contents(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+    pub(super) fn sidebar_contents(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         ui.spacing_mut().item_spacing.y = 3.0;
         if self.section_header(ui, "My Computer") {
             self.my_computer(ui, ctx);
@@ -1368,7 +1385,7 @@ impl RivetApp {
     }
 
     /// Folder tree sidebar: Home and File System, expandable.
-    fn tree_contents(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+    pub(super) fn tree_contents(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         ui.spacing_mut().item_spacing.y = 3.0;
         let current = self.current_dir();
         let mut rows: Vec<(PathBuf, usize)> = Vec::new();
@@ -1527,6 +1544,11 @@ pub(super) fn fuzzy_score(name: &str, typed: &str) -> Option<i32> {
 /// Sub-folders of the folder typed so far (`prefix`, up to and including the last "/")
 /// that match `word`, best first. The folder listing is cached between keystrokes.
 fn folder_suggestions(prefix: &str, word: &str, cache: &mut Option<(PathBuf, Vec<String>)>) -> Vec<egui::Suggestion> {
+    folder_matches(prefix, word, cache, 12).into_iter().map(|n| egui::Suggestion::new(format!("{n}/"))).collect()
+}
+
+/// The names behind [`folder_suggestions`] (at most `limit`), also used by Spotlight.
+pub(super) fn folder_matches(prefix: &str, word: &str, cache: &mut Option<(PathBuf, Vec<String>)>, limit: usize) -> Vec<String> {
     if prefix.is_empty() || !(prefix.starts_with('/') || prefix.starts_with('~')) {
         return Vec::new();
     }
@@ -1558,7 +1580,7 @@ fn folder_suggestions(prefix: &str, word: &str, cache: &mut Option<(PathBuf, Vec
         return Vec::new();
     }
     scored.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.to_lowercase().cmp(&b.1.to_lowercase())));
-    scored.into_iter().take(12).map(|(_, n)| egui::Suggestion::new(format!("{n}/"))).collect()
+    scored.into_iter().take(limit).map(|(_, n)| n.clone()).collect()
 }
 
 #[cfg(test)]

@@ -32,6 +32,7 @@ Rivet is powerful all the while being minimal. Make it your own — bloat the in
 - 🗂️ **Icon, list and compact views** with tabs and a clickable path bar that suggests folders as you type
 - 🧭 **Sidebar** — places, bookmarks, drives with usage bars, network, or a folder tree, on the left or right
 - 🧪 **Filters** — show a folder with only pictures, recent files or names you choose; global, per folder, or for a folder and everything below it
+- 🔦 **Spotlight** — Ctrl+Space, type a few letters of any folder, press Enter and you're there
 - 🔍 **Instant filter** as you type, plus search through subfolders
 - 🌐 **Network** — find servers, open SMB shares, log in, or connect to any address
 
@@ -53,6 +54,7 @@ Rivet is powerful all the while being minimal. Make it your own — bloat the in
 - 💜 **Built-in icon set** recolored from your palette (primary, secondary or tertiary)
 - 🧰 **Your layout** — custom toolbar at the top or bottom, status bar top, bottom or off, fonts, text size, hideable menu bar
 - 🧩 **Modules** — switch Bulk Rename or Convert & Resize off if you don't use them
+- 🧘 **Zen mode** — just your files, edge to edge; the toolbar, sidebar and Peek slide in when you reach for their edge (F12)
 - 🪟 **Title bar your way** — your desktop's, or Rivet's own with window buttons
 
 **Under the hood**
@@ -117,6 +119,19 @@ Drag the grip under the preview to make it taller or shorter.
   </tr>
 </table>
 
+### 🧘 Zen mode and Spotlight
+
+Press F12 and the bars step aside so your files get the whole window. Reach for an edge and the
+toolbar, sidebar or Peek slides in; move away and it's gone again. Pair it with Spotlight
+(Ctrl+Space): type a few letters of any folder and press Enter.
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/zen-wide.png" alt="Zen mode with the toolbar and sidebar slid in"></td>
+    <td><img src="docs/screenshots/spotlight-wide.png" alt="Spotlight jumping to a folder"></td>
+  </tr>
+</table>
+
 ## 📦 Install
 
 Grab the latest from the [Releases page](https://github.com/ulinaaron/rivet-files/releases):
@@ -155,7 +170,8 @@ Rivet talks to X11 or Wayland directly. It does not use GTK or Qt. A normal desk
 | `Ctrl+1` `2` `3` | Icon / list / compact view |
 | `F2` · `Delete` | Rename (Bulk Rename with several selected) · move to Trash |
 | `Ctrl+M` | Show or hide the menu bar |
-| `F8` · `F9` · `F11` | Status bar · sidebar · Peek panel |
+| `Ctrl+Space` | Spotlight: jump to any folder |
+| `F8` · `F9` · `F11` · `F12` | Status bar · sidebar · Peek panel · Zen mode |
 | `Ctrl+Shift+F` | Filters |
 | `Space` · `←` `→` · `Return` | Preview the selection · previous / next file · open it |
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / redo |
@@ -212,7 +228,6 @@ and `utilities/rivet-dev bench`.
 
 - Freedesktop file picker integration
 - Tagging and pinning files
-- Zen mode
 
 ## 🛠️ For developers
 
