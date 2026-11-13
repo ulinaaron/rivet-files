@@ -973,7 +973,10 @@ impl RivetApp {
         // Keyboard: while Preferences has focus (and no text field or dialog does), ↑/↓ move
         // between its pages, Home/End jump to the first/last, Esc closes it. Taken here so
         // the file view behind doesn't also react.
-        if self.prefs_focus && matches!(self.dialog, Dialog::None) && !ctx.egui_wants_keyboard_input() {
+        // Esc in a text field (or an open list) first leaves that; egui drops the focus before we
+        // get here, so look at whether one was active last frame.
+        let busy = self.prefs_busy_last || ctx.egui_wants_keyboard_input() || egui::Popup::is_any_open(ctx);
+        if self.prefs_focus && matches!(self.dialog, Dialog::None) && !busy {
             let none = egui::Modifiers::NONE;
             let (up, down, home, end, esc) = ctx.input_mut(|i| {
                 (
@@ -1627,5 +1630,6 @@ impl RivetApp {
             self.dirty_settings = true;
         }
         self.prefs_open = open;
+        self.prefs_busy_last = ctx.egui_wants_keyboard_input() || egui::Popup::is_any_open(ctx);
     }
 }

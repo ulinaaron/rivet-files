@@ -195,6 +195,9 @@ pub struct RivetApp {
     prefs_focus: bool,
     /// What was typed into the font list's search field.
     font_filter: String,
+    /// A text field or drop-down list in Preferences was active last frame (Esc then only
+    /// leaves it, instead of closing Preferences).
+    prefs_busy_last: bool,
     /// The file list's keyboard stop, and whether focus is being moved with the keyboard
     /// (then a focus ring shows where it is).
     file_list_focus: Option<egui::Id>,
@@ -411,6 +414,7 @@ impl RivetApp {
             window_focus: false,
             prefs_focus: false,
             font_filter: String::new(),
+            prefs_busy_last: false,
             file_list_focus: None,
             kb_nav: false,
             prefs_rect: None,
@@ -1962,7 +1966,7 @@ impl eframe::App for RivetApp {
                 continue;
             }
             // "left@N" / "right@N" / "up@N" / "down@N" / "enter@N" / "tab@N" press that key at frame N.
-            if matches!(xy.trim(), "left" | "right" | "up" | "down" | "enter" | "tab") {
+            if matches!(xy.trim(), "left" | "right" | "up" | "down" | "enter" | "tab" | "esc") {
                 if let Ok(f) = f.trim().parse::<u32>() {
                     if self.frames + 1 == f {
                         let key = match xy.trim() {
@@ -1971,6 +1975,7 @@ impl eframe::App for RivetApp {
                             "tab" => egui::Key::Tab,
                             "up" => egui::Key::ArrowUp,
                             "down" => egui::Key::ArrowDown,
+                            "esc" => egui::Key::Escape,
                             _ => egui::Key::Enter,
                         };
                         raw.events.push(egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers: Default::default() });
