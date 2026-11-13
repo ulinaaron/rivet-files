@@ -1516,7 +1516,13 @@ impl RivetApp {
                     }
                     PrefsTab::Modules => {
                         // One list: each module is a name, a line about it, and a switch.
-                        let ffmpeg = crate::media::ffmpeg_version();
+                        // Look again while this page is open, so installing ffmpeg is noticed.
+                        let ffmpeg = crate::media::recheck();
+                        if ffmpeg.is_none() && self.s.media_tools {
+                            // The module can't work without ffmpeg: switch it off.
+                            self.s.media_tools = false;
+                            changed = true;
+                        }
                         let warn = super::status(ui.ctx()).warning;
                         let card_fill = ui.visuals().faint_bg_color;
                         egui::Frame::NONE.fill(card_fill).corner_radius(super::R_MD).inner_margin(egui::Margin::symmetric(18, 6)).show(ui, |ui| {
@@ -1549,9 +1555,7 @@ impl RivetApp {
                                 Some(_) => egui::RichText::new("Convert pictures, videos and audio, and resize pictures — uses ffmpeg").color(weak),
                                 None => egui::RichText::new("Needs ffmpeg, which isn't installed — add it from your distribution's packages").color(warn),
                             };
-                            let mut media_on = self.s.media_tools && ffmpeg.is_some();
-                            if row(ui, "Convert & Resize", about, &mut media_on, ffmpeg.is_some()) {
-                                self.s.media_tools = media_on;
+                            if row(ui, "Convert & Resize", about, &mut self.s.media_tools, ffmpeg.is_some()) {
                                 changed = true;
                             }
                         });

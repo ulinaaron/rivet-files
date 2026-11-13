@@ -4,21 +4,50 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::Ordering;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use crate::fsops::{self, OpKind, Progress};
 use crate::preview::{self, Kind};
 
-/// ffmpeg's version line, if ffmpeg is installed (checked once).
-pub fn ffmpeg_version() -> Option<&'static str> {
-    static V: OnceLock<Option<String>> = OnceLock::new();
-    V.get_or_init(|| {
-        let out = Command::new("ffmpeg").arg("-version").stdin(Stdio::null()).stderr(Stdio::null()).output().ok()?;
-        let text = String::from_utf8_lossy(&out.stdout);
-        // "ffmpeg version 7.1.1 Copyright …" → "7.1.1"
-        text.lines().next().and_then(|l| l.split_whitespace().nth(2)).map(|s| s.to_string())
-    })
-    .as_deref()
+/// Ask the system for ffmpeg's version ("7.1.1"), or None if it isn't installed.
+fn probe() -> Option<String> {
+    // Test hook for checks: behave as if ffmpeg were missing.
+    if std::env::var_os("RIVET_NO_FFMPEG").is_some() {
+        return None;
+    }
+    let out = Command::new("ffmpeg").arg("-version").stdin(Stdio::null()).stderr(Stdio::null()).output().ok()?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    // "ffmpeg version 7.1.1 Copyright …" → "7.1.1"
+    text.lines().next().and_then(|l| l.split_whitespace().nth(2)).map(|s| s.to_string())
+}
+
+static CHECKED: Mutex<Option<(Instant, Option<String>)>> = Mutex::new(None);
+
+/// ffmpeg's version, if ffmpeg is installed. Checked once and then remembered;
+/// see [`recheck`] for looking again.
+pub fn ffmpeg_version() -> Option<String> {
+    let mut c = CHECKED.lock().unwrap();
+    if c.is_none() {
+        *c = Some((Instant::now(), probe()));
+    }
+    c.as_ref().and_then(|(_, v)| v.clone())
+}
+
+/// Look for ffmpeg again (at most every few seconds), e.g. while Preferences is open,
+/// so installing or removing it is noticed without restarting.
+pub fn recheck() -> Option<String> {
+    {
+        let c = CHECKED.lock().unwrap();
+        if let Some((at, v)) = c.as_ref() {
+            if at.elapsed() < Duration::from_secs(4) {
+                return v.clone();
+            }
+        }
+    }
+    let v = probe();
+    *CHECKED.lock().unwrap() = Some((Instant::now(), v.clone()));
+    v
 }
 
 pub fn available() -> bool {

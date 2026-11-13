@@ -476,6 +476,11 @@ impl RivetApp {
             dirty_settings: false,
         };
         app.apply_visuals(&ctx);
+        // Convert & Resize needs ffmpeg: switch the module off when it isn't installed.
+        if app.s.media_tools && !crate::media::available() {
+            app.s.media_tools = false;
+            app.dirty_settings = true;
+        }
         // Test hooks for checks: open a window straight away.
         if std::env::var_os("RIVET_OPEN_PREFS").is_some() {
             app.prefs_open = true;
