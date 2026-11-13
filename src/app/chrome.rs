@@ -765,15 +765,30 @@ impl RivetApp {
         let last = crumbs.len() - 1;
         // Clicking the empty part of the location bar turns it into a text field.
         let area = ui.max_rect();
-        let bg = ui.interact(area, Id::unique("crumbs-bg"), Sense::click());
+        // Dragging across it (even starting on a folder button) does too, so the path can
+        // be selected and copied like text.
+        let bg = ui.interact(area, Id::unique("crumbs-bg"), Sense::click_and_drag());
         if bg.hovered() {
             // Lift the bar a touch on hover instead of drawing an outline.
             ui.painter().rect_filled(area.expand(4.0), R_MD, ui.visuals().text_color().gamma_multiply(0.05));
             ui.ctx().set_cursor_icon(egui::CursorIcon::Text);
         }
-        if bg.clicked() {
+        if bg.clicked() || bg.drag_started() {
             self.start_path_editing();
         }
+        let here = self.current_dir();
+        bg.context_menu(|ui| {
+            Self::comfy_menu(ui);
+            if let Some(d) = &here {
+                if ui.button("Copy Location").clicked() {
+                    ui.ctx().copy_text(d.display().to_string());
+                    self.flash("Location copied");
+                }
+            }
+            if ui.add(egui::Button::new("Edit Location").shortcut_text("Ctrl+L")).clicked() {
+                self.start_path_editing();
+            }
+        });
         egui::ScrollArea::horizontal()
             .id_salt("crumbs")
             .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
@@ -795,6 +810,27 @@ impl RivetApp {
                             if let Some(t) = target.clone() {
                                 self.pending.push(Action::Navigate(t));
                             }
+                        }
+                        // Right-click a folder button: copy its location or open it in a tab.
+                        let crumb_dir = match &target {
+                            Some(Location::Dir(d)) => Some(d.clone()),
+                            None if sel => here.clone(),
+                            _ => None,
+                        };
+                        if let Some(d) = crumb_dir {
+                            resp.context_menu(|ui| {
+                                Self::comfy_menu(ui);
+                                if ui.button("Copy Location").clicked() {
+                                    ui.ctx().copy_text(d.display().to_string());
+                                    self.flash("Location copied");
+                                }
+                                if ui.button("Open in New Tab").clicked() {
+                                    self.pending.push(Action::OpenInNewTab(d.clone()));
+                                }
+                                if ui.add(egui::Button::new("Edit Location").shortcut_text("Ctrl+L")).clicked() {
+                                    self.start_path_editing();
+                                }
+                            });
                         }
                         if let Some(Location::Dir(d)) = &target {
                             if let Some(p) = resp.dnd_release_payload::<DragFiles>() {

@@ -1635,6 +1635,16 @@ impl RivetApp {
 
     fn screenshot_step(&mut self, ctx: &egui::Context) {
         let Some(path) = self.screenshot.clone() else { return };
+        // Checks never touch the real clipboard: report what would be copied instead.
+        ctx.output_mut(|o| {
+            o.commands.retain(|c| match c {
+                egui::OutputCommand::CopyText(t) => {
+                    println!("copied: {t}");
+                    false
+                }
+                _ => true,
+            })
+        });
         self.frames += 1;
         ctx.request_repaint();
         // Keep painting even if the compositor reports the window as hidden.
@@ -1800,6 +1810,17 @@ impl eframe::App for RivetApp {
         let Ok(list) = std::env::var("RIVET_CLICKS") else { return };
         for item in list.split(';') {
             let Some((xy, f)) = item.split_once('@') else { continue };
+            // "copy@N" sends Ctrl+C at frame N.
+            if xy.trim() == "copy" {
+                if let Ok(f) = f.trim().parse::<u32>() {
+                    if self.frames + 1 == f {
+                        let m = egui::Modifiers::COMMAND;
+                        raw.events.push(egui::Event::Key { key: egui::Key::C, physical_key: None, pressed: true, repeat: false, modifiers: m });
+                        raw.events.push(egui::Event::Copy);
+                    }
+                }
+                continue;
+            }
             // "r" in front means a right click: "r400,300@5".
             let (button, xy) = match xy.trim().strip_prefix('r') {
                 Some(rest) => (egui::PointerButton::Secondary, rest),
