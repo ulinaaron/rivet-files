@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Removed the niri-only code that moved check / screenshot windows to another workspace.
 - **Theme-tinted action colors**: info, danger, warning and success are 70% their usual hue and
   30% your theme accent. Delete Permanently, the close-button hover and errors use danger; Rename uses success.
 - Roomier Rename window.

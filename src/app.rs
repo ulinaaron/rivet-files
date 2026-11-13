@@ -1709,12 +1709,7 @@ impl RivetApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             return;
         }
-        // A window moved to a background workspace is drawn slowly by the compositor;
-        // there, a few frames over ~3 s is as settled as 120 visible frames.
-        let away_and_settled = crate::niri::moved_away()
-            && self.frames >= 8
-            && crate::STARTED.get().is_some_and(|t| t.elapsed().as_secs_f32() >= 3.0);
-        if (self.frames >= 120 || away_and_settled) && !self.shot_requested {
+        if self.frames >= 120 && !self.shot_requested {
             self.shot_requested = true;
             let done = self.shot_done.clone();
             let ctx2 = ctx.clone();
