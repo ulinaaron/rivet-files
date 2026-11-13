@@ -1334,7 +1334,7 @@ impl RivetApp {
                             });
                         });
                         section(ui, "Terminal command", &mut |ui| {
-                            let spots = [(desktop::LinkSpot::User, "Just for you", "Link"), (desktop::LinkSpot::System, "Everyone", "Link…")];
+                            let spots = [(desktop::LinkSpot::User, "Just for you", "Link"), (desktop::LinkSpot::System, "Everyone", "Link")];
                             for (n, (spot, name, button)) in spots.into_iter().enumerate() {
                                 if n > 0 {
                                     ui.separator();
