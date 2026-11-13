@@ -850,69 +850,127 @@ impl RivetApp {
 
     pub(super) fn status_bar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         let fill = ctx.global_style().visuals.panel_fill;
+        // The sidebar buttons sit on the sidebar's side and the zoom on the other;
+        // the Peek button sits on the Peek panel's side.
+        let sidebar_right = self.s.sidebar_right;
+        let peek_left = self.s.peek_left;
         egui::Panel::bottom("status").show_separator_line(false)
             .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin { left: 6, right: 6, top: 3, bottom: 6 }))
             .show(ui, |ui| {
                 self.flat_buttons = true;
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 6.0;
-                    let (sb, tree) = (self.s.show_sidebar, self.s.sidebar_tree);
-                    if self.tool_button(ui, ctx, &["user-bookmarks-symbolic", "starred-symbolic", "bookmark-new-symbolic"], "★", "Show places", true, sb && !tree) {
-                        self.s.show_sidebar = true;
-                        self.s.sidebar_tree = false;
-                        self.dirty_settings = true;
+                    // Left edge, outermost first.
+                    if peek_left {
+                        self.status_peek_button(ui, ctx);
+                        ui.add_space(6.0);
                     }
-                    if self.tool_button(ui, ctx, &["view-list-tree-symbolic", "folder-symbolic", "view-list-symbolic"], "🌲", "Show the folder tree", true, sb && tree) {
-                        self.s.show_sidebar = true;
-                        self.s.sidebar_tree = true;
-                        self.dirty_settings = true;
-                    }
-                    if self.tool_button(ui, ctx, &["sidebar-show-symbolic", "view-sidebar-symbolic", "view-dual-symbolic"], "◧", "Hide the sidebar (F9)", true, false) {
-                        self.s.show_sidebar = !self.s.show_sidebar;
-                        self.dirty_settings = true;
+                    if sidebar_right {
+                        self.status_zoom(ui, false);
+                    } else {
+                        self.status_sidebar_buttons(ui, ctx);
                     }
                     ui.add_space(6.0);
-                    let text = self.status_text();
-                    let zoom_w = 180.0;
-                    ui.allocate_ui_with_layout(Vec2::new((ui.available_width() - zoom_w).max(50.0), 24.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                        ui.set_min_width(ui.available_width());
-                        if let Some(op) = self.ops.first().cloned() {
-                            let done = op.done_items.load(Ordering::Relaxed) as f32;
-                            ui.add(egui::ProgressBar::new(done / op.total_items as f32).desired_width(120.0).desired_height(10.0));
-                            ui.label(format!("{} “{}”…", op.kind.verb(), op.current.lock().unwrap()));
-                            if ui.small_button("Cancel").clicked() {
-                                op.cancel.store(true, Ordering::Relaxed);
-                            }
-                        } else {
-                            ui.centered_and_justified(|ui| {
-                                ui.label(text);
-                            });
-                        }
-                    });
+                    // Right edge (right-to-left, so outermost first), then the text in between.
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        let peek = self.s.show_peek;
-                        if self.tool_button(ui, ctx, &["sidebar-show-right-symbolic", "view-right-pane-symbolic", "document-properties-symbolic"], "◨", if peek { "Hide the Peek panel (F11)" } else { "Show the Peek panel (F11)" }, true, peek) {
-                            self.s.show_peek = !peek;
-                            self.dirty_settings = true;
+                        if !peek_left {
+                            self.status_peek_button(ui, ctx);
+                            ui.add_space(6.0);
+                        }
+                        if sidebar_right {
+                            self.status_sidebar_buttons(ui, ctx);
+                        } else {
+                            self.status_zoom(ui, true);
                         }
                         ui.add_space(6.0);
-                        if ui.add(egui::Button::new("+").small().frame_when_inactive(false)).on_hover_text("Zoom in").clicked() {
-                            self.zoom(1);
-                        }
-                        let (val, range) = match self.s.view {
-                            ViewMode::Icons => (&mut self.s.zoom, 32.0..=256.0),
-                            _ => (&mut self.s.list_zoom, 16.0..=64.0),
-                        };
-                        ui.spacing_mut().slider_width = 110.0;
-                        if ui.add(egui::Slider::new(val, range).show_value(false)).changed() {
-                            self.dirty_settings = true;
-                        }
-                        if ui.add(egui::Button::new("−").small().frame_when_inactive(false)).on_hover_text("Zoom out").clicked() {
-                            self.zoom(-1);
-                        }
+                        let text = self.status_text();
+                        ui.allocate_ui_with_layout(Vec2::new(ui.available_width().max(50.0), 24.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                            ui.set_min_width(ui.available_width());
+                            if let Some(op) = self.ops.first().cloned() {
+                                let done = op.done_items.load(Ordering::Relaxed) as f32;
+                                ui.add(egui::ProgressBar::new(done / op.total_items as f32).desired_width(120.0).desired_height(10.0));
+                                ui.label(format!("{} “{}”…", op.kind.verb(), op.current.lock().unwrap()));
+                                if ui.small_button("Cancel").clicked() {
+                                    op.cancel.store(true, Ordering::Relaxed);
+                                }
+                            } else {
+                                ui.centered_and_justified(|ui| {
+                                    ui.label(text);
+                                });
+                            }
+                        });
                     });
                 });
             });
+    }
+
+    /// Places / folder tree / hide sidebar. In a right-to-left layout they come out
+    /// mirrored, with "places" at the outer edge either way.
+    fn status_sidebar_buttons(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+        let (sb, tree) = (self.s.show_sidebar, self.s.sidebar_tree);
+        if self.tool_button(ui, ctx, &["user-bookmarks-symbolic", "starred-symbolic", "bookmark-new-symbolic"], "★", "Show places", true, sb && !tree) {
+            self.s.show_sidebar = true;
+            self.s.sidebar_tree = false;
+            self.dirty_settings = true;
+        }
+        if self.tool_button(ui, ctx, &["view-list-tree-symbolic", "folder-symbolic", "view-list-symbolic"], "🌲", "Show the folder tree", true, sb && tree) {
+            self.s.show_sidebar = true;
+            self.s.sidebar_tree = true;
+            self.dirty_settings = true;
+        }
+        let icons: &[&str] = if self.s.sidebar_right {
+            &["sidebar-show-right-symbolic", "view-right-pane-symbolic", "view-dual-symbolic"]
+        } else {
+            &["sidebar-show-symbolic", "view-sidebar-symbolic", "view-dual-symbolic"]
+        };
+        let tip = if sb { "Hide the sidebar (F9)" } else { "Show the sidebar (F9)" };
+        if self.tool_button(ui, ctx, icons, if self.s.sidebar_right { "◨" } else { "◧" }, tip, true, false) {
+            self.s.show_sidebar = !self.s.show_sidebar;
+            self.dirty_settings = true;
+        }
+    }
+
+    fn status_peek_button(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+        let peek = self.s.show_peek;
+        let tip = if peek { "Hide the Peek panel (F11)" } else { "Show the Peek panel (F11)" };
+        let icons: &[&str] = &["document-properties-symbolic", "dialog-information-symbolic", "sidebar-show-right-symbolic"];
+        if self.tool_button(ui, ctx, icons, "i", tip, true, peek) {
+            self.s.show_peek = !peek;
+            self.dirty_settings = true;
+        }
+    }
+
+    /// "− slider +", reading left to right whichever side it is on.
+    fn status_zoom(&mut self, ui: &mut egui::Ui, right_to_left: bool) {
+        let mut zoom_out = |app: &mut Self, ui: &mut egui::Ui| {
+            if ui.add(egui::Button::new("−").small().frame_when_inactive(false)).on_hover_text("Zoom out").clicked() {
+                app.zoom(-1);
+            }
+        };
+        let zoom_in = |app: &mut Self, ui: &mut egui::Ui| {
+            if ui.add(egui::Button::new("+").small().frame_when_inactive(false)).on_hover_text("Zoom in").clicked() {
+                app.zoom(1);
+            }
+        };
+        let slider = |app: &mut Self, ui: &mut egui::Ui| {
+            let (val, range) = match app.s.view {
+                ViewMode::Icons => (&mut app.s.zoom, 32.0..=256.0),
+                _ => (&mut app.s.list_zoom, 16.0..=64.0),
+            };
+            ui.spacing_mut().slider_width = 110.0;
+            if ui.add(egui::Slider::new(val, range).show_value(false)).changed() {
+                app.dirty_settings = true;
+            }
+        };
+        if right_to_left {
+            zoom_in(self, ui);
+            slider(self, ui);
+            zoom_out(self, ui);
+        } else {
+            zoom_out(self, ui);
+            slider(self, ui);
+            zoom_in(self, ui);
+        }
     }
 
     fn status_text(&self) -> String {
