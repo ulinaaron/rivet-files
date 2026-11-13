@@ -185,18 +185,37 @@ impl RivetApp {
                 ui.add_space(2.0);
             };
             heading(ui, "TYPE");
-            ui.horizontal_wrapped(|ui| {
-                for t in TypeGroup::ALL {
-                    let mut on = f.types.contains(&t);
-                    if ui.toggle_value(&mut on, egui::RichText::new(t.label()).size(12.5)).changed() {
+            // Two even columns of chips, with the app's soft "selected" look.
+            let cw = (ui.available_width() - 4.0) / 2.0;
+            for pair in TypeGroup::ALL.chunks(2) {
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = 4.0;
+                    for t in pair {
+                        let on = f.types.contains(t);
+                        let (r, resp) = ui.allocate_exact_size(Vec2::new(cw, 26.0), Sense::click());
                         if on {
-                            f.types.push(t);
+                            let (fill, stroke) = super::selected_tile(&v, card);
+                            ui.painter().rect_filled(r, R_SM, fill);
+                            ui.painter().rect_stroke(r, R_SM, stroke, egui::StrokeKind::Inside);
                         } else {
-                            f.types.retain(|x| *x != t);
+                            let fill = if resp.hovered() { v.widgets.hovered.weak_bg_fill } else { v.widgets.inactive.weak_bg_fill };
+                            ui.painter().rect_filled(r, R_SM, fill);
+                        }
+                        let fg = if on { v.strong_text_color() } else { v.text_color() };
+                        ui.painter().text(r.center(), egui::Align2::CENTER_CENTER, t.label(), crate::fonts::ui_font(12.5), fg);
+                        if resp.clicked() {
+                            if on {
+                                f.types.retain(|x| x != t);
+                            } else {
+                                f.types.push(*t);
+                            }
                         }
                     }
-                }
-            });
+                });
+            }
+            if !f.types.is_empty() {
+                ui.label(egui::RichText::new("Only the picked types show").size(11.0).color(weak));
+            }
             heading(ui, "NAME");
             // A segmented control: three equal parts.
             let (seg, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 26.0), Sense::hover());
@@ -207,12 +226,14 @@ impl RivetApp {
                 let r = Rect::from_min_size(seg.min + Vec2::new(pw * i as f32, 0.0), Vec2::new(pw, seg.height())).shrink(2.0);
                 let resp = ui.interact(r, ui.scope_id().with(("name-mode", i)), Sense::click());
                 if f.name_mode == *mode {
-                    ui.painter().rect_filled(r, R_SM - 1, v.selection.bg_fill);
+                    let (fill, stroke) = super::selected_tile(&v, v.widgets.inactive.weak_bg_fill);
+                    ui.painter().rect_filled(r, R_SM - 1, fill);
+                    ui.painter().rect_stroke(r, R_SM - 1, stroke, egui::StrokeKind::Inside);
                 } else if resp.hovered() {
                     ui.painter().rect_filled(r, R_SM - 1, v.widgets.hovered.weak_bg_fill);
                 }
-                let fg = if f.name_mode == *mode { v.selection.stroke.color } else { v.text_color() };
-                ui.painter().text(r.center(), egui::Align2::CENTER_CENTER, *label, crate::fonts::ui_font(12.0), fg);
+                let fg = if f.name_mode == *mode { v.strong_text_color() } else { v.text_color() };
+                ui.painter().text(r.center(), egui::Align2::CENTER_CENTER, *label, crate::fonts::ui_font(11.5), fg);
                 if resp.clicked() {
                     f.name_mode = *mode;
                 }
@@ -252,7 +273,14 @@ impl RivetApp {
             self.s.filters.save();
             self.resort_all();
         }
+        // Plain-language note on which filter is used, lined up with the card above.
         ui.add_space(8.0);
-        ui.add(egui::Label::new(egui::RichText::new("This folder's filter wins, then the nearest “& below”, then Everywhere.").size(11.0).color(weak)).wrap());
+        egui::Frame::NONE.inner_margin(egui::Margin { left: 10, right: 10, top: 0, bottom: 8 }).show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.add(
+                egui::Label::new(egui::RichText::new("Only one filter is used at a time. A folder's own filter comes first, then one set on a folder above it, then Everywhere.").size(11.5).color(weak))
+                    .wrap(),
+            );
+        });
     }
 }
