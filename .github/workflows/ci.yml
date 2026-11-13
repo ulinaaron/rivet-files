@@ -103,6 +103,9 @@ jobs:
           bundle: rivet-files.flatpak
           manifest-path: packaging/flatpak/io.github.ulinaaron.rivet-files.yml
           cache-key: flatpak-26.08
+          # Download the metainfo screenshots into the repo and rewrite their
+          # URLs to dl.flathub.org/media, which is what the linter checks for.
+          mirror-screenshots-url: https://dl.flathub.org/media
 
       - name: Lint the manifest and the build
         run: |
