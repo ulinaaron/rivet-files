@@ -573,6 +573,8 @@ impl RivetApp {
                 st.spacing.item_spacing = Vec2::new(6.0, 4.0);
                 st.spacing.button_padding = Vec2::new(6.0, 3.0);
                 st.spacing.interact_size.y = 24.0;
+                // A little more room inside every pop-up menu.
+                st.spacing.menu_margin = egui::Margin::same(8);
                 for (ts, size) in [
                     (egui::TextStyle::Body, 13.5),
                     (egui::TextStyle::Button, 13.5),
@@ -1699,14 +1701,19 @@ impl eframe::App for RivetApp {
         let Ok(list) = std::env::var("RIVET_CLICKS") else { return };
         for item in list.split(';') {
             let Some((xy, f)) = item.split_once('@') else { continue };
+            // "r" in front means a right click: "r400,300@5".
+            let (button, xy) = match xy.trim().strip_prefix('r') {
+                Some(rest) => (egui::PointerButton::Secondary, rest),
+                None => (egui::PointerButton::Primary, xy),
+            };
             let Some((x, y)) = xy.split_once(',') else { continue };
             let (Ok(x), Ok(y), Ok(f)) = (x.trim().parse::<f32>(), y.trim().parse::<f32>(), f.trim().parse::<u32>()) else { continue };
             let pos = Pos2::new(x, y);
             if self.frames + 1 == f {
                 raw.events.push(egui::Event::PointerMoved(pos));
-                raw.events.push(egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed: true, modifiers: Default::default() });
+                raw.events.push(egui::Event::PointerButton { pos, button, pressed: true, modifiers: Default::default() });
             } else if self.frames + 1 == f + 1 {
-                raw.events.push(egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed: false, modifiers: Default::default() });
+                raw.events.push(egui::Event::PointerButton { pos, button, pressed: false, modifiers: Default::default() });
             } else if self.frames + 1 > f + 1 {
                 raw.events.push(egui::Event::PointerMoved(pos));
             }

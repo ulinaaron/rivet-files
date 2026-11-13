@@ -71,6 +71,13 @@ impl RivetApp {
         false
     }
 
+    /// Comfortable spacing for right-click menus: wider, taller rows.
+    pub(super) fn comfy_menu(ui: &mut egui::Ui) {
+        ui.set_min_width(210.0);
+        ui.spacing_mut().button_padding = Vec2::new(10.0, 5.0);
+        ui.spacing_mut().item_spacing.y = 3.0;
+    }
+
     /// Roomier items for menus opened from the hamburger button.
     fn roomy_menu(&self, ui: &mut egui::Ui) {
         if self.roomy_menus {
@@ -549,6 +556,7 @@ impl RivetApp {
                 // Right-click on empty toolbar space to customize it.
                 let bg = ui.interact(ui.max_rect(), Id::unique("toolbar-bg"), Sense::click());
                 bg.context_menu(|ui| {
+                    Self::comfy_menu(ui);
                     if ui.button("Customize Toolbar…").clicked() {
                         self.open_prefs();
                     }
@@ -1161,7 +1169,7 @@ impl RivetApp {
     fn my_computer(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         let home = places::home();
         let (resp, _) = self.place_row(ui, ctx, &["user-home"], "Home", Some(Location::Dir(home.clone())), None, false);
-        resp.context_menu(|ui| self.place_menu(ui, &home));
+        resp.context_menu(|ui| { Self::comfy_menu(ui); self.place_menu(ui, &home) });
         let d = self.user_dirs.clone();
         for (p, icon, label) in [
             (&d.desktop, "user-desktop", "Desktop"),
@@ -1174,13 +1182,13 @@ impl RivetApp {
             if let Some(p) = p {
                 let name = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| label.into());
                 let (resp, _) = self.place_row(ui, ctx, &[icon, "folder"], &name, Some(Location::Dir(p.clone())), None, false);
-                resp.context_menu(|ui| self.place_menu(ui, p));
+                resp.context_menu(|ui| { Self::comfy_menu(ui); self.place_menu(ui, p) });
             }
         }
         self.place_row(ui, ctx, &["document-open-recent", "folder-recent"], "Recent", Some(Location::Recent), None, false);
         let root_usage = places::disk_space(Path::new("/")).map(|(t, f)| if t > 0 { 1.0 - f as f32 / t as f32 } else { 0.0 });
         let (resp, _) = self.place_row(ui, ctx, &["drive-harddisk-system", "drive-harddisk"], "File System", Some(Location::Dir("/".into())), root_usage, false);
-        resp.context_menu(|ui| self.place_menu(ui, Path::new("/")));
+        resp.context_menu(|ui| { Self::comfy_menu(ui); self.place_menu(ui, Path::new("/")) });
         // Flatpak's /usr and /etc are the runtime. The computer's copies are under /run/host.
         if places::in_flatpak() {
             let host = PathBuf::from("/run/host");
@@ -1192,6 +1200,7 @@ impl RivetApp {
         let trash_icon: &[&str] = if self.trash_empty { &["user-trash"] } else { &["user-trash-full", "user-trash"] };
         let (resp, _) = self.place_row(ui, ctx, trash_icon, "Trash", Some(Location::Trash), None, false);
         resp.context_menu(|ui| {
+                    Self::comfy_menu(ui);
             if ui.add_enabled(!self.trash_empty, egui::Button::new("Empty Trash")).clicked() {
                 self.pending.push(Action::EmptyTrash);
             }
@@ -1211,6 +1220,7 @@ impl RivetApp {
                 };
                 let (resp, _) = self.place_row(ui, ctx, &icon, &b.label, Some(Location::Dir(b.path.clone())), None, false);
                 resp.context_menu(|ui| {
+                    Self::comfy_menu(ui);
                     self.place_menu(ui, &b.path);
                     ui.separator();
                     if ui.button("Rename…").clicked() {
@@ -1233,6 +1243,7 @@ impl RivetApp {
                     self.pending.push(Action::Unmount(m.clone()));
                 }
                 resp.context_menu(|ui| {
+                    Self::comfy_menu(ui);
                     self.place_menu(ui, &m.path);
                     ui.separator();
                     if ui.button("Unmount").clicked() {
@@ -1250,7 +1261,7 @@ impl RivetApp {
                 if eject {
                     self.pending.push(Action::Unmount(m.clone()));
                 }
-                resp.context_menu(|ui| self.place_menu(ui, &m.path));
+                resp.context_menu(|ui| { Self::comfy_menu(ui); self.place_menu(ui, &m.path) });
             }
         }
     }
@@ -1361,7 +1372,7 @@ impl RivetApp {
             if resp.dnd_hover_payload::<DragFiles>().is_some() {
                 ui.painter().rect_stroke(rect, R_MD, Stroke::new(2.0, accent), StrokeKind::Inside);
             }
-            resp.context_menu(|ui| self.place_menu(ui, &p));
+            resp.context_menu(|ui| { Self::comfy_menu(ui); self.place_menu(ui, &p) });
         }
     }
 

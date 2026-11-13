@@ -495,6 +495,7 @@ impl RivetApp {
     // -------------------------------------------------------------- context menus
 
     fn item_menu(&mut self, ui: &mut egui::Ui, e: &Entry) {
+        Self::comfy_menu(ui);
         let in_trash = matches!(self.tab().loc, Location::Trash);
         if !self.tab().selected.contains(&e.path) {
             let t = self.tab_mut();
@@ -540,6 +541,7 @@ impl RivetApp {
                 self.pending.push(Action::Run(e.path.clone()));
             }
             ui.menu_button("Open With", |ui| {
+                Self::comfy_menu(ui);
                 let apps: Vec<(usize, String)> = launch::apps_for(&self.apps, &e.mime)
                     .into_iter()
                     .filter_map(|a| self.apps.iter().position(|x| x.id == a.id).map(|i| (i, a.name.clone())))
@@ -607,6 +609,7 @@ impl RivetApp {
     }
 
     pub(super) fn background_menu(&mut self, ui: &mut egui::Ui) {
+        Self::comfy_menu(ui);
         if matches!(self.tab().loc, Location::Trash) {
             if ui.button("Empty Trash").clicked() {
                 self.pending.push(Action::EmptyTrash);
@@ -618,6 +621,7 @@ impl RivetApp {
             self.pending.push(Action::NewFolder);
         }
         ui.menu_button("Create New Document", |ui| {
+                Self::comfy_menu(ui);
             if ui.button("Empty Document").clicked() {
                 self.pending.push(Action::NewFile(None));
             }
@@ -648,7 +652,10 @@ impl RivetApp {
             self.pending.push(Action::SelectAll);
         }
         ui.separator();
-        ui.menu_button("Sort Items", |ui| self.sort_menu(ui));
+        ui.menu_button("Sort Items", |ui| {
+            Self::comfy_menu(ui);
+            self.sort_menu(ui)
+        });
         if Self::menu_toggle(ui, &mut self.s.show_hidden, "Show Hidden Files", "Ctrl+H") {
             self.resort_all();
         }
