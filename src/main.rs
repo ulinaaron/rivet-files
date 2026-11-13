@@ -9,6 +9,7 @@ mod cli;
 mod bench;
 mod builtin_icons;
 mod fonts;
+mod filters;
 mod fsops;
 mod highlight;
 mod icons;
@@ -114,6 +115,9 @@ fn main() -> eframe::Result {
         }
     }
 
+    if screenshot.is_some() || measuring() {
+        filters::NO_SAVE.store(true, std::sync::atomic::Ordering::Relaxed);
+    }
     // Checks use the default look so they are comparable from run to run.
     let mut settings = if screenshot.is_some() || measuring() { settings::Settings::default() } else { settings::Settings::load() };
     // Screenshots for checks show a neutral sample folder, never the person's own files,
@@ -172,6 +176,10 @@ fn main() -> eframe::Result {
     // Test hooks: toolbar at the bottom, status bar at the top.
     if std::env::var_os("RIVET_TOOLBAR_BOTTOM").is_some() {
         settings.toolbar_bottom = true;
+    }
+    if std::env::var_os("RIVET_SIDEBAR_FILTERS").is_some() {
+        settings.show_sidebar = true;
+        settings.sidebar_filters = true;
     }
     if std::env::var_os("RIVET_NO_STATUSBAR").is_some() {
         settings.show_statusbar = false;

@@ -33,6 +33,7 @@ Rivet is powerful all the while being minimal. Make it your own — bloat the in
 - 📋 **Everything you expect** — copy, cut, paste, drag and drop, rename, Trash with restore
 - ✏️ **Bulk Rename** — insert, date / time, numbering, remove, search & replace and case changes, with a live preview
 - ↩️ **Undo and redo** — copies, moves, renames, Trash, new items, compress and extract
+- 🧪 **Filters** — show a folder with only pictures, recent files or names you choose; global, per folder or per folder and subfolders
 - 🔍 **Instant filter** as you type, plus search through subfolders
 - 🖼️ **Picture thumbnails** and your system icon theme
 - 👀 **Peek panel** — big previews, videos that play right there, code colored by your theme, and full file details, on either side

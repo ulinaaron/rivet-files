@@ -74,6 +74,10 @@ pub struct Settings {
     pub media_tools: bool,
     /// The Bulk Rename module (F2 / right-click with several items selected).
     pub bulk_rename: bool,
+    /// Show the Filters view in the sidebar (instead of places or the folder tree).
+    pub sidebar_filters: bool,
+    /// Filters (saved in their own file, see filters.rs).
+    pub filters: crate::filters::FilterSet,
     /// Put the status bar at the top of the window (under the toolbar when both are there).
     pub statusbar_top: bool,
     /// The Peek panel: details and a large preview of the selected item.
@@ -122,6 +126,8 @@ impl Default for Settings {
             toolbar_bottom: false,
             media_tools: true,
             bulk_rename: true,
+            sidebar_filters: false,
+            filters: Default::default(),
             statusbar_top: false,
             show_peek: false,
             peek_left: false,
@@ -139,6 +145,7 @@ fn path() -> std::path::PathBuf {
 impl Settings {
     pub fn load() -> Self {
         let mut s = Settings::default();
+        s.filters = crate::filters::FilterSet::load();
         let Ok(text) = std::fs::read_to_string(path()) else { return s };
         for line in text.lines() {
             let Some((k, v)) = line.split_once('=') else { continue };

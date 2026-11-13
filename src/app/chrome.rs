@@ -406,6 +406,12 @@ impl RivetApp {
     // -------------------------------------------------------------- toolbar
 
     pub(super) fn tool_button(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, icons: &[&str], fallback: &str, tip: &str, enabled: bool, selected: bool) -> bool {
+        self.tool_button_resp(ui, ctx, icons, fallback, tip, enabled, selected).clicked()
+    }
+
+    /// [`Self::tool_button`], returning the whole response (to draw on it).
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn tool_button_resp(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, icons: &[&str], fallback: &str, tip: &str, enabled: bool, selected: bool) -> egui::Response {
         let tex = self.icon(ctx, icons, 16.0);
         let flat = self.toolbar_drawing || self.flat_buttons;
         // Active buttons get the same look as a selected file; the icon keeps the normal text colour.
@@ -428,7 +434,7 @@ impl RivetApp {
                 egui::Shape::rect_stroke(r, R_SM, stroke, StrokeKind::Inside),
             ]));
         }
-        resp.on_hover_text(tip).clicked()
+        resp.on_hover_text(tip)
     }
 
     /// Draw one configurable toolbar item.
@@ -1001,16 +1007,25 @@ impl RivetApp {
     /// Places / folder tree / hide sidebar. In a right-to-left layout they come out
     /// mirrored, with "places" at the outer edge either way.
     fn status_sidebar_buttons(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        let (sb, tree) = (self.s.show_sidebar, self.s.sidebar_tree);
-        if self.tool_button(ui, ctx, &["user-bookmarks-symbolic", "starred-symbolic", "bookmark-new-symbolic"], "★", "Show places", true, sb && !tree) {
+        let (sb, tree, filt) = (self.s.show_sidebar, self.s.sidebar_tree, self.s.sidebar_filters);
+        if self.tool_button(ui, ctx, &["user-bookmarks-symbolic", "starred-symbolic", "bookmark-new-symbolic"], "★", "Show places", true, sb && !tree && !filt) {
             self.s.show_sidebar = true;
             self.s.sidebar_tree = false;
+            self.s.sidebar_filters = false;
             self.dirty_settings = true;
         }
-        if self.tool_button(ui, ctx, &["view-list-tree-symbolic", "folder-symbolic", "view-list-symbolic"], "🌲", "Show the folder tree", true, sb && tree) {
+        if self.tool_button(ui, ctx, &["view-list-tree-symbolic", "folder-symbolic", "view-list-symbolic"], "🌲", "Show the folder tree", true, sb && tree && !filt) {
             self.s.show_sidebar = true;
             self.s.sidebar_tree = true;
+            self.s.sidebar_filters = false;
             self.dirty_settings = true;
+        }
+        // Filters: a drawn funnel (the same in every icon theme).
+        let resp = self.tool_button_resp(ui, ctx, &[], " ", "Show the filters", true, sb && filt);
+        let fg = ui.visuals().text_color();
+        super::filterview::paint_funnel(ui.painter(), resp.rect.center(), 15.0, fg);
+        if resp.clicked() {
+            self.show_filters();
         }
         let icons: &[&str] = if self.s.sidebar_right {
             &["sidebar-show-right-symbolic", "view-right-pane-symbolic", "view-dual-symbolic"]
@@ -1113,7 +1128,9 @@ impl RivetApp {
             .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin { left: 8, right: 8, top: 6, bottom: 10 }))
             .show(ui, |ui| {
                 egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
-                    if self.s.sidebar_tree {
+                    if self.s.sidebar_filters {
+                        self.filters_view(ui);
+                    } else if self.s.sidebar_tree {
                         self.tree_contents(ui, ctx);
                     } else {
                         self.sidebar_contents(ui, ctx);

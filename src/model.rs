@@ -120,6 +120,8 @@ pub struct Tab {
     pub anchor: Option<usize>,
     pub cursor: Option<usize>,
     pub filter: String,
+    /// How many items the active filter (global / folder) hides here.
+    pub filtered_out: usize,
     pub error: Option<String>,
     pub dir_mtime: Option<SystemTime>,
     pub last_check: Instant,
@@ -141,6 +143,7 @@ impl Tab {
             anchor: None,
             cursor: None,
             filter: String::new(),
+            filtered_out: 0,
             error: None,
             dir_mtime: None,
             last_check: Instant::now(),
@@ -217,12 +220,26 @@ impl Tab {
     pub fn resort(&mut self, db: &MimeDb, s: &Settings) {
         let f = self.filter.to_lowercase();
         let show_hidden = s.show_hidden || matches!(self.loc, Location::Search { .. });
+        // The filter (global / folder / folder & subfolders) that applies here, if any.
+        let rule = self.loc.dir().and_then(|d| s.filters.active_for(&d)).map(|(_, r)| r.clone());
+        let now = std::time::SystemTime::now();
+        let mut hidden_by_rule = 0;
         let mut vis: Vec<usize> = (0..self.entries.len())
             .filter(|&i| {
                 let e = &self.entries[i];
-                (show_hidden || !e.hidden) && (f.is_empty() || e.name.to_lowercase().contains(&f))
+                if !((show_hidden || !e.hidden) && (f.is_empty() || e.name.to_lowercase().contains(&f))) {
+                    return false;
+                }
+                if let Some(r) = &rule {
+                    if !r.matches(e, now) {
+                        hidden_by_rule += 1;
+                        return false;
+                    }
+                }
+                true
             })
             .collect();
+        self.filtered_out = hidden_by_rule;
         let entries = &self.entries;
         let recent = matches!(self.loc, Location::Recent);
         vis.sort_by(|&a, &b| {

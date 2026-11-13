@@ -78,6 +78,11 @@ fn archive_ext(name: &str) -> Option<&'static str> {
     ARCHIVE_EXTS.iter().copied().find(|e| lower.ends_with(e) && lower.len() > e.len())
 }
 
+/// Whether a file name has an archive ending (no disk access).
+pub fn is_archive_name(name: &str) -> bool {
+    archive_ext(name).is_some()
+}
+
 pub fn is_archive(path: &Path) -> bool {
     path.is_file() && path.file_name().and_then(|n| n.to_str()).and_then(archive_ext).is_some()
 }

@@ -24,7 +24,7 @@ fn select_stem(ctx: &egui::Context, id: Id, text: &str, is_dir: bool) {
 }
 
 /// An on/off switch (a pill with a sliding knob), in the accent color when on.
-fn switch(ui: &mut egui::Ui, on: &mut bool, enabled: bool) -> egui::Response {
+pub(super) fn switch(ui: &mut egui::Ui, on: &mut bool, enabled: bool) -> egui::Response {
     let size = Vec2::new(40.0, 22.0);
     let (rect, mut resp) = ui.allocate_exact_size(size, if enabled { Sense::click() } else { Sense::hover() });
     if enabled && resp.clicked() {

@@ -20,6 +20,7 @@ use crate::thumbs::{self, Thumbnailer};
 mod chrome;
 mod bulkrename;
 mod dialogs;
+mod filterview;
 mod mediatools;
 mod netview;
 mod peek;
@@ -209,6 +210,8 @@ pub struct RivetApp {
     prefs_focus: bool,
     /// What was typed into the font list's search field.
     font_filter: String,
+    /// Which filter the Filters sidebar is editing.
+    filter_scope: Option<crate::filters::Scope>,
     /// A text field or drop-down list in Preferences was active last frame (Esc then only
     /// leaves it, instead of closing Preferences).
     prefs_busy_last: bool,
@@ -428,6 +431,7 @@ impl RivetApp {
             window_focus: false,
             prefs_focus: false,
             font_filter: String::new(),
+            filter_scope: None,
             prefs_busy_last: false,
             file_list_focus: None,
             kb_nav: false,
@@ -547,6 +551,15 @@ impl RivetApp {
         if std::env::var_os("RIVET_SEARCH").is_some() {
             app.search_open = true;
             app.search_focus = true;
+        }
+        // RIVET_FILTERS=FILE loads filters from that file (for checks; the real ones live in
+        // ~/.config/rivet/filters). Folder names may use $START for the start folder.
+        if let Ok(f) = std::env::var("RIVET_FILTERS") {
+            if let Ok(text) = std::fs::read_to_string(f) {
+                let start = app.tab().loc.dir().map(|d| d.display().to_string()).unwrap_or_default();
+                app.s.filters = crate::filters::FilterSet::parse(&text.replace("$START", &start));
+                app.resort_all();
+            }
         }
         if let Ok(v) = std::env::var("RIVET_EDIT_PATH") {
             app.start_path_editing();

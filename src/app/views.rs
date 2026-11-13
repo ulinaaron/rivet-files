@@ -34,6 +34,7 @@ impl RivetApp {
                 m.set_focus_lock_filter(anchor.id, egui::EventFilter { tab: false, horizontal_arrows: true, vertical_arrows: true, escape: false })
             });
             self.file_list_focus = Some(anchor.id);
+            self.filter_strip(ui);
             let loc = self.tab().loc.clone();
             if matches!(loc, Location::Trash) {
                 egui::Frame::NONE.fill(ui.visuals().faint_bg_color).inner_margin(egui::Margin::symmetric(10, 6)).show(ui, |ui| {
