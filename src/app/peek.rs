@@ -487,10 +487,12 @@ impl RivetApp {
                         [Pos2::new(chev_r.left(), r.top() + border.width), Pos2::new(chev_r.left(), r.bottom() - border.width)],
                         border,
                     );
-                    let c = chev_r.center() + Vec2::new(0.0, 1.0);
-                    let st = Stroke::new(1.8, fg);
-                    ui.painter().line_segment([c + Vec2::new(-4.5, -2.5), c + Vec2::new(0.0, 2.0)], st);
-                    ui.painter().line_segment([c + Vec2::new(0.0, 2.0), c + Vec2::new(4.5, -2.5)], st);
+                    // An "apps" grid: this opens the app chooser rather than a drop-down list.
+                    let c = chev_r.center();
+                    for (dx, dy) in [(-1.0, -1.0), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0)] {
+                        let sq = Rect::from_center_size(c + Vec2::new(dx * 3.4, dy * 3.4), Vec2::splat(5.0));
+                        ui.painter().rect_filled(sq, 1.5, fg);
+                    }
                     if cresp.on_hover_text("Open with another application…").clicked() {
                         self.pending.push(Action::OpenWithDialog(vec![e.path.clone()]));
                     }
