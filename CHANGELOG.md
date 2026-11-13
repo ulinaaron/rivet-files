@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.2.0 — unreleased
+
+### New
+- **Peek panel** (F11, View menu, status bar): a big preview of the selection with all its details.
+  Pictures, videos that play right in the panel (muted, with seek), music covers, and text files
+  with syntax highlighting in your theme's colors. Drag the grip to resize the preview.
+  A split "Open with …" button (the arrow picks another app), plus Copy location, Rename, Trash and Properties.
+- **Network** that works: finds servers on your network, lists SMB shares, connects (with a login
+  window or as guest), disconnects, and *Connect to Server…* for smb://, sftp://, ftp://, dav:// addresses.
+- **Compress and Extract Here**: zip, tar.gz, tar.xz, tar.zst and 7z, in the background, with undo.
+- **Undo and redo** (Ctrl+Z / Ctrl+Shift+Z) for copies, moves, renames, Trash and new items.
+- **Sidebar and Peek on either side** (Preferences → Window); the status bar buttons follow them.
+
+### Improved
+- Open With window redesigned; it always lists the current default app.
+- Tidier menus with consistent shortcut labels; roomier hamburger menu; wider menu bar hover.
+- Title bar setting reads *System* / *App*.
+- Check and screenshot windows stay out of the way on niri.
+- Release builds run on older glibc; Flatpak and AUR packaging.
+
+### Removed
+- Alt no longer peeks at a hidden menu bar (Ctrl+M shows it).
+
 ## 0.1.2
 
 - bump.sh: one command to set the next version

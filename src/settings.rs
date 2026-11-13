@@ -345,7 +345,7 @@ impl ToolItem {
             Properties => (&["document-properties-symbolic", "dialog-information-symbolic", "document-properties"], "i"),
             Bookmark => (&["bookmark-new-symbolic", "starred-symbolic", "bookmark-new"], "★"),
             Sidebar => (&["sidebar-show-symbolic", "view-sidebar-symbolic", "view-dual-symbolic"], "◧"),
-            Peek => (&["document-properties-symbolic", "dialog-information-symbolic", "sidebar-show-right-symbolic"], "i"),
+            Peek => (&["view-reveal-symbolic", "view-visible-symbolic", "document-properties-symbolic"], "i"),
             Separator => (&[], "|"),
             Menu => (&[], "≡"),
         }

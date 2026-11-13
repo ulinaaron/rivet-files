@@ -439,15 +439,18 @@ impl RivetApp {
                 let main_r = Rect::from_min_max(r.min, Pos2::new(r.right() - chevron_w, r.bottom()));
                 let chev_r = Rect::from_min_max(Pos2::new(main_r.right(), r.top()), r.max);
                 let resp = ui.interact(main_r, ui.scope_id().with("peek-open"), Sense::click());
-                let base = v.selection.bg_fill;
-                let hover = crate::palette::mix(base, v.text_color(), 0.14);
+                // The "glassy" selected-tile look (accent tint + soft accent border), like the
+                // active toolbar buttons; app icons stay readable on it.
+                let under = ui.visuals().panel_fill;
+                let (base, border) = super::selected_tile(&v, under);
+                let hover = crate::palette::mix(under, v.selection.bg_fill, 0.42);
                 ui.painter().rect_filled(r, R_MD, base);
                 let rad = R_MD;
                 if resp.hovered() {
                     let cr = if split { egui::CornerRadius { nw: rad, sw: rad, ne: 0, se: 0 } } else { egui::CornerRadius::same(rad) };
                     ui.painter().rect_filled(main_r, cr, hover);
                 }
-                let fg = v.selection.stroke.color;
+                let fg = v.text_color();
                 if split {
                     let cresp = ui.interact(chev_r, ui.scope_id().with("peek-open-with"), Sense::click());
                     if cresp.hovered() {
@@ -456,7 +459,7 @@ impl RivetApp {
                     // divider
                     ui.painter().line_segment(
                         [Pos2::new(chev_r.left(), r.top() + 7.0), Pos2::new(chev_r.left(), r.bottom() - 7.0)],
-                        Stroke::new(1.0, fg.gamma_multiply(0.35)),
+                        border,
                     );
                     let c = chev_r.center() + Vec2::new(0.0, 1.0);
                     let st = Stroke::new(1.8, fg);
@@ -480,6 +483,7 @@ impl RivetApp {
                 job.wrap = egui::text::TextWrapping::truncate_at_width(r.right() - x - 8.0);
                 let g = ui.painter().layout_job(job);
                 ui.painter().galley(Pos2::new(x, r.center().y - g.size().y / 2.0), g, fg);
+                ui.painter().rect_stroke(Rect::from_min_max(r.min, Pos2::new(r.right() + chevron_w, r.bottom())), R_MD, border, egui::StrokeKind::Inside);
                 if resp.on_hover_text(&label).clicked() {
                     if e.is_dir && here {
                         self.pending.push(Action::Terminal(e.path.clone()));

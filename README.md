@@ -16,11 +16,13 @@ A Linux file manager in the same vein as Nemo, Thunar and Caja — written in Ru
 ## ✨ Features
 
 - 🗂️ **Icon, list and compact views** with tabs and a clickable path bar
-- 🧭 **Sidebar** — places, bookmarks, drives with usage bars, network, or a folder tree
+- 🧭 **Sidebar** — places, bookmarks, drives with usage bars, network, or a folder tree, on the left or right
 - 📋 **Everything you expect** — copy, cut, paste, drag and drop, rename, Trash with restore
+- ↩️ **Undo and redo** — copies, moves, renames, Trash, new items, compress and extract
 - 🔍 **Instant filter** as you type, plus search through subfolders
 - 🖼️ **Picture thumbnails** and your system icon theme
-- 👀 **Peek panel** — big previews, videos that play right there, and file details, on either side
+- 👀 **Peek panel** — big previews, videos that play right there, code colored by your theme, and full file details, on either side
+- 🚀 **Open With** — pick any app from a searchable list, or set a new default
 - 🌐 **Network** — find servers, open SMB shares, log in, or connect to any address
 - 🗜️ **Compress and extract** — zip, tar.gz, tar.xz, tar.zst and 7z
 - 🎨 **Follows your colors** — matugen, Noctalia and GTK themes, live, no restart
@@ -55,6 +57,23 @@ Change your wallpaper or scheme and Rivet restyles itself within a second.
     <td align="center">List view</td>
     <td align="center">Built-in icons</td>
     <td align="center">Preferences</td>
+  </tr>
+</table>
+
+### 👀 Peek
+
+Select something and the Peek panel (F11) shows it big: pictures, videos that play right in the panel,
+music covers, and text with syntax highlighting in your theme's colors — plus everything about the file.
+Drag the grip under the preview to make it taller or shorter.
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/peek-code-wide.png" alt="Peek panel showing highlighted Rust code"></td>
+    <td><img src="docs/screenshots/peek-picture-wide.png" alt="Peek panel showing a picture and its details"></td>
+  </tr>
+  <tr>
+    <td align="center">Code, colored by your theme</td>
+    <td align="center">Pictures and details</td>
   </tr>
 </table>
 

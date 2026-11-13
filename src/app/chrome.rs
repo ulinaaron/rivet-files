@@ -933,7 +933,7 @@ impl RivetApp {
     fn status_peek_button(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         let peek = self.s.show_peek;
         let tip = if peek { "Hide the Peek panel (F11)" } else { "Show the Peek panel (F11)" };
-        let icons: &[&str] = &["document-properties-symbolic", "dialog-information-symbolic", "sidebar-show-right-symbolic"];
+        let icons: &[&str] = &["view-reveal-symbolic", "view-visible-symbolic", "document-properties-symbolic"];
         if self.tool_button(ui, ctx, icons, "i", tip, true, peek) {
             self.s.show_peek = !peek;
             self.dirty_settings = true;

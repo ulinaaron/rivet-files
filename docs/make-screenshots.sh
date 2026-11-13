@@ -15,6 +15,25 @@ for f in report.pdf budget.ods slides.odp letter.odt meeting-notes.txt; do : > "
 for f in song.mp3 podcast.ogg; do : > "$H/Music/$f"; done
 for f in holiday.mp4; do : > "$H/Videos/$f"; done
 for f in main.rs index.html style.css data.json; do : > "$H/Projects/$f"; done
+# A real source file so the Peek panel has something to highlight.
+cat > "$H/Projects/word_count.rs" <<'EOF'
+use std::collections::HashMap;
+
+/// Count how often each word appears.
+fn count_words(text: &str) -> HashMap<&str, usize> {
+    let mut counts = HashMap::new();
+    for word in text.split_whitespace() {
+        *counts.entry(word).or_insert(0) += 1; // tally
+    }
+    counts
+}
+
+fn main() {
+    let text = "the quick brown fox jumps over the lazy dog";
+    let counts = count_words(text);
+    println!("{} unique words, 'the' appears {} times", counts.len(), counts["the"]);
+}
+EOF
 
 # A few colourful sample pictures so thumbnails show up.
 python3 -I - "$H/Pictures" "$H" <<'EOF'
@@ -40,6 +59,11 @@ export XDG_CONFIG_HOME="$T/config"
 export XDG_DATA_HOME="$H/.local/share"
 export XDG_CACHE_HOME="$T/cache"
 mkdir -p "$XDG_CONFIG_HOME/rivet"
+# Neutral default apps for the Peek "Open" button (whatever is installed is used if these aren't).
+cat > "$XDG_CONFIG_HOME/mimeapps.list" <<'EOF'
+[Default Applications]
+image/png=org.gnome.Loupe.desktop
+EOF
 # A fixed, matugen-style blue scheme for the pictures.
 cat > "$XDG_CONFIG_HOME/rivet/colors.css" <<'EOF'
 @define-color accent_bg_color #8ecdff;
@@ -58,6 +82,9 @@ RIVET_ICON_THEME=Papirus "$BIN" "$H" --screenshot "$OUT/icons-wide.png"
 RIVET_ICON_THEME=Papirus "$BIN" "$H/Documents" --view list --screenshot "$OUT/list-wide.png"
 RIVET_ICONS=builtin RIVET_ICON_COLOR=tertiary "$BIN" "$H" --screenshot "$OUT/rivet-icons-wide.png"
 RIVET_ICON_THEME=Papirus RIVET_OPEN_PREFS=1 "$BIN" "$H" --screenshot "$OUT/preferences-wide.png"
+# The Peek panel: highlighted code, and a picture (items are sorted by name).
+RIVET_ICON_THEME=Papirus RIVET_PEEK=1 RIVET_SELECT=4 "$BIN" "$H/Projects" --screenshot "$OUT/peek-code-wide.png"
+RIVET_ICON_THEME=Papirus RIVET_PEEK=1 RIVET_SELECT=2 "$BIN" "$H/Pictures" --screenshot "$OUT/peek-picture-wide.png"
 
 # The same window recoloured by different matugen-style schemes (Rivet's own icons).
 # palette NAME ACCENT ACCENT_FG WINDOW_BG WINDOW_FG HEADERBAR VIEW POPOVER SECONDARY TERTIARY [VIEW_OPTS]
