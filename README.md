@@ -190,6 +190,28 @@ Preferences → *Add Rivet template to matugen* registers a dedicated template i
 </details>
 
 <details>
+<summary><b>Keeping check windows out of the way (niri)</b></summary>
+
+`--screenshot` and `--measure` runs use their own app id, `rivet-files-check`, and on niri they
+move their window to a background workspace (without taking focus) as soon as it appears, so
+builds and checks don't take over your screen. Set `RIVET_CHECK_WORKSPACE=name` to pick the
+workspace, or `RIVET_CHECK_WORKSPACE=off` to keep the window where it opens.
+
+For no flash at all, add this to `~/.config/niri/config.kdl` and the window opens there directly:
+
+```kdl
+workspace "rivet-checks"
+
+window-rule {
+    match app-id="^rivet-files-check$"
+    open-on-workspace "rivet-checks"
+    open-focused false
+}
+```
+
+</details>
+
+<details>
 <summary><b>Screenshots, logo and releases</b></summary>
 
 - **Screenshots** come from a throwaway sample home folder: `docs/make-screenshots.sh`

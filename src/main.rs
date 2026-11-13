@@ -13,6 +13,7 @@ mod icons;
 mod launch;
 mod desktop;
 mod mime;
+mod niri;
 mod model;
 mod palette;
 mod places;
@@ -159,6 +160,9 @@ fn main() -> eframe::Result {
 
     // Flatpak sets this to the app id so the desktop matches the window.
     let app_id = std::env::var("FLATPAK_ID").unwrap_or_else(|_| "rivet-files".into());
+    // Check / screenshot windows get their own app id, so window rules can send only
+    // them to another workspace (see the README).
+    let app_id = if screenshot.is_some() || measuring() { niri::CHECK_APP_ID.to_string() } else { app_id };
     let mut viewport = egui::ViewportBuilder::default()
         .with_title("Rivet")
         .with_app_id(app_id)
@@ -187,6 +191,11 @@ fn main() -> eframe::Result {
     if let Err(msg) = cli::ensure_gui_libraries() {
         eprintln!("{msg}");
         std::process::exit(1);
+    }
+
+    if screenshot.is_some() || measuring() {
+        // On niri: move this window to a background workspace once it appears.
+        niri::send_check_window_away();
     }
 
     eframe::run_native(
