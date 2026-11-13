@@ -103,7 +103,7 @@ impl RivetApp {
 
         // ---- which filter to edit
         let mut rows: Vec<(Scope, String)> = vec![
-            (Scope::Global, "Everywhere".into()),
+            (Scope::Global, "Global".into()),
             (Scope::Folder(dir.clone()), "This folder".into()),
             (Scope::Tree(dir.clone()), "This folder & below".into()),
         ];
@@ -119,43 +119,52 @@ impl RivetApp {
             .filter(|s| rows.iter().any(|(r, _)| r == s))
             .or_else(|| active.clone())
             .unwrap_or(Scope::Folder(dir.clone()));
-        ui.spacing_mut().item_spacing.y = 2.0;
-        for (scope, label) in &rows {
-            let (r, resp) = ui.allocate_exact_size(Vec2::new(w, 30.0), Sense::click());
+        // Three icon buttons: global, this folder, this folder & below.
+        ui.add_space(4.0);
+        let (bar, _) = ui.allocate_exact_size(Vec2::new(w, 40.0), Sense::hover());
+        ui.painter().rect_filled(bar, R_MD, v.widgets.inactive.weak_bg_fill);
+        let bw = bar.width() / 3.0;
+        for (i, (scope, _)) in rows.iter().take(3).enumerate() {
+            let r = Rect::from_min_size(bar.min + Vec2::new(bw * i as f32, 0.0), Vec2::new(bw, bar.height())).shrink(3.0);
+            let resp = ui.interact(r, ui.scope_id().with(("filter-scope", i)), Sense::click());
             let sel = *scope == pick;
             if sel {
-                let (fill, stroke) = super::selected_tile(&v, v.panel_fill);
+                let (fill, stroke) = super::selected_tile(&v, v.widgets.inactive.weak_bg_fill);
                 ui.painter().rect_filled(r, R_SM, fill);
                 ui.painter().rect_stroke(r, R_SM, stroke, egui::StrokeKind::Inside);
             } else if resp.hovered() {
                 ui.painter().rect_filled(r, R_SM, v.widgets.hovered.weak_bg_fill);
             }
-            // A filled dot when this scope has a filter set, a ring when it doesn't.
-            let has = self.s.filters.get(scope).is_some_and(|f| f.is_active());
-            let dc = Pos2::new(r.left() + 12.0, r.center().y);
-            if has {
-                ui.painter().circle_filled(dc, 4.0, accent);
-            } else {
-                ui.painter().circle_stroke(dc, 3.5, Stroke::new(1.2, weak));
-            }
-            let in_use = active.as_ref() == Some(scope);
-            let badge_w = if in_use { 44.0 } else { 0.0 };
             let fg = if sel { v.strong_text_color() } else { v.text_color() };
-            let mut job = egui::text::LayoutJob::simple_singleline(label.clone(), crate::fonts::ui_font(13.0), fg);
-            job.wrap = egui::text::TextWrapping::truncate_at_width(r.width() - 30.0 - badge_w);
-            let g = ui.painter().layout_job(job);
-            ui.painter().galley(Pos2::new(r.left() + 24.0, r.center().y - g.size().y / 2.0), g, fg);
-            if in_use {
-                let br = Rect::from_min_size(Pos2::new(r.right() - badge_w - 4.0, r.center().y - 8.0), Vec2::new(badge_w, 16.0));
-                ui.painter().rect_filled(br, 8.0, crate::palette::mix(v.panel_fill, accent, 0.35));
-                ui.painter().text(br.center(), egui::Align2::CENTER_CENTER, "in use", crate::fonts::ui_font(10.5), v.strong_text_color());
+            match i {
+                0 => paint_globe(ui.painter(), r.center(), 17.0, fg),
+                1 => paint_folder(ui.painter(), r.center(), 18.0, fg, false),
+                _ => paint_folder(ui.painter(), r.center(), 18.0, fg, true),
             }
-            let resp = resp.on_hover_text(match scope {
-                Scope::Global => "Applies in every folder without its own filter".to_string(),
-                Scope::Folder(_) => format!("Only “{folder_name}”"),
-                Scope::Tree(p) => format!("{} and every folder inside it", p.display()),
-            });
-            if resp.clicked() {
+            // A dot when this scope has a filter set; an accent underline for the one in use.
+            if self.s.filters.get(scope).is_some_and(|f| f.is_active()) {
+                ui.painter().circle_filled(Pos2::new(r.right() - 7.0, r.top() + 7.0), 3.0, accent);
+            }
+            if active.as_ref() == Some(scope) {
+                let u = Rect::from_center_size(Pos2::new(r.center().x, r.bottom() - 3.0), Vec2::new(16.0, 2.5));
+                ui.painter().rect_filled(u, 1.5, accent);
+            }
+            let tip = match i {
+                0 => "Global — for every folder that has no filter of its own".to_string(),
+                1 => format!("This folder — only “{folder_name}”"),
+                _ => format!("This folder & below — “{folder_name}” and every folder inside it"),
+            };
+            let in_use = if active.as_ref() == Some(scope) { "\nIn use here" } else { "" };
+            if resp.on_hover_text(format!("{tip}{in_use}")).clicked() {
+                pick = scope.clone();
+            }
+        }
+        // A parent folder's "& below" filter that applies here can be edited too.
+        if let Some((scope, label)) = rows.get(3) {
+            ui.add_space(4.0);
+            let sel = *scope == pick;
+            let text = egui::RichText::new(format!("In use: {label}")).size(12.0).color(if sel { v.strong_text_color() } else { accent });
+            if ui.add(egui::Button::new(text).frame_when_inactive(sel)).on_hover_text("A filter set on a folder above this one; click to edit it").clicked() {
                 pick = scope.clone();
             }
         }
@@ -278,9 +287,48 @@ impl RivetApp {
         egui::Frame::NONE.inner_margin(egui::Margin { left: 10, right: 10, top: 0, bottom: 8 }).show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.add(
-                egui::Label::new(egui::RichText::new("Only one filter is used at a time. A folder's own filter comes first, then one set on a folder above it, then Everywhere.").size(11.5).color(weak))
+                egui::Label::new(egui::RichText::new("Only one filter is used at a time. A folder's own filter comes first, then one set on a folder above it, then Global.").size(11.5).color(weak))
                     .wrap(),
             );
         });
+    }
+}
+
+/// A globe: a circle with an equator and a meridian.
+fn paint_globe(p: &egui::Painter, c: Pos2, size: f32, color: Color32) {
+    let r = size / 2.0 - 1.0;
+    let st = Stroke::new(1.5, color);
+    p.circle_stroke(c, r, st);
+    p.line_segment([c + Vec2::new(-r, 0.0), c + Vec2::new(r, 0.0)], st);
+    // The meridian as an ellipse.
+    let pts: Vec<Pos2> = (0..=24).map(|k| {
+        let a = k as f32 / 24.0 * std::f32::consts::TAU;
+        c + Vec2::new(a.cos() * r * 0.45, a.sin() * r)
+    }).collect();
+    p.add(egui::Shape::line(pts, st));
+}
+
+/// A folder outline; with `plus`, a small "+" badge for "and everything below".
+fn paint_folder(p: &egui::Painter, c: Pos2, size: f32, color: Color32, plus: bool) {
+    let s = size / 18.0;
+    let st = Stroke::new(1.5, color);
+    let o = c + Vec2::new(if plus { -2.0 } else { 0.0 }, 0.0) * s;
+    let pts = vec![
+        o + Vec2::new(-8.0, -6.0) * s,
+        o + Vec2::new(-3.0, -6.0) * s,
+        o + Vec2::new(-1.5, -4.0) * s,
+        o + Vec2::new(8.0, -4.0) * s,
+        o + Vec2::new(8.0, 6.0) * s,
+        o + Vec2::new(-8.0, 6.0) * s,
+    ];
+    p.add(egui::Shape::closed_line(pts, st));
+    if plus {
+        let b = c + Vec2::new(7.5, 5.0) * s;
+        p.circle_filled(b, 5.0 * s, color);
+        // The "+" in the badge contrasts with it on light and dark themes.
+        let bg = if crate::palette::luminance(color) > 0.5 { Color32::from_black_alpha(230) } else { Color32::WHITE };
+        let pst = Stroke::new(1.6, bg);
+        p.line_segment([b + Vec2::new(-2.8, 0.0) * s, b + Vec2::new(2.8, 0.0) * s], pst);
+        p.line_segment([b + Vec2::new(0.0, -2.8) * s, b + Vec2::new(0.0, 2.8) * s], pst);
     }
 }
