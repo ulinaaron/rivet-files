@@ -223,7 +223,8 @@ impl RivetApp {
                 });
             }
             if !f.types.is_empty() {
-                ui.label(egui::RichText::new("Only the picked types show").size(11.0).color(weak));
+                ui.add_space(2.0);
+                info_note(ui, "Only the picked types show");
             }
             heading(ui, "NAME");
             // A segmented control: three equal parts.
@@ -282,15 +283,10 @@ impl RivetApp {
             self.s.filters.save();
             self.resort_all();
         }
-        // Plain-language note on which filter is used, lined up with the card above.
+        // Plain-language note on which filter is used.
         ui.add_space(8.0);
-        egui::Frame::NONE.inner_margin(egui::Margin { left: 10, right: 10, top: 0, bottom: 8 }).show(ui, |ui| {
-            ui.set_width(ui.available_width());
-            ui.add(
-                egui::Label::new(egui::RichText::new("Only one filter is used at a time. A folder's own filter comes first, then one set on a folder above it, then Global.").size(11.5).color(weak))
-                    .wrap(),
-            );
-        });
+        info_note(ui, "Only one filter is used at a time. A folder's own filter comes first, then one set on a folder above it, then Global.");
+        ui.add_space(8.0);
     }
 }
 
@@ -331,4 +327,23 @@ fn paint_folder(p: &egui::Painter, c: Pos2, size: f32, color: Color32, plus: boo
         p.line_segment([b + Vec2::new(-2.8, 0.0) * s, b + Vec2::new(2.8, 0.0) * s], pst);
         p.line_segment([b + Vec2::new(0.0, -2.8) * s, b + Vec2::new(0.0, 2.8) * s], pst);
     }
+}
+
+/// A quiet info box: a faint rounded background, a small "i" and wrapped text.
+fn info_note(ui: &mut egui::Ui, text: &str) {
+    let v = ui.visuals().clone();
+    let weak = v.weak_text_color();
+    let fill = crate::palette::mix(v.panel_fill, v.text_color(), 0.035);
+    egui::Frame::NONE.fill(fill).corner_radius(R_SM).inner_margin(egui::Margin { left: 8, right: 8, top: 6, bottom: 6 }).show(ui, |ui| {
+        ui.set_width(ui.available_width());
+        ui.horizontal_top(|ui| {
+            ui.spacing_mut().item_spacing.x = 7.0;
+            let (r, _) = ui.allocate_exact_size(Vec2::new(12.0, 15.0), Sense::hover());
+            let c = Pos2::new(r.center().x, r.top() + 7.5);
+            ui.painter().circle_stroke(c, 5.5, Stroke::new(1.0, weak));
+            ui.painter().circle_filled(c + Vec2::new(0.0, -2.4), 0.8, weak);
+            ui.painter().line_segment([c + Vec2::new(0.0, -0.6), c + Vec2::new(0.0, 2.8)], Stroke::new(1.1, weak));
+            ui.add(egui::Label::new(egui::RichText::new(text).size(11.0).color(weak)).wrap());
+        });
+    });
 }
