@@ -837,6 +837,10 @@ impl RivetApp {
                             None => egui::Button::new(text),
                         };
                         let resp = ui.add(btn.selected(sel).frame_when_inactive(sel).min_size(Vec2::new(0.0, 24.0)));
+                        // Folders are links: a pointing hand over them (the bar around them shows a text cursor).
+                        if resp.hovered() && target.is_some() {
+                            ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+                        }
                         if resp.clicked() {
                             if let Some(t) = target.clone() {
                                 self.pending.push(Action::Navigate(t));
