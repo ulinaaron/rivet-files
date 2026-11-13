@@ -29,6 +29,10 @@
 - README: Rivet's goals and a short roadmap.
 - Code tidy-up: no compiler warnings, unused code removed.
 
+### Fixed
+- The `rivet` terminal command (Preferences → System → Link) could point at another AppImage app
+  when Rivet was started from one; Rivet now only treats itself as an AppImage when it runs from it.
+
 ### Removed
 - The niri-only code that moved check / screenshot windows to another workspace.
 

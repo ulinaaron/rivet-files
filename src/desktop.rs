@@ -191,11 +191,17 @@ pub enum LinkState {
 }
 
 fn this_build() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok().map(|p| std::fs::canonicalize(&p).unwrap_or(p))?;
     // Inside an AppImage the running file lives in a temporary mount; point at the AppImage itself.
-    if let Some(a) = std::env::var_os("APPIMAGE").map(PathBuf::from).filter(|p| p.is_file()) {
-        return Some(a);
+    // APPIMAGE / APPDIR are inherited by every program an AppImage starts, so only trust them
+    // when this program really runs from that mount (not when another AppImage app launched us).
+    let appdir = std::env::var_os("APPDIR").map(PathBuf::from).map(|d| std::fs::canonicalize(&d).unwrap_or(d));
+    if let (Some(a), Some(dir)) = (std::env::var_os("APPIMAGE").map(PathBuf::from).filter(|p| p.is_file()), appdir) {
+        if exe.starts_with(&dir) {
+            return Some(a);
+        }
     }
-    std::env::current_exe().ok().map(|p| std::fs::canonicalize(&p).unwrap_or(p))
+    Some(exe)
 }
 
 pub fn link_state(spot: LinkSpot) -> LinkState {
@@ -289,6 +295,21 @@ mod tests {
         // SAFETY: only this test reads XDG_BIN_HOME.
         unsafe { std::env::set_var("XDG_BIN_HOME", &dir) };
         use super::*;
+        // Started by some other AppImage app: its APPIMAGE / APPDIR are inherited,
+        // but this build must still point at itself, not at that AppImage.
+        let other = std::env::temp_dir().join(format!("other-app-{}.AppImage", std::process::id()));
+        std::fs::write(&other, "x").unwrap();
+        unsafe {
+            std::env::set_var("APPIMAGE", &other);
+            std::env::set_var("APPDIR", std::env::temp_dir().join("some-other-mount"));
+        }
+        let me = std::fs::canonicalize(std::env::current_exe().unwrap()).unwrap();
+        assert_eq!(this_build(), Some(me));
+        unsafe {
+            std::env::remove_var("APPIMAGE");
+            std::env::remove_var("APPDIR");
+        }
+        std::fs::remove_file(&other).unwrap();
         assert_eq!(link_state(LinkSpot::User), LinkState::Missing);
         link_command_here(LinkSpot::User).unwrap();
         assert_eq!(link_state(LinkSpot::User), LinkState::ThisBuild);
