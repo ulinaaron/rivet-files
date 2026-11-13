@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Light mode contrast**: file icons and thumbnails get a soft shadow and faint edge on light
+  backgrounds, Rivet's own page icons are tinted and outlined, and secondary text, panels and
+  controls are a little stronger.
+- **Preferences** has a sidebar of pages: Appearance (with Window), Views, Behavior, Menu (with the
+  toolbar), System and About. Appearance is split into roomy groups: desktop colors, style and accent,
+  icons, typography, window. Help → About opens the About page.
+
 ## 0.2.0
 
 ### New

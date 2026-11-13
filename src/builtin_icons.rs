@@ -200,12 +200,15 @@ fn folder_emblem(key: &str) -> String {
 }
 
 fn file_page(c: &BuiltinColors, inner: &str) -> String {
-    let page = if c.dark { mix(Color32::from_rgb(0xee, 0xee, 0xee), c.accent, 0.10) } else { mix(Color32::WHITE, c.accent, 0.06) };
-    let fold = darken(page, 0.16);
-    let line = mix(page, darken(c.accent, 0.5), 0.45);
+    // On light backgrounds the page is tinted a little more and gets a thin outline,
+    // so it never melts into a white window.
+    let page = if c.dark { mix(Color32::from_rgb(0xee, 0xee, 0xee), c.accent, 0.10) } else { mix(Color32::from_rgb(0xf7, 0xf7, 0xf8), c.accent, 0.10) };
+    let fold = darken(page, if c.dark { 0.16 } else { 0.22 });
+    let line = mix(page, darken(c.accent, 0.5), 0.5);
     let inner = inner.replace("LINE", &hex(line));
+    let edge = if c.dark { String::new() } else { format!(r##" stroke="{}" stroke-width="1.2""##, hex(mix(page, darken(c.accent, 0.55), 0.38))) };
     format!(
-        r##"{SVG48}<path d="M12 4h16.5L38 13.5V41a3 3 0 0 1-3 3H12a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z" fill="{p}"/><path d="M28.5 4v7a2.5 2.5 0 0 0 2.5 2.5h7z" fill="{f}"/>{inner}</svg>"##,
+        r##"{SVG48}<path d="M12 4h16.5L38 13.5V41a3 3 0 0 1-3 3H12a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z" fill="{p}"{edge}/><path d="M28.5 4v7a2.5 2.5 0 0 0 2.5 2.5h7z" fill="{f}"/>{inner}</svg>"##,
         p = hex(page),
         f = hex(fold),
     )

@@ -185,7 +185,7 @@ impl RivetApp {
             // One tile style for hover and selection: a rounded box around icon + name.
             // Only a single selected item grows to show its full name (drawn on top).
             let single = self.tab().selected.len() == 1;
-            let mut expanded: Option<(Rect, Option<egui::TextureHandle>, Rect, Color32, Arc<egui::Galley>, Pos2, Color32, bool)> = None;
+            let mut expanded: Option<(Rect, Option<egui::TextureHandle>, Rect, Color32, Arc<egui::Galley>, Pos2, Color32, bool, Entry)> = None;
             for (vi, item) in item_rects {
                 let e = {
                     let t = self.tab();
@@ -212,7 +212,7 @@ impl RivetApp {
                     // Drawn after everything else so the full name can overlap the next row.
                     let galley = self.name_galley(ui, &e.name, cell_w - 8.0, 5, fg);
                     let bottom = (text_pos.y + galley.size().y + 6.0).max(tile.bottom());
-                    expanded = Some((Rect::from_min_max(tile.min, Pos2::new(tile.right(), bottom)), tex, icon_rect, tint, galley, text_pos, fg, e.is_link));
+                    expanded = Some((Rect::from_min_max(tile.min, Pos2::new(tile.right(), bottom)), tex, icon_rect, tint, galley, text_pos, fg, e.is_link, e.clone()));
                 } else {
                     if selected {
                         ui.painter().rect_filled(tile, R_SM, sel_fill);
@@ -221,6 +221,8 @@ impl RivetApp {
                         ui.painter().rect_filled(tile, R_SM, v.widgets.hovered.weak_bg_fill.gamma_multiply(0.8));
                     }
                     if let Some(t) = &tex {
+                        let painter = ui.painter().clone();
+                        self.icon_lift(ctx, &painter, &e, t, icon_rect, v.dark_mode);
                         paint_tex(ui.painter(), t, icon_rect, tint);
                     }
                     if e.is_link {
@@ -238,7 +240,7 @@ impl RivetApp {
                 let resp = resp.on_hover_text_at_pointer(self.tooltip(&e));
                 resp.context_menu(|ui| self.item_menu(ui, &e));
             }
-            if let Some((tile, tex, icon_rect, tint, galley, pos, fg, is_link)) = expanded {
+            if let Some((tile, tex, icon_rect, tint, galley, pos, fg, is_link, ent)) = expanded {
                 let v = ui.visuals().clone();
                 let p = ui.painter();
                 // Opaque base first so neighbours underneath don't show through.
@@ -247,7 +249,9 @@ impl RivetApp {
                 p.rect_filled(tile, R_SM, fill);
                 p.rect_stroke(tile, R_SM, stroke, StrokeKind::Inside);
                 if let Some(t) = &tex {
-                    paint_tex(p, t, icon_rect, tint);
+                    let painter = p.clone();
+                    self.icon_lift(ctx, &painter, &ent, t, icon_rect, v.dark_mode);
+                    paint_tex(&painter, t, icon_rect, tint);
                 }
                 if is_link {
                     let z = icon_rect.width();
@@ -365,6 +369,8 @@ impl RivetApp {
                         paint_tex(ui.painter(), &t, icon_rect, v.selection.stroke.color);
                     }
                 } else if let Some(t) = self.entry_texture(ctx, &e, z) {
+                    let painter = ui.painter().clone();
+                    self.icon_lift(ctx, &painter, &e, &t, icon_rect, v.dark_mode);
                     paint_tex(ui.painter(), &t, icon_rect, tint);
                 }
                 if e.is_link {
@@ -461,6 +467,8 @@ impl RivetApp {
                         paint_tex(ui.painter(), &t, icon_rect, v.selection.stroke.color);
                     }
                 } else if let Some(t) = self.entry_texture(ctx, &e, z) {
+                    let painter = ui.painter().clone();
+                    self.icon_lift(ctx, &painter, &e, &t, icon_rect, v.dark_mode);
                     paint_tex(ui.painter(), &t, icon_rect, tint);
                 }
                 let mut job = egui::text::LayoutJob::simple_singleline(e.name.clone(), crate::fonts::ui_font(13.0), fg);

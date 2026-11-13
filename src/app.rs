@@ -65,6 +65,55 @@ enum Action {
     ExtractHere(Vec<PathBuf>),
 }
 
+/// The pages of the Preferences window.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub(crate) enum PrefsTab {
+    #[default]
+    Appearance,
+    Views,
+    Behavior,
+    Menu,
+    System,
+    About,
+}
+
+impl PrefsTab {
+    pub const ALL: [PrefsTab; 6] = [PrefsTab::Appearance, PrefsTab::Views, PrefsTab::Behavior, PrefsTab::Menu, PrefsTab::System, PrefsTab::About];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            PrefsTab::Appearance => "Appearance",
+            PrefsTab::Views => "Views",
+            PrefsTab::Behavior => "Behavior",
+            PrefsTab::Menu => "Menu",
+            PrefsTab::System => "System",
+            PrefsTab::About => "About",
+        }
+    }
+
+    pub fn title(self) -> &'static str {
+        match self {
+            PrefsTab::Menu => "Menu and toolbar",
+            t => t.label(),
+        }
+    }
+
+    pub fn icons(self) -> &'static [&'static str] {
+        match self {
+            PrefsTab::Appearance => &["preferences-desktop-appearance-symbolic", "applications-graphics-symbolic", "color-select-symbolic"],
+            PrefsTab::Views => &["view-grid-symbolic", "view-app-grid-symbolic", "view-list-symbolic"],
+            PrefsTab::Behavior => &["input-mouse-symbolic", "preferences-desktop-peripherals-symbolic", "preferences-system-symbolic"],
+            PrefsTab::Menu => &["open-menu-symbolic", "view-more-symbolic", "application-menu-symbolic"],
+            PrefsTab::System => &["computer-symbolic", "preferences-system-symbolic", "drive-harddisk-symbolic"],
+            PrefsTab::About => &["help-about-symbolic", "dialog-information-symbolic"],
+        }
+    }
+
+    fn from_id(s: &str) -> Option<PrefsTab> {
+        PrefsTab::ALL.into_iter().find(|t| t.label().eq_ignore_ascii_case(s))
+    }
+}
+
 enum Dialog {
     None,
     Rename { path: PathBuf, text: String, focus: bool },
@@ -74,7 +123,6 @@ enum Dialog {
     OpenWith { paths: Vec<PathBuf>, mime: String, show_all: bool, filter: String, chosen: Option<usize>, remember: bool, focus: bool },
     RenameBookmark { idx: usize, text: String },
     Message(String, String),
-    About,
     Shortcuts,
     Compress { paths: Vec<PathBuf>, name: String, format: crate::archive::Format, focus: bool },
 }
@@ -128,6 +176,8 @@ pub struct RivetApp {
     dialog: Dialog,
     prefs_open: bool,
     prefs_win: windows::WinState,
+    /// The page shown in Preferences.
+    prefs_tab: PrefsTab,
     /// Open Properties windows (several at once are fine).
     props: Vec<(windows::WinState, PropsState)>,
     next_win_id: u64,
@@ -300,7 +350,8 @@ impl RivetApp {
             ops: Vec::new(),
             dialog: Dialog::None,
             prefs_open: false,
-            prefs_win: windows::WinState::new(1, Vec2::new(580.0, 720.0)),
+            prefs_win: windows::WinState::new(1, Vec2::new(800.0, 640.0)),
+            prefs_tab: PrefsTab::default(),
             props: Vec::new(),
             next_win_id: 10,
             window_rects: Vec::new(),
@@ -353,6 +404,12 @@ impl RivetApp {
             app.prefs_open = true;
             app.popup_serial += 1;
         }
+        // RIVET_PREFS_TAB=views|behavior|menu|system|about opens Preferences on that page.
+        if let Some(t) = std::env::var("RIVET_PREFS_TAB").ok().and_then(|t| PrefsTab::from_id(&t)) {
+            app.prefs_tab = t;
+            app.prefs_open = true;
+            app.popup_serial += 1;
+        }
         if let Some(p) = std::env::var_os("RIVET_EXTRA_TAB") {
             app.new_tab(Location::Dir(PathBuf::from(p)));
         }
@@ -366,7 +423,7 @@ impl RivetApp {
             }
         }
         match std::env::var("RIVET_DIALOG").as_deref() {
-            Ok("about") => app.dialog = Dialog::About,
+            Ok("about") => app.open_about(),
             Ok("shortcuts") => app.dialog = Dialog::Shortcuts,
             Ok("connect") => app.open_connect_dialog(),
             Ok("compress") => {
@@ -527,10 +584,17 @@ impl RivetApp {
                     v.window_fill = Color32::from_rgb(0x3a, 0x3a, 0x3a);
                     v.faint_bg_color = Color32::from_rgb(0x2b, 0x2b, 0x2b);
                 } else {
+                    // Light: a slightly deeper chrome and darker secondary text, so
+                    // edges, labels and pale icons keep enough contrast on white.
                     v.extreme_bg_color = Color32::WHITE;
-                    v.panel_fill = Color32::from_rgb(0xee, 0xee, 0xef);
-                    v.window_fill = Color32::from_rgb(0xfc, 0xfc, 0xfc);
-                    v.faint_bg_color = Color32::from_rgb(0xf4, 0xf4, 0xf5);
+                    v.panel_fill = Color32::from_rgb(0xea, 0xea, 0xec);
+                    v.window_fill = Color32::from_rgb(0xfb, 0xfb, 0xfc);
+                    v.faint_bg_color = Color32::from_rgb(0xf3, 0xf3, 0xf5);
+                    v.weak_text_color = Some(Color32::from_gray(104));
+                    v.widgets.inactive.weak_bg_fill = Color32::from_rgb(0xe2, 0xe2, 0xe5);
+                    // Checkboxes, slider rails and other controls need a visible well on white.
+                    v.widgets.inactive.bg_fill = Color32::from_rgb(0xd3, 0xd3, 0xd8);
+                    v.widgets.hovered.weak_bg_fill = Color32::from_rgb(0xdc, 0xdc, 0xe0);
                 }
                 for w in [&mut v.widgets.noninteractive, &mut v.widgets.inactive, &mut v.widgets.hovered, &mut v.widgets.active, &mut v.widgets.open] {
                     w.corner_radius = CornerRadius::same(R_SM);
@@ -553,7 +617,8 @@ impl RivetApp {
                     let chrome = v.panel_fill;
                     v.window_fill = p.popover_bg.filter(|c| *c != chrome && *c != view).unwrap_or_else(|| mix(chrome, fg, 0.07));
                     v.text_edit_bg_color = Some(mix(view, fg, 0.05));
-                    v.weak_text_color = Some(mix(fg, view, 0.4));
+                    // Secondary text: lighter than the main text, but readable on light schemes too.
+                    v.weak_text_color = Some(mix(fg, view, if dark { 0.4 } else { 0.32 }));
                     v.selection.stroke = Stroke::new(1.0, p.accent_fg.unwrap_or(if palette::luminance(accent) > 0.6 { Color32::BLACK } else { Color32::WHITE }));
                     v.widgets.noninteractive.bg_fill = bg;
                     v.widgets.noninteractive.weak_bg_fill = bg;
@@ -616,6 +681,32 @@ impl RivetApp {
     /// The entry's icon as a single-colour silhouette (tint it), for highlighted rows.
     fn entry_mask(&mut self, ctx: &egui::Context, e: &Entry, px: f32) -> Option<egui::TextureHandle> {
         self.entry_icon(ctx, e, px, true)
+    }
+
+    /// On light backgrounds: a soft shadow and a faint edge under a file's icon (or
+    /// thumbnail), so white "paper" icons and pale pictures don't melt into the background.
+    /// Call before painting the icon itself.
+    fn icon_lift(&mut self, ctx: &egui::Context, painter: &egui::Painter, e: &Entry, tex: &egui::TextureHandle, rect: Rect, dark: bool) {
+        if dark || rect.width() < 14.0 {
+            return;
+        }
+        let z = rect.width();
+        if tex.name().starts_with("thumb:") || tex.name().starts_with("peek:") {
+            let size = tex.size_vec2();
+            let scale = (rect.width() / size.x).min(rect.height() / size.y);
+            let r = Rect::from_center_size(rect.center(), size * scale);
+            painter.rect_filled(r.translate(Vec2::new(0.0, 1.5)).expand(0.5), 2.0, Color32::from_black_alpha(28));
+            painter.rect_stroke(r, 1.0, Stroke::new(1.0, Color32::from_black_alpha(34)), StrokeKind::Outside);
+            return;
+        }
+        let Some(mask) = self.entry_mask(ctx, e, z) else { return };
+        let d = (z / 48.0).clamp(0.6, 1.4);
+        // A hairline all round, then a soft shadow below.
+        for off in [Vec2::new(-0.7, 0.0), Vec2::new(0.7, 0.0), Vec2::new(0.0, -0.7)] {
+            paint_tex(painter, &mask, rect.translate(off * d), Color32::from_black_alpha(26));
+        }
+        paint_tex(painter, &mask, rect.translate(Vec2::new(0.0, 1.0 * d)), Color32::from_black_alpha(34));
+        paint_tex(painter, &mask, rect.translate(Vec2::new(0.0, 2.2 * d)), Color32::from_black_alpha(16));
     }
 
     fn icon_or_mask(&mut self, ctx: &egui::Context, names: &[&str], px: f32, mask: bool) -> Option<egui::TextureHandle> {
@@ -1110,6 +1201,12 @@ impl RivetApp {
             bytes,
             partial,
         }));
+    }
+
+    /// Help → About: the About page of Preferences.
+    fn open_about(&mut self) {
+        self.prefs_tab = PrefsTab::About;
+        self.open_prefs();
     }
 
     fn open_prefs(&mut self) {

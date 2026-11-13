@@ -156,6 +156,18 @@ fn main() -> eframe::Result {
     if let Some(h) = std::env::var("RIVET_PEEK_PREVIEW_H").ok().and_then(|v| v.parse::<f32>().ok()) {
         settings.peek_preview_h = h;
     }
+    // Test hook for checks: RIVET_THEME=light|dark (ignores the desktop palette).
+    match std::env::var("RIVET_THEME").as_deref() {
+        Ok("light") => {
+            settings.theme = settings::ThemeChoice::Light;
+            settings.follow_desktop_colors = false;
+        }
+        Ok("dark") => {
+            settings.theme = settings::ThemeChoice::Dark;
+            settings.follow_desktop_colors = false;
+        }
+        _ => {}
+    }
     if std::env::var_os("RIVET_SIDEBAR_RIGHT").is_some() {
         settings.sidebar_right = true;
     }

@@ -74,7 +74,9 @@ pub(super) fn show<R>(ctx: &egui::Context, st: &mut WinState, chrome: &Chrome, a
         let v = ui.visuals().clone();
         let fg = v.text_color();
         if let Some(t) = &chrome.icon {
-            paint_tex(ui.painter(), t, Rect::from_center_size(Pos2::new(hrect.left() + 20.0, hrect.center().y), Vec2::splat(16.0)), Color32::WHITE);
+            // Symbolic title icons take the text color so they read on light and dark.
+            let tint = if t.name().contains("symbolic") { fg } else { Color32::WHITE };
+            paint_tex(ui.painter(), t, Rect::from_center_size(Pos2::new(hrect.left() + 20.0, hrect.center().y), Vec2::splat(16.0)), tint);
         }
         ui.painter().text(hrect.center(), Align2::CENTER_CENTER, &chrome.title, crate::fonts::ui_font(13.5), v.strong_text_color());
         // Pop-up windows only get a close button (no roll-up or maximize).

@@ -3,7 +3,7 @@
 use eframe::egui::{self, Color32, Id, Key, Pos2, Rect, Sense, Stroke, Vec2};
 use std::path::Path;
 
-use super::{Action, Dialog, PropsState, RivetApp, ACCENTS};
+use super::{Action, Dialog, PrefsTab, PropsState, RivetApp, ACCENTS};
 use crate::fsops::{self, OpKind};
 use crate::desktop;
 use crate::icons;
@@ -21,11 +21,6 @@ fn select_stem(ctx: &egui::Context, id: Id, text: &str, is_dir: bool) {
         )));
         st.store(ctx, id);
     }
-}
-
-/// Window titles in the regular UI size rather than the large heading size.
-fn window_title(text: &str) -> egui::RichText {
-    egui::RichText::new(text).size(13.5).strong()
 }
 
 /// A label with a drawn tick (the symbol isn't in every system font).
@@ -388,35 +383,6 @@ impl RivetApp {
                     });
                     ui.add_space(10.0);
                     ui.button("Close").clicked()
-                });
-                if r.inner || r.should_close() {
-                    close = true;
-                }
-            }
-            Dialog::About => {
-                let theme = self.icons.name.clone();
-                self.app_icon_texture(ctx);
-                let icon = self.app_icon.clone();
-                let r = egui::Modal::new(Id::unique("about")).show(ctx, |ui| {
-                    ui.set_width(380.0);
-                    ui.vertical_centered(|ui| {
-                        if let Some(t) = &icon {
-                            ui.add(egui::Image::from_texture(t).fit_to_exact_size(Vec2::splat(96.0)));
-                        }
-                        ui.add_space(4.0);
-                        ui.heading("Rivet Files");
-                        ui.label(egui::RichText::new(format!("Version {}", env!("CARGO_PKG_VERSION"))).weak());
-                        ui.add_space(8.0);
-                        ui.label("A file manager written in Rust. No GTK or Qt — it reads your desktop's icon theme, file types, bookmarks and default applications directly.");
-                        ui.add_space(8.0);
-                        ui.hyperlink_to("github.com/ulinaaron/rivet-files", "https://github.com/ulinaaron/rivet-files");
-                        ui.add_space(4.0);
-                        ui.label(egui::RichText::new("Licensed under MIT or Apache-2.0").small().weak());
-                        ui.label(egui::RichText::new(format!("Icon theme in use: {theme}")).small().weak());
-                        ui.add_space(10.0);
-                        ui.button("Close").clicked()
-                    })
-                    .inner
                 });
                 if r.inner || r.should_close() {
                     close = true;
@@ -920,96 +886,89 @@ impl RivetApp {
         let mut win = std::mem::replace(&mut self.prefs_win, super::windows::WinState::new(0, Vec2::ZERO));
         // Test hook: RIVET_PREFS_SCROLL=PX opens Preferences scrolled down (for screenshots).
         let scroll_to = std::env::var("RIVET_PREFS_SCROLL").ok().and_then(|v| v.parse::<f32>().ok());
-        let shown = super::windows::show(ctx, &mut win, &chrome, area, Vec2::new(460.0, 260.0), |ui| {
-                let mut sa = egui::ScrollArea::vertical().auto_shrink([false, false]);
-                if let Some(y) = scroll_to {
-                    sa = sa.vertical_scroll_offset(y);
-                }
-                sa.show(ui, |ui| {
-                ui.set_width((ui.available_width() - 14.0).max(400.0));
-                ui.add_space(6.0);
+        let tab_now = self.prefs_tab;
+        let mut pick_tab: Option<PrefsTab> = None;
+        let mut show_shortcuts = false;
+        self.app_icon_texture(ctx);
+        let about_icon = self.app_icon.clone();
+        let tab_icons: Vec<Option<egui::TextureHandle>> = PrefsTab::ALL.iter().map(|t| self.icon(ctx, t.icons(), 16.0)).collect();
+        let shown = super::windows::show(ctx, &mut win, &chrome, area, Vec2::new(640.0, 380.0), |ui| {
+            let v = ui.visuals().clone();
+            let weak = v.weak_text_color();
+            let full_h = ui.available_height();
+            ui.horizontal_top(|ui| {
+                ui.spacing_mut().item_spacing.x = 0.0;
+                // ---- the sidebar of pages
+                let side_fill = crate::palette::mix(v.window_fill, v.panel_fill, 0.6);
+                egui::Frame::NONE
+                    .fill(side_fill)
+                    .corner_radius(egui::CornerRadius { sw: super::R_LG, ..Default::default() })
+                    .inner_margin(egui::Margin { left: 10, right: 10, top: 10, bottom: 10 })
+                    .show(ui, |ui| {
+                        ui.set_width(168.0);
+                        ui.set_min_height(full_h - 20.0);
+                        ui.vertical(|ui| {
+                        ui.spacing_mut().item_spacing.y = 2.0;
+                        for (i, t) in PrefsTab::ALL.iter().enumerate() {
+                            if *t == PrefsTab::About {
+                                // About sits apart at the bottom of the list.
+                                ui.add_space(10.0);
+                            }
+                            let (r, resp) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 34.0), Sense::click());
+                            let sel = *t == tab_now;
+                            if sel {
+                                let (fill, stroke) = super::selected_tile(&v, side_fill);
+                                ui.painter().rect_filled(r, super::R_SM, fill);
+                                ui.painter().rect_stroke(r, super::R_SM, stroke, egui::StrokeKind::Inside);
+                            } else if resp.hovered() {
+                                ui.painter().rect_filled(r, super::R_SM, v.widgets.hovered.weak_bg_fill);
+                            }
+                            let fg = if sel { v.strong_text_color() } else { v.text_color() };
+                            if let Some(tex) = &tab_icons[i] {
+                                super::paint_tex(ui.painter(), tex, Rect::from_center_size(Pos2::new(r.left() + 20.0, r.center().y), Vec2::splat(16.0)), fg);
+                            }
+                            ui.painter().text(Pos2::new(r.left() + 40.0, r.center().y), egui::Align2::LEFT_CENTER, t.label(), crate::fonts::ui_font(13.5), fg);
+                            if resp.clicked() {
+                                pick_tab = Some(*t);
+                            }
+                        }
+                        });
+                    });
+                // ---- the page
+                ui.vertical(|ui| {
+                    let mut sa = egui::ScrollArea::vertical().id_salt(("prefs-page", tab_now as u8)).auto_shrink([false, false]);
+                    if let Some(y) = scroll_to {
+                        sa = sa.vertical_scroll_offset(y);
+                    }
+                    sa.show(ui, |ui| {
+                        egui::Frame::NONE.inner_margin(egui::Margin { left: 26, right: 22, top: 18, bottom: 22 }).show(ui, |ui| {
+                ui.set_width((ui.available_width()).max(380.0));
                 ui.spacing_mut().item_spacing = Vec2::new(10.0, 8.0);
                 ui.spacing_mut().button_padding = Vec2::new(10.0, 4.0);
                 let card_fill = ui.visuals().faint_bg_color;
-                let weak = ui.visuals().weak_text_color();
-                // One titled, padded card per group of settings.
+                // One titled, roomy card per group of settings.
                 let section = |ui: &mut egui::Ui, title: &str, body: &mut dyn FnMut(&mut egui::Ui)| {
-                    ui.add_space(4.0);
                     ui.label(egui::RichText::new(title).strong().size(14.5));
-                    ui.add_space(2.0);
-                    egui::Frame::NONE.fill(card_fill).corner_radius(super::R_MD).inner_margin(egui::Margin::symmetric(14, 12)).show(ui, |ui| {
+                    ui.add_space(4.0);
+                    egui::Frame::NONE.fill(card_fill).corner_radius(super::R_MD).inner_margin(egui::Margin::symmetric(18, 16)).show(ui, |ui| {
                         ui.set_width(ui.available_width());
                         body(ui);
                     });
-                    ui.add_space(10.0);
+                    ui.add_space(22.0);
                 };
                 let hint = |ui: &mut egui::Ui, text: &str| {
                     ui.add(egui::Label::new(egui::RichText::new(text).small().color(weak)).wrap());
                 };
-
-                section(ui, "Views", &mut |ui| {
-                    egui::Grid::new("prefs-views").num_columns(2).spacing([18.0, 10.0]).min_col_width(110.0).show(ui, |ui| {
-                        ui.label("Default view");
-                        ui.horizontal(|ui| {
-                            changed |= ui.selectable_value(&mut self.s.view, ViewMode::Icons, "Icons").changed();
-                            changed |= ui.selectable_value(&mut self.s.view, ViewMode::List, "List").changed();
-                            changed |= ui.selectable_value(&mut self.s.view, ViewMode::Compact, "Compact").changed();
-                        });
-                        ui.end_row();
-                    });
-                    ui.add_space(4.0);
-                    resort |= ui.checkbox(&mut self.s.show_hidden, "Show hidden files").changed();
-                    resort |= ui.checkbox(&mut self.s.folders_first, "Sort folders before files").changed();
-                    changed |= ui.checkbox(&mut self.s.show_thumbnails, "Show picture thumbnails").changed();
-                    ui.horizontal(|ui| {
-                        ui.label("Sidebar icons");
-                        ui.add_space(10.0);
-                        for (size, label) in [(0.0, "Off"), (16.0, "Small"), (20.0, "Medium"), (24.0, "Large")] {
-                            changed |= ui.selectable_value(&mut self.s.sidebar_icon, size, label).changed();
-                        }
-                    });
-                });
-
-                section(ui, "Behavior", &mut |ui| {
-                    changed |= ui.checkbox(&mut self.s.single_click, "Single click to open items").changed();
-                    changed |= ui.checkbox(&mut self.s.confirm_trash, "Ask before moving files to the Trash").changed();
-                });
-
-                section(ui, "Window", &mut |ui| {
-                    egui::Grid::new("prefs-window").num_columns(2).spacing([18.0, 10.0]).min_col_width(110.0).show(ui, |ui| {
-                        ui.label("Title bar");
-                        ui.horizontal(|ui| {
-                            changed |= ui.selectable_value(&mut self.s.decorations, true, "System").changed();
-                            changed |= ui.selectable_value(&mut self.s.decorations, false, "App").changed();
-                        });
-                        ui.end_row();
-                        ui.label("Sidebar");
-                        ui.horizontal(|ui| {
-                            changed |= ui.selectable_value(&mut self.s.sidebar_right, false, "Left").changed();
-                            changed |= ui.selectable_value(&mut self.s.sidebar_right, true, "Right").changed();
-                        });
-                        ui.end_row();
-                        ui.label("Peek panel");
-                        ui.horizontal(|ui| {
-                            let mut pick = if !self.s.show_peek { 0 } else if self.s.peek_left { 1 } else { 2 };
-                            let before = pick;
-                            ui.selectable_value(&mut pick, 0, "Off");
-                            ui.selectable_value(&mut pick, 1, "Left");
-                            ui.selectable_value(&mut pick, 2, "Right");
-                            if pick != before {
-                                self.s.show_peek = pick != 0;
-                                if pick != 0 {
-                                    self.s.peek_left = pick == 1;
-                                }
-                                changed = true;
-                            }
-                        });
-                        ui.end_row();
-                    });
-                });
-
-                section(ui, "Appearance", &mut |ui| {
-                    changed |= ui.checkbox(&mut self.s.follow_desktop_colors, "Follow desktop colors (matugen, Noctalia, GTK theme)").changed();
+                if tab_now != PrefsTab::About {
+                    ui.label(egui::RichText::new(tab_now.title()).size(20.0).strong());
+                    ui.add_space(14.0);
+                }
+                match tab_now {
+                    PrefsTab::Appearance => {
+                        section(ui, "Desktop colors", &mut |ui| {
+                    changed |= ui.checkbox(&mut self.s.follow_desktop_colors, egui::RichText::new("Follow desktop colors").strong()).changed();
+                    hint(ui, "Use the colors generated by matugen, Noctalia or your GTK theme, and update live when they change.");
+                    ui.add_space(6.0);
                     match (&self.palette, self.s.follow_desktop_colors) {
                         (Some(p), true) => {
                             ui.horizontal(|ui| {
@@ -1039,9 +998,10 @@ impl RivetApp {
                             matugen_msg = Some("Template copied.".into());
                         }
                     });
-                    ui.add_space(6.0);
-                    let manual = !(self.s.follow_desktop_colors && self.palette.is_some());
-                    egui::Grid::new("prefs-look").num_columns(2).spacing([18.0, 12.0]).min_col_width(110.0).show(ui, |ui| {
+                        });
+                        let manual = !(self.s.follow_desktop_colors && self.palette.is_some());
+                        section(ui, "Style and accent", &mut |ui| {
+                            egui::Grid::new("prefs-look").num_columns(2).spacing([24.0, 18.0]).min_col_width(120.0).show(ui, |ui| {
                         ui.label("Style");
                         ui.add_enabled_ui(manual, |ui| {
                             ui.horizontal(|ui| {
@@ -1071,11 +1031,14 @@ impl RivetApp {
                             });
                         });
                         ui.end_row();
-                        // A little breathing room between groups (colors · icons · text).
-                    });
-                    // A slight gap between groups (colors · icons · text).
-                    ui.add_space(8.0);
-                    egui::Grid::new("prefs-look-icons").num_columns(2).spacing([18.0, 12.0]).min_col_width(110.0).show(ui, |ui| {
+                            });
+                            if !manual {
+                                ui.add_space(6.0);
+                                hint(ui, "Style and accent come from your desktop colors while you follow them.");
+                            }
+                        });
+                        section(ui, "Icons", &mut |ui| {
+                    egui::Grid::new("prefs-look-icons").num_columns(2).spacing([24.0, 16.0]).min_col_width(120.0).show(ui, |ui| {
                         ui.label("Icon theme");
                         let sys = format!("System ({})", self.system_icon_theme);
                         let builtin_label = "Rivet (follows your colors)".to_string();
@@ -1130,9 +1093,9 @@ impl RivetApp {
                             ui.end_row();
                         }
                     });
-                    // A slight gap between groups (colors · icons · text).
-                    ui.add_space(8.0);
-                    egui::Grid::new("prefs-look-text").num_columns(2).spacing([18.0, 12.0]).min_col_width(110.0).show(ui, |ui| {
+                        });
+                        section(ui, "Typography", &mut |ui| {
+                    egui::Grid::new("prefs-look-text").num_columns(2).spacing([24.0, 16.0]).min_col_width(120.0).show(ui, |ui| {
                         // UI font family and size.
                         ui.label("Font");
                         let system_name = crate::fonts::desktop_font_cached().map(|(f, _)| f).unwrap_or_else(|| "Sans".into());
@@ -1167,12 +1130,76 @@ impl RivetApp {
                         });
                         ui.end_row();
                     });
-                    if !manual {
-                        hint(ui, "Style and accent come from your desktop colors while following them.");
+                        });
+                        section(ui, "Window", &mut |ui| {
+                    egui::Grid::new("prefs-window").num_columns(2).spacing([24.0, 16.0]).min_col_width(120.0).show(ui, |ui| {
+                        ui.label("Title bar");
+                        ui.horizontal(|ui| {
+                            changed |= ui.selectable_value(&mut self.s.decorations, true, "System").changed();
+                            changed |= ui.selectable_value(&mut self.s.decorations, false, "App").changed();
+                        });
+                        ui.end_row();
+                        ui.label("Sidebar");
+                        ui.horizontal(|ui| {
+                            changed |= ui.selectable_value(&mut self.s.sidebar_right, false, "Left").changed();
+                            changed |= ui.selectable_value(&mut self.s.sidebar_right, true, "Right").changed();
+                        });
+                        ui.end_row();
+                        ui.label("Peek panel");
+                        ui.horizontal(|ui| {
+                            let mut pick = if !self.s.show_peek { 0 } else if self.s.peek_left { 1 } else { 2 };
+                            let before = pick;
+                            ui.selectable_value(&mut pick, 0, "Off");
+                            ui.selectable_value(&mut pick, 1, "Left");
+                            ui.selectable_value(&mut pick, 2, "Right");
+                            if pick != before {
+                                self.s.show_peek = pick != 0;
+                                if pick != 0 {
+                                    self.s.peek_left = pick == 1;
+                                }
+                                changed = true;
+                            }
+                        });
+                        ui.end_row();
+                    });
+                        });
                     }
-                });
-
-                section(ui, "Toolbar", &mut |ui| {
+                    PrefsTab::Views => {
+                        section(ui, "Folders", &mut |ui| {
+                    egui::Grid::new("prefs-views").num_columns(2).spacing([18.0, 10.0]).min_col_width(110.0).show(ui, |ui| {
+                        ui.label("Default view");
+                        ui.horizontal(|ui| {
+                            changed |= ui.selectable_value(&mut self.s.view, ViewMode::Icons, "Icons").changed();
+                            changed |= ui.selectable_value(&mut self.s.view, ViewMode::List, "List").changed();
+                            changed |= ui.selectable_value(&mut self.s.view, ViewMode::Compact, "Compact").changed();
+                        });
+                        ui.end_row();
+                    });
+                    ui.add_space(4.0);
+                    resort |= ui.checkbox(&mut self.s.show_hidden, "Show hidden files").changed();
+                    resort |= ui.checkbox(&mut self.s.folders_first, "Sort folders before files").changed();
+                    changed |= ui.checkbox(&mut self.s.show_thumbnails, "Show picture thumbnails").changed();
+                    ui.horizontal(|ui| {
+                        ui.label("Sidebar icons");
+                        ui.add_space(10.0);
+                        for (size, label) in [(0.0, "Off"), (16.0, "Small"), (20.0, "Medium"), (24.0, "Large")] {
+                            changed |= ui.selectable_value(&mut self.s.sidebar_icon, size, label).changed();
+                        }
+                    });
+                        });
+                    }
+                    PrefsTab::Behavior => {
+                        section(ui, "Opening and deleting", &mut |ui| {
+                    changed |= ui.checkbox(&mut self.s.single_click, "Single click to open items").changed();
+                    changed |= ui.checkbox(&mut self.s.confirm_trash, "Ask before moving files to the Trash").changed();
+                        });
+                    }
+                    PrefsTab::Menu => {
+                        section(ui, "Menu bar", &mut |ui| {
+                            changed |= ui.checkbox(&mut self.s.show_menubar, "Show the menu bar").changed();
+                            hint(ui, "When it is hidden, the menu button at the end of the toolbar holds the menus. Ctrl+M switches it at any time.");
+                        });
+                        section(ui, "Toolbar", &mut |ui| {
                     hint(ui, "Choose the buttons and their order. Items above the location bar sit on its left, items below it on its right.");
                     ui.add_space(2.0);
                     let mut op: Option<(usize, i32)> = None; // (index, -1 up / +1 down / 0 remove)
@@ -1261,9 +1288,10 @@ impl RivetApp {
                             changed = true;
                         }
                     });
-                });
-
-                section(ui, "System", &mut |ui| {
+                        });
+                    }
+                    PrefsTab::System => {
+                        section(ui, "Desktop integration", &mut |ui| {
                     let installed = desktop::is_installed();
                     ui.horizontal(|ui| {
                         if installed {
@@ -1321,9 +1349,43 @@ impl RivetApp {
                         });
                     }
                     hint(ui, "Lets you type rivet in a terminal or launcher. It points at this build, so every rebuild is picked up.");
-                });
+                        });
+                    }
+                    PrefsTab::About => {
+                        ui.add_space(18.0);
+                        ui.vertical_centered(|ui| {
+                            if let Some(t) = &about_icon {
+                                ui.add(egui::Image::from_texture(t).fit_to_exact_size(Vec2::splat(112.0)));
+                            }
+                            ui.add_space(8.0);
+                            ui.label(egui::RichText::new("Rivet Files").size(24.0).strong());
+                            ui.label(egui::RichText::new(format!("Version {}", env!("CARGO_PKG_VERSION"))).color(weak));
+                            ui.add_space(14.0);
+                            ui.set_max_width(380.0);
+                            ui.add(egui::Label::new("A classic Linux file manager, written in Rust. No GTK or Qt: it reads your desktop's icon theme, file types, bookmarks and default applications directly.").wrap());
+                            ui.add_space(14.0);
+                            ui.hyperlink_to("github.com/ulinaaron/rivet-files", "https://github.com/ulinaaron/rivet-files");
+                            ui.add_space(6.0);
+                            ui.label(egui::RichText::new("Licensed under MIT or Apache-2.0").small().color(weak));
+                            ui.label(egui::RichText::new(format!("Icon theme in use: {}", self.icons.name)).small().color(weak));
+                            ui.add_space(16.0);
+                            if ui.button("Keyboard Shortcuts").clicked() {
+                                show_shortcuts = true;
+                            }
+                        });
+                    }
+                }
+                        });
+                    });
                 });
             });
+        });
+        if let Some(t) = pick_tab {
+            self.prefs_tab = t;
+        }
+        if show_shortcuts {
+            self.dialog = Dialog::Shortcuts;
+        }
         self.prefs_win = win;
         if let Some(r) = shown.rect {
             self.window_rects.push(r);

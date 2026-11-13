@@ -377,7 +377,7 @@ impl RivetApp {
             }
             ui.separator();
             if ui.button("About Rivet").clicked() {
-                self.dialog = Dialog::About;
+                self.open_about();
             }
         });
     }
