@@ -1538,7 +1538,7 @@ impl RivetApp {
                             ui.label(egui::RichText::new(format!("Version {}", env!("CARGO_PKG_VERSION"))).color(weak));
                             ui.add_space(14.0);
                             ui.set_max_width(380.0);
-                            ui.add(egui::Label::new("A classic Linux file manager, written in Rust. No GTK or Qt: it reads your desktop's icon theme, file types, bookmarks and default applications directly.").wrap());
+                            ui.add(egui::Label::new("Rivet is a powerful traditional file manager that can be as bloated or as minimal as you need.").halign(egui::Align::Center).wrap());
                             ui.add_space(14.0);
                             ui.hyperlink_to("github.com/ulinaaron/rivet-files", "https://github.com/ulinaaron/rivet-files");
                             ui.add_space(6.0);
