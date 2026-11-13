@@ -94,6 +94,19 @@ RIVET_ICON_THEME=Papirus RIVET_NO_STATUSBAR=1 RIVET_TOOLBAR="menu,back,forward,p
 RIVET_ICON_THEME=Papirus RIVET_PEEK=1 RIVET_SELECT=2 RIVET_EXTRA_TAB="$H/Pictures" \
     RIVET_TOOLBAR="back,forward,up,reload,home,new-folder,new-tab,path,search,view-icons,view-list,view-compact,show-hidden,terminal,trash,peek" \
     "$BIN" "$H/Documents" --screenshot "$OUT/bloated-wide.png"
+# Tools: the Filters panel (a "this folder" filter showing folders and pictures) and Bulk Rename.
+cat > "$T/filters" <<'EOF'
+[folder $START]
+enabled=true
+types=folders,images
+name_mode=contains
+name=
+date=any
+EOF
+RIVET_ICON_THEME=Papirus RIVET_FILTERS="$T/filters" RIVET_FILTERS_OPEN=1 RIVET_TOOLBAR="back,forward,up,reload,home,computer,edit-location,path,search,filters,view-icons,view-list,view-compact,menu" \
+    "$BIN" "$H" --screenshot "$OUT/filters-wide.png"
+RIVET_ICON_THEME=Papirus RIVET_SELECT=0,1,2 RIVET_DIALOG=bulkrename RIVET_CLICKS="type:holiday_@20" \
+    "$BIN" "$H/Pictures" --screenshot "$OUT/bulk-rename-wide.png"
 
 # The same window recoloured by different matugen-style schemes (Rivet's own icons).
 # palette NAME ACCENT ACCENT_FG WINDOW_BG WINDOW_FG HEADERBAR VIEW POPOVER SECONDARY TERTIARY [VIEW_OPTS]

@@ -232,7 +232,10 @@ impl RivetApp {
                                 ui.add(egui::Label::new(egui::RichText::new(name).color(weak)).truncate());
                             });
                             ui.label(egui::RichText::new(format!("{w} × {h}")).color(weak));
-                            ui.label(egui::RichText::new(format!("→  {nw} × {nh}")).color(v.strong_text_color()));
+                            ui.horizontal(|ui| {
+                                super::arrow_label(ui, weak);
+                                ui.label(egui::RichText::new(format!("{nw} × {nh}")).color(v.strong_text_color()));
+                            });
                             ui.end_row();
                         }
                     });

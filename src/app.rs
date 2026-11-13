@@ -384,6 +384,16 @@ pub(crate) fn selected_tile(v: &egui::Visuals, bg: Color32) -> (Color32, Stroke)
     (crate::palette::mix(bg, v.selection.bg_fill, 0.30), Stroke::new(1.0, v.selection.bg_fill.gamma_multiply(0.65)))
 }
 
+/// A small right arrow (drawn, so it looks the same in every font), sized like a label.
+pub(crate) fn arrow_label(ui: &mut egui::Ui, color: Color32) {
+    let (r, _) = ui.allocate_exact_size(Vec2::new(18.0, 14.0), egui::Sense::hover());
+    let c = r.center();
+    let st = Stroke::new(1.4, color);
+    ui.painter().line_segment([c + Vec2::new(-6.0, 0.0), c + Vec2::new(5.5, 0.0)], st);
+    ui.painter().line_segment([c + Vec2::new(1.5, -4.0), c + Vec2::new(5.5, 0.0)], st);
+    ui.painter().line_segment([c + Vec2::new(1.5, 4.0), c + Vec2::new(5.5, 0.0)], st);
+}
+
 fn paint_tex(painter: &egui::Painter, tex: &egui::TextureHandle, rect: Rect, tint: Color32) {
     let size = tex.size_vec2();
     let scale = (rect.width() / size.x).min(rect.height() / size.y);

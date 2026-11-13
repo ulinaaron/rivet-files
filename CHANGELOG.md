@@ -5,26 +5,33 @@
 ### New
 - **Filters**: show a folder with only certain items — by type (folders, pictures, videos, audio,
   documents, archives, code & text, other), by name (contains / excludes / includes patterns like
-  `*.jpg, IMG_*`) and by date modified. A filter is global, for one folder, or for a folder and its
-  subfolders; the most specific one is used (this folder, then a parent's “& subfolders”, then
-  global). A strip above the files says when one is on and how many items it hides; its funnel,
-  a Filters toolbar button, View → Filters… or Ctrl+Shift+F open the Filters panel over the files
-  (the sidebar stays free for getting around). Saved in ~/.config/rivet/filters.
-- **Convert & Resize module** (needs ffmpeg; Preferences → Modules shows whether it's installed and
-  turns it on or off). Right-click → Convert To… for pictures (JPEG, PNG, WebP, GIF, BMP, TIFF), videos
-  (MP4, WebM, MKV, GIF, MP3) and audio (MP3, Ogg, FLAC, WAV, M4A), one file or many, with a quality
-  setting; keep the originals or replace them (originals go to the Trash). Right-click → Resize… for
-  pictures: by percentage or to fit a box, as new copies or overwriting. Runs in the background.
-- **Modules** page in Preferences: Bulk Rename and Convert & Resize can each be turned off, and it
-  shows what each one needs.
+  `*.jpg, IMG_*`) and by date modified. A filter is Global, for This folder, or for This folder &
+  below; only one applies, and a folder's own filter comes first, then one set on a folder above
+  it, then Global. A strip above the files says when one is on and how many items it hides. The
+  Filters panel drops down over the files (strip funnel, a Filters toolbar button, View → Filters…
+  or Ctrl+Shift+F), so the sidebar stays free for getting around. Saved in `~/.config/rivet/filters`.
 - **Bulk Rename**: select several items and press F2 (or right-click → Bulk Rename…). Insert /
   overwrite text, date / time, numbering, remove characters, search & replace, upper / lower /
   title / sentence case — on the name, the extension or both, with a live preview that flags
   clashes before anything changes. One Ctrl+Z undoes the whole batch.
+- **Convert & Resize** (uses ffmpeg): right-click → Convert To… for pictures (JPEG, PNG, WebP, GIF,
+  BMP, TIFF), videos (MP4, WebM, MKV, GIF, MP3) and audio (MP3, Ogg, FLAC, WAV, M4A), one file or
+  many, with a quality setting; keep the originals or replace them (originals go to the Trash).
+  Right-click → Resize… for pictures: by percentage or to fit a box, as new copies or overwriting.
+  Runs in the background.
+- **Modules** page in Preferences: Bulk Rename and Convert & Resize each have an on/off switch.
+  Convert & Resize switches itself off while ffmpeg isn't installed, and notices when it is.
+
+### Improved
+- README: features grouped, a Tools gallery (Filters, Bulk Rename).
+
+### Fixed
+- Arrows in the Bulk Rename and Resize previews are drawn, so they show with every font.
 
 ### Developer
-- All developer scripts live in `utilities/` behind one command: `utilities/rivet-dev <command>`
-  (bump, release, publish, appimage, portable, install, link, screenshots, bench…; `help` lists them).
+- All developer scripts live in `utilities/` behind one command, `utilities/rivet-dev <command>`:
+  `bump`, `release [--publish]`, `push`, `appimage`, `portable`, `install`, `link`, `screenshots`,
+  `bench`… (`help` lists them). `push` and `release --publish` take in GitHub's commits first.
 
 ## 0.3.0
 

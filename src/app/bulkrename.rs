@@ -266,7 +266,7 @@ impl RivetApp {
                                 .inner
                             };
                             cell(ui, egui::RichText::new(&old).color(weak));
-                            ui.label(egui::RichText::new("→").color(weak));
+                            super::arrow_label(ui, weak);
                             let colr = if p.problem.is_some() { danger } else if p.changes() { v.strong_text_color() } else { weak };
                             let resp = cell(ui, egui::RichText::new(&new).color(colr));
                             if let Some(why) = &p.problem {

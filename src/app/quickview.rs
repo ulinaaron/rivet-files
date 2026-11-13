@@ -327,7 +327,7 @@ impl RivetApp {
                     let st = Stroke::new(2.4, white);
                     ui.painter().line_segment([c + Vec2::new(-4.0 * d, -9.0), c + Vec2::new(5.0 * d, 0.0)], st);
                     ui.painter().line_segment([c + Vec2::new(5.0 * d, 0.0), c + Vec2::new(-4.0 * d, 9.0)], st);
-                    if resp.on_hover_text(if dir < 0 { "Previous (←)" } else { "Next (→)" }).clicked() {
+                    if resp.on_hover_text(if dir < 0 { "Previous (left arrow key)" } else { "Next (right arrow key)" }).clicked() {
                         go = Some(target as usize);
                     }
                 }

@@ -28,26 +28,36 @@ Rivet is powerful all the while being minimal. Make it your own — bloat the in
 
 ## ✨ Features
 
-- 🗂️ **Icon, list and compact views** with tabs and a clickable path bar
+**Getting around**
+- 🗂️ **Icon, list and compact views** with tabs and a clickable path bar that suggests folders as you type
 - 🧭 **Sidebar** — places, bookmarks, drives with usage bars, network, or a folder tree, on the left or right
-- 📋 **Everything you expect** — copy, cut, paste, drag and drop, rename, Trash with restore
-- ✏️ **Bulk Rename** — insert, date / time, numbering, remove, search & replace and case changes, with a live preview
-- ↩️ **Undo and redo** — copies, moves, renames, Trash, new items, compress and extract
-- 🧪 **Filters** — show a folder with only pictures, recent files or names you choose; global, per folder or per folder and subfolders
+- 🧪 **Filters** — show a folder with only pictures, recent files or names you choose; global, per folder, or for a folder and everything below it
 - 🔍 **Instant filter** as you type, plus search through subfolders
+- 🌐 **Network** — find servers, open SMB shares, log in, or connect to any address
+
+**Working with files**
+- 📋 **Everything you expect** — copy, cut, paste, drag and drop, rename, Trash with restore
+- ↩️ **Undo and redo** — copies, moves, renames, Trash, new items, compress and extract
+- ✏️ **Bulk Rename** — insert, date / time, numbering, remove, search & replace and case changes, with a live preview
+- 🔄 **Convert and resize** — pictures, videos and audio to another format, one file or many; resize pictures (uses ffmpeg)
+- 🗜️ **Compress and extract** — zip, tar.gz, tar.xz, tar.zst and 7z
+- 🚀 **Open With** — pick any app from a searchable list, or set a new default
+
+**Seeing inside**
 - 🖼️ **Picture thumbnails** and your system icon theme
 - 👀 **Peek panel** — big previews, videos that play right there, code colored by your theme, and full file details, on either side
-- 🔍 **Preview** — a full-window light box (Space or right-click → Preview); ← → step through the folder's pictures, videos and text
-- 🚀 **Open With** — pick any app from a searchable list, or set a new default
-- 🌐 **Network** — find servers, open SMB shares, log in, or connect to any address
-- 🗜️ **Compress and extract** — zip, tar.gz, tar.xz, tar.zst and 7z
+- 🔎 **Preview** — a full-window light box (Space); ← → step through the folder's pictures, videos and text
+
+**Making it yours**
 - 🎨 **Follows your colors** — Matugen, Noctalia, Dux Shell, and GTK themes, live, no restart
 - 💜 **Built-in icon set** recolored from your palette (primary, secondary or tertiary)
-- 🧰 **Make it yours** — custom toolbar at the top or bottom, status bar top, bottom or off, fonts, text size, hideable menu bar
+- 🧰 **Your layout** — custom toolbar at the top or bottom, status bar top, bottom or off, fonts, text size, hideable menu bar
+- 🧩 **Modules** — switch Bulk Rename or Convert & Resize off if you don't use them
 - 🪟 **Title bar your way** — your desktop's, or Rivet's own with window buttons
+
+**Under the hood**
 - ⚡ **Fast** — 100,000 files open in under 0.4 s, and an idle Rivet uses no CPU
-- 🔄 **Convert and resize** — pictures, videos and audio to another format, one file or many; resize pictures (a module that uses ffmpeg, see Preferences → Modules)
-- 🦀 **Light** — one 14 MB program (a 6 MB AppImage download); extras like video previews and conversion use ffmpeg when it's installed
+- 🦀 **Light** — one 14 MB program (a 6 MB AppImage download); video previews and conversion use ffmpeg when it's installed
 
 ## 🎨 Follows your colors
 
@@ -91,6 +101,19 @@ Drag the grip under the preview to make it taller or shorter.
   <tr>
     <td align="center">Code, colored by your theme</td>
     <td align="center">Pictures and details</td>
+  </tr>
+</table>
+
+### 🧰 Tools
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/filters-wide.png" alt="The Filters panel: this folder shows only folders and pictures"></td>
+    <td><img src="docs/screenshots/bulk-rename-wide.png" alt="Bulk Rename with a live preview of the new names"></td>
+  </tr>
+  <tr>
+    <td align="center">Filters — this folder shows only folders and pictures</td>
+    <td align="center">Bulk Rename — every new name previewed first</td>
   </tr>
 </table>
 

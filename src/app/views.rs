@@ -502,7 +502,7 @@ impl RivetApp {
         let label = if n == 1 { p.0[0].file_name().map(|x| x.to_string_lossy().to_string()).unwrap_or_default() } else { format!("{n} items") };
         let copy = ctx.input(|i| i.modifiers.ctrl);
         let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Tooltip, Id::unique("dragtip")));
-        let text = format!("{} {label}", if copy { "+ Copy" } else { "→ Move" });
+        let text = format!("{} {label}", if copy { "+ Copy" } else { "Move" });
         let tip_fg = ctx.global_style().visuals.selection.stroke.color;
         let g = painter.layout_no_wrap(text, crate::fonts::ui_font(13.0), tip_fg);
         let r = Rect::from_min_size(pos + Vec2::new(14.0, 10.0), g.size() + Vec2::new(14.0, 8.0));
