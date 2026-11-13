@@ -379,6 +379,7 @@ impl RivetApp {
                     ]),
                     ("Window", &[
                         ("Ctrl+,", "Preferences"),
+                        ("F8", "Show or hide the status bar"),
                         ("F9", "Show or hide the sidebar"),
                         ("F11", "Show or hide the Peek panel"),
                         ("Ctrl+M or F10", "Show or hide the menu bar"),

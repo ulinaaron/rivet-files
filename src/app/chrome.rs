@@ -299,7 +299,7 @@ impl RivetApp {
             let mut c = false;
             c |= Self::menu_toggle(ui, &mut self.s.show_sidebar, "Sidebar", "F9");
             c |= Self::menu_toggle(ui, &mut self.s.show_peek, "Peek", "F11");
-            c |= Self::menu_toggle(ui, &mut self.s.show_statusbar, "Statusbar", "");
+            c |= Self::menu_toggle(ui, &mut self.s.show_statusbar, "Statusbar", "F8");
             c |= Self::menu_toggle(ui, &mut self.s.show_menubar, "Menubar", "Ctrl+M");
             c |= Self::menu_toggle(ui, &mut self.s.show_thumbnails, "Picture Thumbnails", "");
             if c {

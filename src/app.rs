@@ -1521,6 +1521,10 @@ impl RivetApp {
         if pressed(Key::F1) {
             self.dialog = Dialog::Shortcuts;
         }
+        if pressed(Key::F8) {
+            self.s.show_statusbar = !self.s.show_statusbar;
+            self.dirty_settings = true;
+        }
         if pressed(Key::F9) {
             self.s.show_sidebar = !self.s.show_sidebar;
             self.dirty_settings = true;

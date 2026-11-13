@@ -9,11 +9,9 @@
 [![Built with Rust](https://img.shields.io/badge/built%20with-Rust%20%2B%20egui-orange)](https://github.com/emilk/egui)
 ![No GTK or Qt](https://img.shields.io/badge/GTK%20%2F%20Qt-none-success)
 
-A Linux file manager in the same vein as Nemo, Thunar and Caja — written in Rust. Does not use GTK or Qt.
+A Linux file manager in the same vein as Dolphin, Nemo, Thunar and Caja — written in Rust. Does not use GTK or Qt.
 
-Rivet aims to be powerful yet minimal. Nothing is locked down or only half adjustable: the
-interface is meant to bend to you, so you can work with as many or as few toolbar controls
-as you like.
+Rivet is powerful all the while being minimal. Make it your own — bloat the interface with every button and panel imaginable. Or strip it back and keep just a few controls visible.
 
 ![Rivet Files showing a home folder](docs/screenshots/icons-wide.png)
 
@@ -30,7 +28,7 @@ as you like.
 - 🚀 **Open With** — pick any app from a searchable list, or set a new default
 - 🌐 **Network** — find servers, open SMB shares, log in, or connect to any address
 - 🗜️ **Compress and extract** — zip, tar.gz, tar.xz, tar.zst and 7z
-- 🎨 **Follows your colors** — matugen, Noctalia and GTK themes, live, no restart
+- 🎨 **Follows your colors** — Matugen, Noctalia, Dux Shell, and GTK themes, live, no restart
 - 💜 **Built-in icon set** recolored from your palette (primary, secondary or tertiary)
 - 🧰 **Make it yours** — custom toolbar at the top or bottom, status bar top, bottom or off, fonts, text size, hideable menu bar
 - 🪟 **Title bar your way** — your desktop's, or Rivet's own with window buttons
@@ -120,7 +118,7 @@ Rivet talks to X11 or Wayland directly. It does not use GTK or Qt. A normal desk
 | `Ctrl+1` `2` `3` | Icon / list / compact view |
 | `F2` · `Delete` | Rename · move to Trash |
 | `Ctrl+M` | Show or hide the menu bar |
-| `F9` · `F11` | Sidebar · Peek panel |
+| `F8` · `F9` · `F11` | Status bar · sidebar · Peek panel |
 | `Space` · `←` `→` · `Return` | Preview the selection · previous / next file · open it |
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / redo |
 | `Ctrl+,` | Preferences |
