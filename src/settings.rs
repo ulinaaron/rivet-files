@@ -63,6 +63,13 @@ pub struct Settings {
     pub window_w: f32,
     pub window_h: f32,
     pub sidebar_width: f32,
+    /// Put the sidebar on the right of the window instead of the left.
+    pub sidebar_right: bool,
+    /// The Peek panel: details and a large preview of the selected item.
+    pub show_peek: bool,
+    /// Put the Peek panel on the left (default: right).
+    pub peek_left: bool,
+    pub peek_width: f32,
     pub toolbar: Vec<ToolItem>,
 }
 
@@ -98,6 +105,10 @@ impl Default for Settings {
             window_w: 1000.0,
             window_h: 640.0,
             sidebar_width: 190.0,
+            sidebar_right: false,
+            show_peek: false,
+            peek_left: false,
+            peek_width: 300.0,
             toolbar: ToolItem::default_layout(),
         }
     }
@@ -152,6 +163,10 @@ impl Settings {
                 "window_w" => s.window_w = f.unwrap_or(s.window_w).max(400.0),
                 "window_h" => s.window_h = f.unwrap_or(s.window_h).max(300.0),
                 "toolbar" => s.toolbar = parse_toolbar(v),
+                "sidebar_right" => s.sidebar_right = b,
+                "show_peek" => s.show_peek = b,
+                "peek_left" => s.peek_left = b,
+                "peek_width" => s.peek_width = f.unwrap_or(s.peek_width).clamp(200.0, 700.0),
                 "sidebar_width" => s.sidebar_width = f.unwrap_or(s.sidebar_width).clamp(120.0, 500.0),
                 _ => {}
             }
@@ -164,11 +179,12 @@ impl Settings {
         let sort = match self.sort { SortKey::Name => "name", SortKey::Size => "size", SortKey::Type => "type", SortKey::Modified => "modified" };
         let theme = match self.theme { ThemeChoice::System => "system", ThemeChoice::Light => "light", ThemeChoice::Dark => "dark" };
         let text = format!(
-            "view={view}\nsort={sort}\nsort_desc={}\nfolders_first={}\nshow_hidden={}\nzoom={}\nlist_zoom={}\ndecorations={}\nicon_theme={}\nbuiltin_icons={}\nui_font={}\nui_font_size={}\nicon_color={}\ntheme={theme}\nshow_sidebar={}\nsidebar_icon={}\nsidebar_tree={}\nshow_statusbar={}\nshow_menubar={}\nshow_thumbnails={}\nsingle_click={}\nconfirm_trash={}\nfollow_desktop_colors={}\naccent=#{:02x}{:02x}{:02x}\nwindow_w={}\nwindow_h={}\nsidebar_width={}\ntoolbar={}\ncompress_format={}\n",
+            "view={view}\nsort={sort}\nsort_desc={}\nfolders_first={}\nshow_hidden={}\nzoom={}\nlist_zoom={}\ndecorations={}\nicon_theme={}\nbuiltin_icons={}\nui_font={}\nui_font_size={}\nicon_color={}\ntheme={theme}\nshow_sidebar={}\nsidebar_icon={}\nsidebar_tree={}\nshow_statusbar={}\nshow_menubar={}\nshow_thumbnails={}\nsingle_click={}\nconfirm_trash={}\nfollow_desktop_colors={}\naccent=#{:02x}{:02x}{:02x}\nwindow_w={}\nwindow_h={}\nsidebar_width={}\ntoolbar={}\ncompress_format={}\nsidebar_right={}\nshow_peek={}\npeek_left={}\npeek_width={}\n",
             self.sort_desc, self.folders_first, self.show_hidden, self.zoom, self.list_zoom, self.decorations,
             self.icon_theme, self.builtin_icons, self.ui_font, self.ui_font_size, self.icon_color.id(), self.show_sidebar, self.sidebar_icon, self.sidebar_tree, self.show_statusbar, self.show_menubar, self.show_thumbnails,
             self.single_click, self.confirm_trash, self.follow_desktop_colors, self.accent[0], self.accent[1], self.accent[2],
-            self.window_w, self.window_h, self.sidebar_width, toolbar_string(&self.toolbar), self.compress_format
+            self.window_w, self.window_h, self.sidebar_width, toolbar_string(&self.toolbar), self.compress_format,
+            self.sidebar_right, self.show_peek, self.peek_left, self.peek_width
         );
         let p = path();
         if let Some(d) = p.parent() {
@@ -201,13 +217,14 @@ pub enum ToolItem {
     Properties,
     Bookmark,
     Sidebar,
+    Peek,
     Separator,
     /// The hamburger menu, shown only while the menu bar is hidden.
     Menu,
 }
 
 impl ToolItem {
-    pub const ALL: [ToolItem; 22] = [
+    pub const ALL: [ToolItem; 23] = [
         ToolItem::Back,
         ToolItem::Forward,
         ToolItem::Up,
@@ -228,6 +245,7 @@ impl ToolItem {
         ToolItem::Properties,
         ToolItem::Bookmark,
         ToolItem::Sidebar,
+        ToolItem::Peek,
         ToolItem::Separator,
         ToolItem::Menu,
     ];
@@ -261,6 +279,7 @@ impl ToolItem {
             Properties => "properties",
             Bookmark => "bookmark",
             Sidebar => "sidebar",
+            Peek => "peek",
             Separator => "separator",
             Menu => "menu",
         }
@@ -289,6 +308,7 @@ impl ToolItem {
             Properties => "Properties",
             Bookmark => "Bookmark this folder",
             Sidebar => "Show/hide sidebar",
+            Peek => "Show/hide Peek panel",
             Separator => "Gap",
             Menu => "Menu (when the menu bar is hidden)",
         }
@@ -318,6 +338,7 @@ impl ToolItem {
             Properties => (&["document-properties-symbolic", "dialog-information-symbolic", "document-properties"], "i"),
             Bookmark => (&["bookmark-new-symbolic", "starred-symbolic", "bookmark-new"], "★"),
             Sidebar => (&["sidebar-show-symbolic", "view-sidebar-symbolic", "view-dual-symbolic"], "◧"),
+            Peek => (&["sidebar-show-right-symbolic", "view-right-pane-symbolic", "document-properties-symbolic"], "◨"),
             Separator => (&[], "|"),
             Menu => (&[], "≡"),
         }

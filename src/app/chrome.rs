@@ -289,6 +289,7 @@ impl RivetApp {
             }
             let mut c = false;
             c |= Self::menu_toggle(ui, &mut self.s.show_sidebar, "Sidebar", "F9");
+            c |= Self::menu_toggle(ui, &mut self.s.show_peek, "Peek", "F11");
             c |= Self::menu_toggle(ui, &mut self.s.show_statusbar, "Statusbar", "");
             c |= Self::menu_toggle(ui, &mut self.s.show_menubar, "Menubar", "Ctrl+M");
             c |= Self::menu_toggle(ui, &mut self.s.show_thumbnails, "Picture Thumbnails", "");
@@ -443,6 +444,7 @@ impl RivetApp {
             NewFolder | Terminal | Bookmark => (self.current_dir().is_some(), false, item.label().into()),
             ShowHidden => (true, self.s.show_hidden, "Show hidden files (Ctrl+H)".into()),
             Sidebar => (true, self.s.show_sidebar, "Show or hide the sidebar (F9)".into()),
+            Peek => (true, self.s.show_peek, "Show or hide the Peek panel (F11)".into()),
             Trash => (true, self.tab().loc == Location::Trash, "Trash".into()),
             _ => (true, false, item.label().into()),
         };
@@ -502,6 +504,10 @@ impl RivetApp {
             }
             Sidebar => {
                 self.s.show_sidebar = !self.s.show_sidebar;
+                self.dirty_settings = true;
+            }
+            Peek => {
+                self.s.show_peek = !self.s.show_peek;
                 self.dirty_settings = true;
             }
             PathBar | Separator | Menu => {}
@@ -884,6 +890,12 @@ impl RivetApp {
                         }
                     });
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        let peek = self.s.show_peek;
+                        if self.tool_button(ui, ctx, &["sidebar-show-right-symbolic", "view-right-pane-symbolic", "document-properties-symbolic"], "◨", if peek { "Hide the Peek panel (F11)" } else { "Show the Peek panel (F11)" }, true, peek) {
+                            self.s.show_peek = !peek;
+                            self.dirty_settings = true;
+                        }
+                        ui.add_space(6.0);
                         if ui.add(egui::Button::new("+").small().frame_when_inactive(false)).on_hover_text("Zoom in").clicked() {
                             self.zoom(1);
                         }
@@ -942,7 +954,8 @@ impl RivetApp {
 
     pub(super) fn sidebar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         let fill = ctx.global_style().visuals.panel_fill;
-        let resp = egui::Panel::left("sidebar").show_separator_line(false)
+        let panel = if self.s.sidebar_right { egui::Panel::right("sidebar") } else { egui::Panel::left("sidebar") };
+        let resp = panel.show_separator_line(false)
             .resizable(true)
             .default_size(self.s.sidebar_width)
             .size_range(120.0..=420.0)

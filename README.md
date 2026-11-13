@@ -20,6 +20,9 @@ A Linux file manager in the same vein as Nemo, Thunar and Caja — written in Ru
 - 📋 **Everything you expect** — copy, cut, paste, drag and drop, rename, Trash with restore
 - 🔍 **Instant filter** as you type, plus search through subfolders
 - 🖼️ **Picture thumbnails** and your system icon theme
+- 👀 **Peek panel** — big previews, videos that play right there, and file details, on either side
+- 🌐 **Network** — find servers, open SMB shares, log in, or connect to any address
+- 🗜️ **Compress and extract** — zip, tar.gz, tar.xz, tar.zst and 7z
 - 🎨 **Follows your colors** — matugen, Noctalia and GTK themes, live, no restart
 - 💜 **Built-in icon set** recolored from your palette (primary, secondary or tertiary)
 - 🧰 **Make it yours** — custom toolbar, fonts, text size, hideable menu bar
@@ -93,6 +96,7 @@ Rivet talks to X11 or Wayland directly. It does not use GTK or Qt. A normal desk
 | `Ctrl+1` `2` `3` | Icon / list / compact view |
 | `F2` · `Delete` | Rename · move to Trash |
 | `Ctrl+M` | Show or hide the menu bar |
+| `F9` · `F11` | Sidebar · Peek panel |
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / redo |
 | `F1` | All shortcuts |
 

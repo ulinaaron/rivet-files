@@ -20,6 +20,7 @@ use crate::thumbs::{self, Thumbnailer};
 mod chrome;
 mod dialogs;
 mod netview;
+mod peek;
 mod views;
 mod windows;
 
@@ -117,6 +118,8 @@ pub struct RivetApp {
     clipboard: Option<(Vec<PathBuf>, bool)>,
     /// The Network page (servers, shares, connecting).
     net: netview::NetState,
+    /// The Peek panel's preview and video player.
+    peek: peek::PeekState,
     net_scan_rx: Option<std::sync::mpsc::Receiver<netview::NetResult>>,
     connect_ask: Option<netview::ConnectAsk>,
     /// Undo / redo for file actions.
@@ -290,6 +293,7 @@ impl RivetApp {
             active: 0,
             clipboard: None,
             net: Default::default(),
+            peek: Default::default(),
             net_scan_rx: None,
             connect_ask: None,
             history: Default::default(),
@@ -1286,6 +1290,10 @@ impl RivetApp {
             self.s.show_sidebar = !self.s.show_sidebar;
             self.dirty_settings = true;
         }
+        if pressed(Key::F11) {
+            self.s.show_peek = !self.s.show_peek;
+            self.dirty_settings = true;
+        }
         if (cmd && pressed(Key::M)) || pressed(Key::F10) {
             self.s.show_menubar = !self.s.show_menubar;
             self.dirty_settings = true;
@@ -1625,6 +1633,11 @@ impl eframe::App for RivetApp {
         }
         if self.s.show_sidebar {
             self.sidebar(ui, &ctx);
+        }
+        if self.s.show_peek {
+            self.peek_panel(ui, &ctx);
+        } else {
+            self.peek.stop();
         }
         // Added after the sidebar, so the tab strip starts where the sidebar ends.
         if self.tabs.len() > 1 {

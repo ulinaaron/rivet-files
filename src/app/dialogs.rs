@@ -362,6 +362,7 @@ impl RivetApp {
                     ]),
                     ("Window", &[
                         ("F9", "Show or hide the sidebar"),
+                        ("F11", "Show or hide the Peek panel"),
                         ("Ctrl+M or F10", "Show or hide the menu bar"),
                         ("F1", "This list"),
                         ("Ctrl+Q", "Close the window"),
@@ -969,11 +970,35 @@ impl RivetApp {
                 });
 
                 section(ui, "Window", &mut |ui| {
-                    ui.horizontal(|ui| {
+                    egui::Grid::new("prefs-window").num_columns(2).spacing([18.0, 10.0]).min_col_width(110.0).show(ui, |ui| {
                         ui.label("Title bar");
-                        ui.add_space(10.0);
-                        changed |= ui.selectable_value(&mut self.s.decorations, true, "From your desktop").changed();
-                        changed |= ui.selectable_value(&mut self.s.decorations, false, "Rivet's own").changed();
+                        ui.horizontal(|ui| {
+                            changed |= ui.selectable_value(&mut self.s.decorations, true, "From your desktop").changed();
+                            changed |= ui.selectable_value(&mut self.s.decorations, false, "Rivet's own").changed();
+                        });
+                        ui.end_row();
+                        ui.label("Sidebar");
+                        ui.horizontal(|ui| {
+                            changed |= ui.selectable_value(&mut self.s.sidebar_right, false, "Left").changed();
+                            changed |= ui.selectable_value(&mut self.s.sidebar_right, true, "Right").changed();
+                        });
+                        ui.end_row();
+                        ui.label("Peek panel");
+                        ui.horizontal(|ui| {
+                            let mut pick = if !self.s.show_peek { 0 } else if self.s.peek_left { 1 } else { 2 };
+                            let before = pick;
+                            ui.selectable_value(&mut pick, 0, "Off");
+                            ui.selectable_value(&mut pick, 1, "Left");
+                            ui.selectable_value(&mut pick, 2, "Right");
+                            if pick != before {
+                                self.s.show_peek = pick != 0;
+                                if pick != 0 {
+                                    self.s.peek_left = pick == 1;
+                                }
+                                changed = true;
+                            }
+                        });
+                        ui.end_row();
                     });
                 });
 

@@ -19,6 +19,7 @@ mod niri;
 mod model;
 mod palette;
 mod places;
+mod preview;
 mod settings;
 mod thumbs;
 mod undo;
@@ -141,6 +142,18 @@ fn main() -> eframe::Result {
     }
     if let Ok(c) = std::env::var("RIVET_ICON_COLOR") {
         settings.icon_color = settings::IconColor::from_id(&c);
+    }
+    // Test hooks for checks: the Peek panel ("1", "left") and a right-hand sidebar.
+    match std::env::var("RIVET_PEEK").as_deref() {
+        Ok("left") => {
+            settings.show_peek = true;
+            settings.peek_left = true;
+        }
+        Ok(_) => settings.show_peek = true,
+        Err(_) => {}
+    }
+    if std::env::var_os("RIVET_SIDEBAR_RIGHT").is_some() {
+        settings.sidebar_right = true;
     }
     if hide_menubar {
         settings.show_menubar = false;

@@ -19,7 +19,10 @@ impl RivetApp {
         // rounded corner where the toolbar and the sidebar meet (no border lines).
         let chrome = ctx.global_style().visuals.panel_fill;
         let round_bottom = self.s.show_statusbar;
-        let corner = egui::CornerRadius { nw: R_LG, ne: 0, sw: if round_bottom { R_LG } else { 0 }, se: 0 };
+        // Round the right-hand corners too when a panel (sidebar or Peek) sits on the right.
+        let right_panel = (self.s.show_sidebar && self.s.sidebar_right) || (self.s.show_peek && !self.s.peek_left);
+        let r = if right_panel { R_LG } else { 0 };
+        let corner = egui::CornerRadius { nw: R_LG, ne: r, sw: if round_bottom { R_LG } else { 0 }, se: if round_bottom { r } else { 0 } };
         egui::CentralPanel::no_frame().frame(egui::Frame::NONE.fill(chrome)).show(ui, |ui| {
             egui::Frame::NONE.fill(bg).corner_radius(corner).inner_margin(egui::Margin { left: 6, top: 6, right: 0, bottom: 4 }).show(ui, |ui| {
             ui.set_min_size(ui.available_size());
