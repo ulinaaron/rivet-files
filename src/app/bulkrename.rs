@@ -38,14 +38,25 @@ fn field(ui: &mut egui::Ui, text: &mut String, hint: &str, width: f32) -> egui::
     egui::Frame::NONE
         .fill(bg)
         .corner_radius(R_MD)
-        .inner_margin(egui::Margin::symmetric(10, 5))
-        .show(ui, |ui| ui.add(egui::TextEdit::singleline(text).frame(egui::Frame::NONE).hint_text(hint).desired_width(width)))
+        .inner_margin(egui::Margin::symmetric(10, 4))
+        .show(ui, |ui| {
+            ui.add(
+                egui::TextEdit::singleline(text)
+                    .frame(egui::Frame::NONE)
+                    .hint_text(hint)
+                    .align(egui::Align2::LEFT_CENTER)
+                    .min_size(Vec2::new(0.0, 22.0))
+                    .desired_width(width),
+            )
+        })
         .inner
 }
 
 impl RivetApp {
     /// Returns true when the window should close.
     pub(super) fn bulk_rename_dialog(&mut self, ctx: &egui::Context) -> bool {
+        let mode_icons: Vec<Option<egui::TextureHandle>> = Mode::ALL.iter().map(|m| self.icon(ctx, mode_icon(*m), 16.0)).collect();
+        let close_icon = self.icon(ctx, &["window-close-symbolic"], 14.0);
         let Dialog::BulkRename(st) = &mut self.dialog else { return true };
         let plan = rename::plan(&st.items, &st.rules);
         let changes = plan.iter().filter(|p| p.changes()).count();
@@ -63,19 +74,68 @@ impl RivetApp {
             let card = v.faint_bg_color;
             ui.spacing_mut().item_spacing = Vec2::new(10.0, 8.0);
             ui.spacing_mut().button_padding = Vec2::new(10.0, 4.0);
-            ui.label(egui::RichText::new(format!("Rename {} items", st.items.len())).heading());
-            ui.add_space(8.0);
+            // ---- title and a close button
+            ui.horizontal(|ui| {
+                ui.label(egui::RichText::new(format!("Rename {} items", st.items.len())).heading());
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let (r, resp) = ui.allocate_exact_size(Vec2::splat(28.0), egui::Sense::click());
+                    let resp = resp.on_hover_text("Close (Esc)");
+                    let fg = if resp.hovered() {
+                        ui.painter().circle_filled(r.center(), 13.0, danger);
+                        super::StatusColors::on(danger)
+                    } else {
+                        v.text_color()
+                    };
+                    match &close_icon {
+                        Some(t) => super::paint_tex(ui.painter(), t, egui::Rect::from_center_size(r.center(), Vec2::splat(14.0)), fg),
+                        None => {
+                            let c = r.center();
+                            let st = egui::Stroke::new(1.6, fg);
+                            ui.painter().line_segment([c + Vec2::new(-4.5, -4.5), c + Vec2::new(4.5, 4.5)], st);
+                            ui.painter().line_segment([c + Vec2::new(4.5, -4.5), c + Vec2::new(-4.5, 4.5)], st);
+                        }
+                    }
+                    if resp.clicked() {
+                        cancel = true;
+                    }
+                });
+            });
+            ui.add_space(10.0);
 
-            // ---- the method
-            let modes: Vec<(Mode, &str)> = Mode::ALL.iter().map(|m| (*m, m.label())).collect();
-            pills(ui, &mut st.rules.mode, &modes);
-            ui.add_space(6.0);
-
-            // ---- its settings
             let rl = &mut st.rules;
             let focus = std::mem::take(&mut st.focus);
+            ui.horizontal_top(|ui| {
+            // ---- the methods, as a list like the Preferences pages
+            let list_w = 196.0;
+            egui::Frame::NONE.fill(card).corner_radius(R_MD).inner_margin(egui::Margin::same(6)).show(ui, |ui| {
+                ui.set_width(list_w - 12.0);
+                ui.vertical(|ui| {
+                ui.spacing_mut().item_spacing.y = 2.0;
+                for (i, m) in Mode::ALL.iter().enumerate() {
+                    let (r, resp) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 32.0), egui::Sense::click());
+                    let sel = rl.mode == *m;
+                    if sel {
+                        let (fill, stroke) = super::selected_tile(&v, card);
+                        ui.painter().rect_filled(r, super::R_SM, fill);
+                        ui.painter().rect_stroke(r, super::R_SM, stroke, egui::StrokeKind::Inside);
+                    } else if resp.hovered() {
+                        ui.painter().rect_filled(r, super::R_SM, v.widgets.hovered.weak_bg_fill);
+                    }
+                    let fg = if sel { v.strong_text_color() } else { v.text_color() };
+                    if let Some(t) = &mode_icons[i] {
+                        super::paint_tex(ui.painter(), t, egui::Rect::from_center_size(egui::Pos2::new(r.left() + 18.0, r.center().y), Vec2::splat(16.0)), fg);
+                    }
+                    ui.painter().text(egui::Pos2::new(r.left() + 36.0, r.center().y), egui::Align2::LEFT_CENTER, m.label(), crate::fonts::ui_font(13.0), fg);
+                    if resp.clicked() {
+                        rl.mode = *m;
+                    }
+                }
+                });
+            });
+            // ---- its settings
             egui::Frame::NONE.fill(card).corner_radius(R_MD).inner_margin(egui::Margin::symmetric(16, 14)).show(ui, |ui| {
                 ui.set_width(ui.available_width());
+                ui.set_min_height(6.0 * 34.0 - 16.0);
                 egui::Grid::new("bulk-opts").num_columns(2).spacing([18.0, 12.0]).min_col_width(110.0).show(ui, |ui| {
                     let label = |ui: &mut egui::Ui, t: &str| {
                         ui.label(egui::RichText::new(t).color(weak));
@@ -185,6 +245,8 @@ impl RivetApp {
                 });
             });
 
+            });
+
             // ---- preview
             ui.add_space(10.0);
             ui.label(egui::RichText::new("PREVIEW").size(10.5).strong().color(weak));
@@ -265,5 +327,17 @@ impl RivetApp {
             }
         }
         true
+    }
+}
+
+/// A small icon for each rename method (first one found in the icon theme).
+fn mode_icon(m: Mode) -> &'static [&'static str] {
+    match m {
+        Mode::Insert => &["insert-text-symbolic", "format-text-bold-symbolic", "document-edit-symbolic"],
+        Mode::DateTime => &["x-office-calendar-symbolic", "office-calendar-symbolic", "alarm-symbolic"],
+        Mode::Number => &["view-list-ordered-symbolic", "format-ordered-list-symbolic", "view-list-symbolic"],
+        Mode::Remove => &["edit-clear-symbolic", "edit-cut-symbolic", "edit-delete-symbolic"],
+        Mode::Replace => &["edit-find-replace-symbolic", "edit-find-symbolic"],
+        Mode::Case => &["format-text-uppercase-symbolic", "font-x-generic-symbolic", "preferences-desktop-font-symbolic"],
     }
 }
