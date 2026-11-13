@@ -10,6 +10,7 @@ mod bench;
 mod builtin_icons;
 mod fonts;
 mod fsops;
+mod highlight;
 mod icons;
 mod launch;
 mod desktop;
@@ -151,6 +152,9 @@ fn main() -> eframe::Result {
         }
         Ok(_) => settings.show_peek = true,
         Err(_) => {}
+    }
+    if let Some(h) = std::env::var("RIVET_PEEK_PREVIEW_H").ok().and_then(|v| v.parse::<f32>().ok()) {
+        settings.peek_preview_h = h;
     }
     if std::env::var_os("RIVET_SIDEBAR_RIGHT").is_some() {
         settings.sidebar_right = true;

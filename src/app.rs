@@ -451,6 +451,17 @@ impl RivetApp {
         ctx.set_fonts(defs);
     }
 
+    /// The theme's three colors: primary (accent), secondary and tertiary.
+    fn theme_trio(&self) -> (Color32, Color32, Color32) {
+        let primary = accent_color(&self.s);
+        let pal = if self.s.follow_desktop_colors { self.palette.as_ref() } else { None };
+        (
+            primary,
+            pal.and_then(|p| p.secondary).unwrap_or_else(|| crate::builtin_icons::derive_secondary(primary)),
+            pal.and_then(|p| p.tertiary).unwrap_or_else(|| crate::builtin_icons::derive_tertiary(primary)),
+        )
+    }
+
     /// The palette colour picked for Rivet's own icons (primary / secondary / tertiary).
     fn icon_base_color(&self) -> Color32 {
         use crate::settings::IconColor;

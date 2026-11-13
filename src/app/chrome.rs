@@ -942,7 +942,7 @@ impl RivetApp {
 
     /// "− slider +", reading left to right whichever side it is on.
     fn status_zoom(&mut self, ui: &mut egui::Ui, right_to_left: bool) {
-        let mut zoom_out = |app: &mut Self, ui: &mut egui::Ui| {
+        let zoom_out = |app: &mut Self, ui: &mut egui::Ui| {
             if ui.add(egui::Button::new("−").small().frame_when_inactive(false)).on_hover_text("Zoom out").clicked() {
                 app.zoom(-1);
             }

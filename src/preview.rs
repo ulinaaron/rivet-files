@@ -63,7 +63,7 @@ pub fn load(path: &Path, mime: &str, size: u64) -> Preview {
         Kind::Image => image_preview(path, size),
         Kind::Video => media_preview(path, true),
         Kind::Audio => media_preview(path, false),
-        Kind::Text => Preview { text: text_head(path), ..Default::default() },
+        Kind::Text => Preview { text: text_head(path), facts: text_facts(path, size), ..Default::default() },
         Kind::Other => Preview::default(),
     }
 }
@@ -84,6 +84,27 @@ fn image_preview(path: &Path, size: u64) -> Preview {
         return p;
     }
     if let Ok(img) = image::open(path) {
+        use image::ColorType as C;
+        let (model, bits) = match img.color() {
+            C::L8 => ("Grayscale", 8),
+            C::La8 => ("Grayscale with transparency", 8),
+            C::Rgb8 => ("RGB", 8),
+            C::Rgba8 => ("RGB with transparency", 8),
+            C::L16 => ("Grayscale", 16),
+            C::La16 => ("Grayscale with transparency", 16),
+            C::Rgb16 => ("RGB", 16),
+            C::Rgba16 => ("RGB with transparency", 16),
+            C::Rgb32F => ("RGB", 32),
+            C::Rgba32F => ("RGB with transparency", 32),
+            _ => ("", 0),
+        };
+        if bits > 0 {
+            p.facts.push(("Color".into(), format!("{model}, {bits}-bit")));
+        }
+        let mp = img.width() as f64 * img.height() as f64 / 1_000_000.0;
+        if mp >= 0.5 {
+            p.facts.push(("Megapixels".into(), format!("{:.1} MP", mp)));
+        }
         let img = if img.width() > PREVIEW_PX || img.height() > PREVIEW_PX { img.thumbnail(PREVIEW_PX, PREVIEW_PX) } else { img };
         let rgba = img.to_rgba8();
         p.image = Some(egui::ColorImage::from_rgba_unmultiplied([rgba.width() as usize, rgba.height() as usize], rgba.as_raw()));
@@ -108,6 +129,38 @@ fn text_head(path: &Path) -> Option<String> {
     };
     let head = s.lines().take(60).map(|l| l.replace('\t', "    ")).collect::<Vec<_>>().join("\n");
     (!head.trim().is_empty()).then_some(head)
+}
+
+/// Lines, words and characters of a text file (only for files up to 4 MB).
+fn text_facts(path: &Path, size: u64) -> Vec<(String, String)> {
+    if size > 4 * 1024 * 1024 {
+        return Vec::new();
+    }
+    let Ok(bytes) = std::fs::read(path) else { return Vec::new() };
+    let text = String::from_utf8_lossy(&bytes);
+    let lines = text.lines().count();
+    let words = text.split_whitespace().count();
+    let chars = text.chars().count();
+    let n = |x: usize| {
+        let s = x.to_string();
+        let mut out = String::new();
+        for (i, c) in s.chars().enumerate() {
+            if i > 0 && (s.len() - i) % 3 == 0 {
+                out.push(',');
+            }
+            out.push(c);
+        }
+        out
+    };
+    let enc = if bytes.is_ascii() { "ASCII" } else if std::str::from_utf8(&bytes).is_ok() { "UTF-8" } else { "Other (not UTF-8)" };
+    let ends = if bytes.windows(2).any(|w| w == b"\r\n") { "Windows (CRLF)" } else { "Unix (LF)" };
+    vec![
+        ("Lines".into(), n(lines)),
+        ("Words".into(), n(words)),
+        ("Characters".into(), n(chars)),
+        ("Encoding".into(), enc.into()),
+        ("Line endings".into(), ends.into()),
+    ]
 }
 
 fn fmt_duration(secs: f64) -> String {
