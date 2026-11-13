@@ -193,7 +193,7 @@ impl RivetApp {
             if let Some(b) = &self.net.busy {
                 ui.horizontal(|ui| {
                     ui.add_space(12.0);
-                    ui.label(egui::RichText::new(b).color(weak));
+                    ui.label(egui::RichText::new(b).color(super::status(ui.ctx()).info));
                 });
             }
             if let Some(e) = &self.net.error {

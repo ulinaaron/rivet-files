@@ -263,29 +263,6 @@ impl MimeDb {
         self.comments.lock().unwrap().insert(mime.to_string(), d.clone());
         d
     }
-
-    pub fn is_subclass_of(&self, mime: &str, parent: &str) -> bool {
-        if mime == parent {
-            return true;
-        }
-        let mut stack = vec![mime.to_string()];
-        let mut guard = 0;
-        while let Some(m) = stack.pop() {
-            guard += 1;
-            if guard > 50 {
-                break;
-            }
-            if let Some(ps) = self.parents.get(&m) {
-                for p in ps {
-                    if p == parent {
-                        return true;
-                    }
-                    stack.push(p.clone());
-                }
-            }
-        }
-        false
-    }
 }
 
 fn decode_xml(s: &str) -> String {

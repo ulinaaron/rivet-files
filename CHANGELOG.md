@@ -2,18 +2,28 @@
 
 ## Unreleased
 
-- **Properties** redesigned: big icon and name field, a Basic / Permissions switch, and roomy
-  General, Dates, Ownership and Access cards.
-- Removed the niri-only code that moved check / screenshot windows to another workspace.
-- **Theme-tinted action colors**: info, danger, warning and success are 70% their usual hue and
-  30% your theme accent. Delete Permanently, the close-button hover and errors use danger; Rename uses success.
-- Roomier Rename window.
-- **Light mode contrast**: file icons and thumbnails get a soft shadow and faint edge on light
-  backgrounds, Rivet's own page icons are tinted and outlined, and secondary text, panels and
-  controls are a little stronger.
+### New
 - **Preferences** has a sidebar of pages: Appearance (with Window), Views, Behavior, Menu (with the
   toolbar), System and About. Appearance is split into roomy groups: desktop colors, style and accent,
   icons, typography, window. Help → About opens the About page.
+- **Theme-tinted action colors**: info, danger, warning and success are 70% their usual hue and
+  30% your theme accent. Delete Permanently, close-button hovers and errors use danger; Rename uses success.
+- **Location bar**: drag across it to select the path as text; right-click it (or any folder in it)
+  for Copy Location, Open in New Tab and Edit Location.
+
+### Improved
+- **Light mode contrast**: file icons and thumbnails get a soft shadow on light backgrounds, Rivet's
+  own page icons are tinted with a thin edge, and secondary text, panels and controls are stronger.
+- **Properties** redesigned: big icon and name field, a Basic / Permissions switch, and roomy
+  General, Dates, Ownership and Access cards.
+- Clearer System page (name · status · action rows) and no filler text in Preferences.
+- Roomier Rename window.
+- Peek's split *Open with* button: full-height divider and an apps icon for choosing another app.
+- README: Rivet's goals and a short roadmap.
+- Code tidy-up: no compiler warnings, unused code removed.
+
+### Removed
+- The niri-only code that moved check / screenshot windows to another workspace.
 
 ## 0.2.0
 

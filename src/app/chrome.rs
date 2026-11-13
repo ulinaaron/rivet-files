@@ -611,7 +611,7 @@ impl RivetApp {
     }
 
     fn location_entry(&mut self, ui: &mut egui::Ui) {
-        let resp = ui.add(egui::TextEdit::singleline(&mut self.path_text).frame(egui::Frame::NONE).vertical_align(egui::Align::Center).min_size(Vec2::new(0.0, 26.0)).desired_width(f32::INFINITY).hint_text("Type a path, e.g. /home or ~/Documents"));
+        let resp = ui.add(egui::TextEdit::singleline(&mut self.path_text).frame(egui::Frame::NONE).align(egui::Align2::LEFT_CENTER).min_size(Vec2::new(0.0, 26.0)).desired_width(f32::INFINITY).hint_text("Type a path, e.g. /home or ~/Documents"));
         if self.path_focus {
             resp.request_focus();
             // Select the whole path so typing replaces it.
@@ -679,7 +679,7 @@ impl RivetApp {
             let t = &mut self.tabs[self.active];
             let resp = ui.add(
                 egui::TextEdit::singleline(&mut t.filter)
-                    .frame(egui::Frame::NONE).vertical_align(egui::Align::Center).min_size(Vec2::new(0.0, 26.0))
+                    .frame(egui::Frame::NONE).align(egui::Align2::LEFT_CENTER).min_size(Vec2::new(0.0, 26.0))
                     .desired_width((ui.available_width() - 150.0).max(80.0))
                     .hint_text("Filter this folder — press Enter to search all subfolders"),
             );

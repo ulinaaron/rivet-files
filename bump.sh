@@ -39,17 +39,22 @@ sed -i "0,/^version = \"$OLD\"/s//version = \"$NEW\"/" Cargo.toml
 # Cargo.lock: record the new version without touching any dependency.
 cargo update --workspace --offline >/dev/null 2>&1 || cargo update --workspace >/dev/null
 
-# CHANGELOG: a new section from the commit subjects since the last tag.
-LAST=$(git describe --tags --abbrev=0 2>/dev/null || true)
-RANGE=${LAST:+$LAST..}HEAD
-NOTES=$(git log --no-merges --format='- %s' $RANGE)
-[ -n "$NOTES" ] || NOTES="- Maintenance release"
-{
-    sed -n '1,2p' CHANGELOG.md
-    printf '## %s\n\n%s\n\n' "$NEW" "$NOTES"
-    sed -n '3,$p' CHANGELOG.md
-} > CHANGELOG.md.new
-mv CHANGELOG.md.new CHANGELOG.md
+# CHANGELOG: a hand-written "## Unreleased" section becomes this version's section;
+# without one, a new section is made from the commit subjects since the last tag.
+if grep -q '^## Unreleased' CHANGELOG.md; then
+    sed -i "0,/^## Unreleased.*/s//## $NEW/" CHANGELOG.md
+else
+    LAST=$(git describe --tags --abbrev=0 2>/dev/null || true)
+    RANGE=${LAST:+$LAST..}HEAD
+    NOTES=$(git log --no-merges --format='- %s' $RANGE)
+    [ -n "$NOTES" ] || NOTES="- Maintenance release"
+    {
+        sed -n '1,2p' CHANGELOG.md
+        printf '## %s\n\n%s\n\n' "$NEW" "$NOTES"
+        sed -n '3,$p' CHANGELOG.md
+    } > CHANGELOG.md.new
+    mv CHANGELOG.md.new CHANGELOG.md
+fi
 
 git add Cargo.toml Cargo.lock CHANGELOG.md
 git commit -q -m "Release $NEW"

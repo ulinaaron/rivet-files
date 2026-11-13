@@ -232,8 +232,8 @@ Preferences → *Add Rivet template to matugen* registers a dedicated template i
 - **Logo** master is `data/rivet-files.svg`; regenerate the PNG set with
   `rivet --export-icons data/icons` and copy the 512 px one to `docs/logo.png`
 - **AppImage**: `./appimage.sh` (needs `squashfs-tools`). It links for glibc 2.31 and bundles the keyboard libraries, so the one file runs on Ubuntu 22.04 and Debian 12.
-- **Release**: `./bump.sh` (patch, or `minor` / `major` / `X.Y.Z`) sets the version, writes the
-  changelog section and commits; then `./release.sh --publish`. The release binary is linked with Zig against glibc 2.31 (not the build machine's libc). CI rejects an ELF that needs a GLIBC symbol newer than 2.35.
+- **Release**: keep notes under `## Unreleased` in `CHANGELOG.md`. `./bump.sh` (patch, or `minor` / `major` / `X.Y.Z`)
+  sets the version, turns that section into the release's (or writes one from the commits) and commits; then `./release.sh --publish`. The release binary is linked with Zig against glibc 2.31 (not the build machine's libc). CI rejects an ELF that needs a GLIBC symbol newer than 2.35.
 
 </details>
 

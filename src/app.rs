@@ -279,7 +279,7 @@ impl StatusColors {
 
 /// The current status colors (set whenever the visuals change).
 pub(crate) fn status(ctx: &egui::Context) -> StatusColors {
-    ctx.data(|d| d.get_temp::<StatusColors>(egui::Id::new("rivet-status-colors")))
+    ctx.data(|d| d.get_temp::<StatusColors>(egui::Id::unique("rivet-status-colors")))
         .unwrap_or_else(|| StatusColors::from_theme(Color32::from_rgb(0x35, 0x84, 0xe4)))
 }
 
@@ -611,7 +611,7 @@ impl RivetApp {
         });
         let accent = accent_color(&self.s);
         let status = StatusColors::from_theme(accent);
-        ctx.data_mut(|d| d.insert_temp(egui::Id::new("rivet-status-colors"), status));
+        ctx.data_mut(|d| d.insert_temp(egui::Id::unique("rivet-status-colors"), status));
         for theme in [egui::Theme::Light, egui::Theme::Dark] {
             let dark = theme == egui::Theme::Dark;
             // Start from a clean style each time so colours from an old palette never linger.
@@ -1175,8 +1175,6 @@ impl RivetApp {
         windows::Chrome {
             title: title.to_string(),
             icon: self.icon(ctx, icon, 16.0),
-            shade: self.icon(ctx, &["window-minimize-symbolic", "go-up-symbolic"], 14.0),
-            max: self.icon(ctx, &["window-maximize-symbolic"], 14.0),
             close: self.icon(ctx, &["window-close-symbolic"], 14.0),
             flush: false,
         }

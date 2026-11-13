@@ -403,10 +403,6 @@ impl IconTheme {
         }
     }
 
-    pub fn builtin_enabled(&self) -> bool {
-        self.builtin.is_some()
-    }
-
     /// Get a texture for the first available icon name, rendered at `px` pixels.
     pub fn texture(&mut self, ctx: &egui::Context, names: &[&str], px: u32) -> Option<egui::TextureHandle> {
         if let Some(colors) = self.builtin {

@@ -62,12 +62,6 @@ Exec={e} --home
     )
 }
 
-/// The file our entry points at, if one is installed.
-pub fn installed_exec() -> Option<String> {
-    let t = std::fs::read_to_string(entry_path()).ok()?;
-    t.lines().find_map(|l| l.strip_prefix("Exec=").map(|s| s.to_string()))
-}
-
 pub fn is_installed() -> bool {
     entry_path().is_file()
 }

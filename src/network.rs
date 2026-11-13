@@ -22,13 +22,6 @@ impl NetPlace {
     pub fn lists_shares(&self) -> bool {
         self.scheme() == "smb" && share_of(&self.uri).is_none()
     }
-    pub fn icon(&self) -> &'static [&'static str] {
-        match self.scheme() {
-            "sftp" | "ssh" => &["network-server", "folder-remote"],
-            _ if share_of(&self.uri).is_some() => &["folder-remote", "network-server"],
-            _ => &["network-server", "folder-remote"],
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]

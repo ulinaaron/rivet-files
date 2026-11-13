@@ -1,6 +1,5 @@
-//! Windows that live inside the app: a title bar with roll-up, maximize and close,
-//! drag to move (double-click to maximize), resize from the edges, and kept within
-//! the app's area. Several can be open at once and they don't block the file view.
+//! Windows that live inside the app: a title bar with a close button, drag to move,
+//! resize from the edges, and kept within the app's area. Several can be open at once and they don't block the file view.
 
 use eframe::egui::{self, Align2, Color32, Id, Pos2, Rect, Sense, Stroke, Vec2};
 
@@ -26,23 +25,20 @@ impl WinState {
 pub(super) struct Chrome {
     pub title: String,
     pub icon: Option<egui::TextureHandle>,
-    pub shade: Option<egui::TextureHandle>,
-    pub max: Option<egui::TextureHandle>,
     pub close: Option<egui::TextureHandle>,
     /// No padding around the content (the window draws its own layout edge to edge).
     pub flush: bool,
 }
 
-pub(super) struct Shown<R> {
+pub(super) struct Shown {
     pub open: bool,
     pub rect: Option<Rect>,
-    pub inner: Option<R>,
 }
 
 const HEADER_H: f32 = 36.0;
 
 /// Draw one in-app window. `area` is where it may live (the app minus a margin).
-pub(super) fn show<R>(ctx: &egui::Context, st: &mut WinState, chrome: &Chrome, area: Rect, min: Vec2, add: impl FnOnce(&mut egui::Ui) -> R) -> Shown<R> {
+pub(super) fn show<R>(ctx: &egui::Context, st: &mut WinState, chrome: &Chrome, area: Rect, min: Vec2, add: impl FnOnce(&mut egui::Ui) -> R) -> Shown {
     // Separate memory for the maximized state, so restoring brings back the old size.
     let id = Id::unique(("inner-window", st.id, st.maximized, st.shaded));
     let size = st.size.min(area.size());
@@ -87,7 +83,7 @@ pub(super) fn show<R>(ctx: &egui::Context, st: &mut WinState, chrome: &Chrome, a
         for (tex, kind) in buttons.iter().rev() {
             let r = Rect::from_center_size(Pos2::new(x - 12.0, hrect.center().y), Vec2::splat(24.0));
             x -= 28.0;
-            let resp = ui.interact(r, ui.id().with(("winbtn", *kind)), Sense::click());
+            let resp = ui.interact(r, ui.scope_id().with(("winbtn", *kind)), Sense::click());
             let hover = resp.hovered();
             if hover {
                 let c = if *kind == 2 { super::status(ui.ctx()).danger } else { v.widgets.hovered.bg_fill };
@@ -162,5 +158,5 @@ pub(super) fn show<R>(ctx: &egui::Context, st: &mut WinState, chrome: &Chrome, a
         st.shaded = !st.shaded;
         st.maximized = false;
     }
-    Shown { open, rect, inner: r.and_then(|r| r.inner).flatten() }
+    Shown { open, rect }
 }

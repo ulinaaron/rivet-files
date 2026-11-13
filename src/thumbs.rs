@@ -67,10 +67,6 @@ impl Thumbnailer {
     pub fn forget(&mut self, path: &PathBuf) {
         self.done.remove(path);
     }
-
-    pub fn clear(&mut self) {
-        self.done.clear();
-    }
 }
 
 fn make_thumb(path: &PathBuf) -> Option<egui::ColorImage> {
