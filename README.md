@@ -35,7 +35,7 @@ as you like.
 - 🧰 **Make it yours** — custom toolbar, fonts, text size, hideable menu bar
 - 🪟 **Title bar your way** — your desktop's, or Rivet's own with window buttons
 - ⚡ **Fast** — 100,000 files open in under 0.4 s, and an idle Rivet uses no CPU
-- 🦀 **Light** — one 12 MB program, no toolkit to install
+- 🦀 **Light** — one 14 MB program (a 6 MB AppImage download), no toolkit to install
 
 ## 🎨 Follows your colors
 
@@ -164,7 +164,7 @@ Release build on Fedora, Wayland, NVMe SSD:
 | Reading 2,092 / 100,000 items | ~19 ms / ~156 ms |
 | Sorting 100,000 items by name / type | ~17 ms / ~27 ms |
 | Indexing icon themes (once) | ~26 ms |
-| Binary size (stripped) | ~12 MB |
+| Binary size (stripped) | ~14 MB (AppImage ~6 MB) |
 
 Reproduce with `rivet --bench [FOLDER…]`, `RIVET_FRAME_STATS=1 rivet --screenshot out.png`
 and `python3 docs/bench-100k.py`.
