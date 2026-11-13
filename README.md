@@ -169,6 +169,14 @@ and `python3 docs/bench-100k.py`.
 
 </details>
 
+## 🗺️ Roadmap
+
+- Freedesktop file picker integration
+- Tagging and pinning files
+- Flexible toolbar and status bar positions
+- Zen mode
+- Bulk rename files
+
 ## 🛠️ For developers
 
 <details>
