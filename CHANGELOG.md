@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0
 
 ### New
 - **Filters**: show a folder with only certain items — by type (folders, pictures, videos, audio,
