@@ -3,6 +3,11 @@
 ## Unreleased
 
 ### New
+- **Convert & Resize module** (needs ffmpeg; Preferences → Modules shows whether it's installed and
+  turns it on or off). Right-click → Convert To… for pictures (JPEG, PNG, WebP, GIF, BMP, TIFF), videos
+  (MP4, WebM, MKV, GIF, MP3) and audio (MP3, Ogg, FLAC, WAV, M4A), one file or many, with a quality
+  setting; keep the originals or replace them (originals go to the Trash). Right-click → Resize… for
+  pictures: by percentage or to fit a box, as new copies or overwriting. Runs in the background.
 - **Bulk Rename**: select several items and press F2 (or right-click → Bulk Rename…). Insert /
   overwrite text, date / time, numbering, remove characters, search & replace, upper / lower /
   title / sentence case — on the name, the extension or both, with a live preview that flags

@@ -16,6 +16,8 @@ pub enum OpKind {
     EmptyTrash,
     Compress,
     Extract,
+    Convert,
+    Resize,
 }
 
 impl OpKind {
@@ -29,6 +31,8 @@ impl OpKind {
             OpKind::EmptyTrash => "Emptying Trash",
             OpKind::Compress => "Compressing",
             OpKind::Extract => "Extracting",
+            OpKind::Convert => "Converting",
+            OpKind::Resize => "Resizing",
         }
     }
 }
@@ -132,7 +136,7 @@ pub fn spawn_op_role(kind: OpKind, sources: Vec<PathBuf>, dest: Option<PathBuf>,
                 OpKind::Delete => remove_recursive(&src).map(|_| None),
                 OpKind::Restore => restore_from_trash(&src).map(Some),
                 // These run through archive::spawn_compress / spawn_extract.
-                OpKind::EmptyTrash | OpKind::Compress | OpKind::Extract => Ok(None),
+                OpKind::EmptyTrash | OpKind::Compress | OpKind::Extract | OpKind::Convert | OpKind::Resize => Ok(None),
             };
             match res {
                 Ok(Some(c)) => {

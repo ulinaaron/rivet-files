@@ -14,6 +14,7 @@ mod highlight;
 mod icons;
 mod launch;
 mod desktop;
+mod media;
 mod mime;
 mod network;
 mod model;

@@ -582,6 +582,19 @@ impl RivetApp {
         if !archives.is_empty() && archives.len() == sel.len() && ui.button("Extract Here").clicked() {
             self.pending.push(Action::ExtractHere(archives));
         }
+        // Media tools (ffmpeg): only when every selected file is a picture, video or audio.
+        if self.media_tools_on() {
+            let mimes: Vec<String> = sel.iter().filter_map(|p| self.tab().entries.iter().find(|x| x.path == *p).map(|x| x.mime.clone())).collect();
+            let refs: Vec<&str> = mimes.iter().map(|m| m.as_str()).collect();
+            if let Some(kind) = crate::media::common_kind(&refs) {
+                if ui.button("Convert To…").clicked() {
+                    self.pending.push(Action::Convert(sel.clone()));
+                }
+                if kind == crate::preview::Kind::Image && ui.button("Resize…").clicked() {
+                    self.pending.push(Action::Resize(sel.clone()));
+                }
+            }
+        }
         if ui.button("Compress…").clicked() {
             self.pending.push(Action::Compress(sel.clone()));
         }

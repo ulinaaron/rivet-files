@@ -45,7 +45,8 @@ Rivet is powerful all the while being minimal. Make it your own — bloat the in
 - 🧰 **Make it yours** — custom toolbar at the top or bottom, status bar top, bottom or off, fonts, text size, hideable menu bar
 - 🪟 **Title bar your way** — your desktop's, or Rivet's own with window buttons
 - ⚡ **Fast** — 100,000 files open in under 0.4 s, and an idle Rivet uses no CPU
-- 🦀 **Light** — one 14 MB program (a 6 MB AppImage download), no toolkit to install
+- 🔄 **Convert and resize** — pictures, videos and audio to another format, one file or many; resize pictures (a module that uses ffmpeg, see Preferences → Modules)
+- 🦀 **Light** — one 14 MB program (a 6 MB AppImage download); extras like video previews and conversion use ffmpeg when it's installed
 
 ## 🎨 Follows your colors
 

@@ -20,6 +20,7 @@ use crate::thumbs::{self, Thumbnailer};
 mod chrome;
 mod bulkrename;
 mod dialogs;
+mod mediatools;
 mod netview;
 mod peek;
 mod quickview;
@@ -65,6 +66,10 @@ enum Action {
     QuickView(PathBuf),
     /// Rename several items at once.
     BulkRename(Vec<PathBuf>),
+    /// Convert pictures / videos / audio to another format (ffmpeg).
+    Convert(Vec<PathBuf>),
+    /// Resize pictures (ffmpeg).
+    Resize(Vec<PathBuf>),
     /// Ask for a name and format, then make an archive of these items.
     Compress(Vec<PathBuf>),
     /// Unpack these archives next to themselves.
@@ -79,12 +84,13 @@ pub(crate) enum PrefsTab {
     Views,
     Behavior,
     Menu,
+    Modules,
     System,
     About,
 }
 
 impl PrefsTab {
-    pub const ALL: [PrefsTab; 6] = [PrefsTab::Appearance, PrefsTab::Views, PrefsTab::Behavior, PrefsTab::Menu, PrefsTab::System, PrefsTab::About];
+    pub const ALL: [PrefsTab; 7] = [PrefsTab::Appearance, PrefsTab::Views, PrefsTab::Behavior, PrefsTab::Menu, PrefsTab::Modules, PrefsTab::System, PrefsTab::About];
 
     pub fn label(self) -> &'static str {
         match self {
@@ -92,6 +98,7 @@ impl PrefsTab {
             PrefsTab::Views => "Views",
             PrefsTab::Behavior => "Behavior",
             PrefsTab::Menu => "Menu",
+            PrefsTab::Modules => "Modules",
             PrefsTab::System => "System",
             PrefsTab::About => "About",
         }
@@ -110,6 +117,7 @@ impl PrefsTab {
             PrefsTab::Views => &["view-grid-symbolic", "view-app-grid-symbolic", "view-list-symbolic"],
             PrefsTab::Behavior => &["input-mouse-symbolic", "preferences-desktop-peripherals-symbolic", "preferences-system-symbolic"],
             PrefsTab::Menu => &["open-menu-symbolic", "view-more-symbolic", "application-menu-symbolic"],
+            PrefsTab::Modules => &["application-x-addon-symbolic", "extension-symbolic", "applications-other-symbolic"],
             PrefsTab::System => &["computer-symbolic", "preferences-system-symbolic", "drive-harddisk-symbolic"],
             PrefsTab::About => &["help-about-symbolic", "dialog-information-symbolic"],
         }
@@ -132,6 +140,8 @@ enum Dialog {
     Shortcuts,
     Compress { paths: Vec<PathBuf>, name: String, format: crate::archive::Format, focus: bool },
     BulkRename(Box<bulkrename::BulkState>),
+    Convert(Box<mediatools::ConvertState>),
+    Resize(Box<mediatools::ResizeState>),
 }
 
 /// What the delete confirmation shows.
@@ -504,6 +514,14 @@ impl RivetApp {
                 if let Some(p) = app.tab().selected_paths().first().cloned() {
                     app.pending.push(Action::QuickView(p));
                 }
+            }
+            Ok("convert") => {
+                let sel = app.tab().selected_paths();
+                app.pending.push(Action::Convert(sel));
+            }
+            Ok("resize") => {
+                let sel = app.tab().selected_paths();
+                app.pending.push(Action::Resize(sel));
             }
             Ok("bulkrename") => {
                 let sel = app.tab().selected_paths();
@@ -1056,6 +1074,22 @@ impl RivetApp {
                         if cut {
                             self.clipboard = None;
                         }
+                    }
+                }
+                Action::Convert(paths) => {
+                    let mimes: Vec<String> = paths.iter().filter_map(|p| Entry::from_path(p.clone(), &self.mime)).map(|e| e.mime).collect();
+                    let refs: Vec<&str> = mimes.iter().map(|m| m.as_str()).collect();
+                    if let Some(kind) = crate::media::common_kind(&refs) {
+                        // Default to the first format the files aren't already in.
+                        let current = paths.first().and_then(|p| p.extension()).map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default();
+                        let ext = crate::media::formats(kind).iter().map(|(e, _)| *e).find(|e| *e != current && !(current == "jpeg" && *e == "jpg")).unwrap_or("png");
+                        self.dialog = Dialog::Convert(Box::new(mediatools::ConvertState { files: paths, kind, ext: ext.to_string(), quality: 90, keep: crate::media::Keep::Originals }));
+                    }
+                }
+                Action::Resize(paths) => {
+                    let files: Vec<(PathBuf, u32, u32)> = paths.into_iter().filter_map(|p| image::image_dimensions(&p).ok().map(|(w, h)| (p, w, h))).collect();
+                    if !files.is_empty() {
+                        self.dialog = Dialog::Resize(Box::new(mediatools::ResizeState { files, by_percent: true, percent: 50, width: 1920, height: 1080, keep: crate::media::Keep::Originals }));
                     }
                 }
                 Action::BulkRename(paths) => {

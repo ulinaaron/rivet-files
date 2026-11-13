@@ -299,6 +299,12 @@ impl RivetApp {
             Dialog::BulkRename(_) => {
                 close = self.bulk_rename_dialog(ctx);
             }
+            Dialog::Convert(_) => {
+                close = self.convert_dialog(ctx);
+            }
+            Dialog::Resize(_) => {
+                close = self.resize_dialog(ctx);
+            }
             Dialog::ConfirmEmptyTrash => {
                 let r = egui::Modal::new(Id::unique("emptytrash")).show(ctx, |ui| {
                     ui.set_width(380.0);
@@ -1479,6 +1485,32 @@ impl RivetApp {
                             changed = true;
                         }
                     });
+                        });
+                    }
+                    PrefsTab::Modules => {
+                        section(ui, "Convert & Resize", &mut |ui| {
+                            let version = crate::media::ffmpeg_version();
+                            egui::Grid::new("prefs-modules").num_columns(2).spacing([24.0, 14.0]).min_col_width(120.0).show(ui, |ui| {
+                                ui.label("Needs ffmpeg");
+                                match version {
+                                    Some(ver) => {
+                                        ui.horizontal(|ui| check_label(ui, &format!("Installed ({ver})")));
+                                    }
+                                    None => {
+                                        ui.label(egui::RichText::new("Not installed").color(super::status(ui.ctx()).warning));
+                                    }
+                                }
+                                ui.end_row();
+                                ui.label("Right-click menu");
+                                ui.add_enabled_ui(version.is_some(), |ui| {
+                                    changed |= ui.checkbox(&mut self.s.media_tools, "Convert To… and Resize…").changed();
+                                });
+                                ui.end_row();
+                            });
+                            if version.is_none() {
+                                ui.add_space(4.0);
+                                hint(ui, "Install the ffmpeg package from your distribution to turn this on.");
+                            }
                         });
                     }
                     PrefsTab::System => {
