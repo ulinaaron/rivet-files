@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Theme-tinted action colors**: info, danger, warning and success are 70% their usual hue and
+  30% your theme accent. Delete Permanently, the close-button hover and errors use danger; Rename uses success.
+- Roomier Rename window.
 - **Light mode contrast**: file icons and thumbnails get a soft shadow and faint edge on light
   backgrounds, Rivet's own page icons are tinted and outlined, and secondary text, panels and
   controls are a little stronger.

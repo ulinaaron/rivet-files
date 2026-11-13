@@ -199,7 +199,7 @@ impl RivetApp {
             if let Some(e) = &self.net.error {
                 ui.horizontal(|ui| {
                     ui.add_space(12.0);
-                    ui.label(egui::RichText::new(e).color(Color32::from_rgb(0xe5, 0x5a, 0x5a)));
+                    ui.label(egui::RichText::new(e).color(super::status(ui.ctx()).danger));
                 });
             }
             ui.add_space(8.0);
@@ -371,7 +371,7 @@ impl RivetApp {
             }
             field(ui, "Password", &mut ask.login.password, true, named, focus_pw);
             if let Some(e) = &ask.error {
-                ui.label(egui::RichText::new(e).color(Color32::from_rgb(0xe5, 0x5a, 0x5a)));
+                ui.label(egui::RichText::new(e).color(super::status(ui.ctx()).danger));
                 ui.add_space(4.0);
             }
             ui.add_space(8.0);

@@ -161,10 +161,10 @@ impl RivetApp {
             let hovered = resp.hovered();
             let fg = ui.visuals().text_color();
             if hovered {
-                let c = if kind == 2 { Color32::from_rgb(0xd9, 0x3f, 0x3f) } else { ui.visuals().widgets.hovered.bg_fill };
+                let c = if kind == 2 { super::status(ctx).danger } else { ui.visuals().widgets.hovered.bg_fill };
                 ui.painter().circle_filled(rect.center(), 11.0, c);
             }
-            let tint = if hovered && kind == 2 { Color32::WHITE } else { fg };
+            let tint = if hovered && kind == 2 { super::StatusColors::on(super::status(ctx).danger) } else { fg };
             if let Some(t) = self.icon(ctx, names, 16.0) {
                 paint_tex(ui.painter(), &t, Rect::from_center_size(rect.center(), Vec2::splat(16.0)), tint);
             } else {
@@ -1157,7 +1157,7 @@ impl RivetApp {
             ui.painter().rect_filled(bar, 1.5, if active { Color32::from_white_alpha(80) } else { v.widgets.inactive.bg_fill });
             let mut filled = bar;
             filled.set_right(bar.left() + bar.width() * u.clamp(0.0, 1.0));
-            let c = if u > 0.9 { Color32::from_rgb(0xd9, 0x3f, 0x3f) } else if active { v.selection.stroke.color } else { accent };
+            let c = if u > 0.9 { super::status(ui.ctx()).danger } else if active { v.selection.stroke.color } else { accent };
             ui.painter().rect_filled(filled, 1.5, c);
         }
         let mut eject_clicked = false;

@@ -49,7 +49,7 @@ fn arrow_button(ui: &mut egui::Ui, up: bool, enabled: bool) -> egui::Response {
 fn trash_button(ui: &mut egui::Ui) -> egui::Response {
     let resp = ui.add(egui::Button::new("").frame_when_inactive(false).min_size(Vec2::new(24.0, 22.0)));
     let c = resp.rect.center();
-    let col = if resp.hovered() { Color32::from_rgb(0xe5, 0x5a, 0x5a) } else { ui.visuals().text_color() };
+    let col = if resp.hovered() { super::status(ui.ctx()).danger } else { ui.visuals().text_color() };
     let s = Stroke::new(1.5, col);
     let p = ui.painter();
     // lid and handle
@@ -68,7 +68,14 @@ fn trash_button(ui: &mut egui::Ui) -> egui::Response {
 }
 
 fn danger_button(ui: &mut egui::Ui, label: &str) -> bool {
-    ui.add(egui::Button::new(egui::RichText::new(label).color(Color32::WHITE)).fill(Color32::from_rgb(0xc0, 0x1c, 0x28))).clicked()
+    let d = super::status(ui.ctx()).danger;
+    ui.add(egui::Button::new(egui::RichText::new(label).color(super::StatusColors::on(d))).fill(d)).clicked()
+}
+
+/// A filled button in the theme-tinted success color (e.g. Rename).
+fn success_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
+    let c = super::status(ui.ctx()).success;
+    ui.add(egui::Button::new(egui::RichText::new(label).color(super::StatusColors::on(c))).fill(c))
 }
 
 impl RivetApp {
@@ -177,19 +184,34 @@ impl RivetApp {
         match &mut self.dialog {
             Dialog::None => {}
             Dialog::Rename { path, text, focus } => {
-                let r = egui::Modal::new(Id::unique("rename")).show(ctx, |ui| {
-                    ui.set_width(340.0);
+                let frame = egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(22)).corner_radius(super::R_LG);
+                let r = egui::Modal::new(Id::unique("rename")).frame(frame).show(ctx, |ui| {
+                    ui.set_width(380.0);
                     ui.heading("Rename");
-                    ui.add_space(6.0);
-                    let resp = ui.add(egui::TextEdit::singleline(text).desired_width(f32::INFINITY));
+                    ui.add_space(12.0);
+                    let v = ui.visuals().clone();
+                    let field_bg = crate::palette::mix(v.window_fill, v.text_color(), 0.06);
+                    let resp = egui::Frame::NONE
+                        .fill(field_bg)
+                        .corner_radius(super::R_MD)
+                        .inner_margin(egui::Margin::symmetric(10, 7))
+                        .show(ui, |ui| ui.add(egui::TextEdit::singleline(text).frame(egui::Frame::NONE).desired_width(f32::INFINITY)))
+                        .inner;
                     if *focus {
                         resp.request_focus();
                         select_stem(ctx, resp.id, text, path.is_dir());
                         *focus = false;
                     }
                     let enter = resp.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter));
-                    ui.add_space(8.0);
-                    ui.horizontal(|ui| (ui.button("Rename").clicked() || enter, ui.button("Cancel").clicked())).inner
+                    ui.add_space(18.0);
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.spacing_mut().item_spacing.x = 8.0;
+                        ui.spacing_mut().button_padding = Vec2::new(14.0, 5.0);
+                        let ok = success_button(ui, "Rename").clicked() || enter;
+                        let cancel = ui.button("Cancel").clicked();
+                        (ok, cancel)
+                    })
+                    .inner
                 });
                 let (ok, cancel) = r.inner;
                 if ok {
@@ -466,7 +488,8 @@ impl RivetApp {
                 });
             }
             ui.add_space(10.0);
-            let warn = Color32::from_rgb(0xe5, 0x5a, 0x5a);
+            let danger = super::status(ctx).danger;
+            let warn = danger;
             if allow_trash {
                 ui.label(egui::RichText::new("Move to Trash keeps them recoverable. Deleting permanently can’t be undone.").color(v.weak_text_color()));
             } else {
@@ -477,8 +500,8 @@ impl RivetApp {
                 ui.spacing_mut().item_spacing.x = 8.0;
                 ui.spacing_mut().button_padding = Vec2::new(12.0, 5.0);
                 // Rightmost = the default (Enter).
-                let red = egui::Button::new(egui::RichText::new("Delete Permanently").color(if permanent_default { Color32::WHITE } else { warn }));
-                let red = if permanent_default { red.fill(Color32::from_rgb(0xc0, 0x1c, 0x28)) } else { red.stroke(Stroke::new(1.0, warn.gamma_multiply(0.6))) };
+                let red = egui::Button::new(egui::RichText::new("Delete Permanently").color(if permanent_default { super::StatusColors::on(danger) } else { danger }));
+                let red = if permanent_default { red.fill(danger) } else { red.stroke(Stroke::new(1.0, danger.gamma_multiply(0.6))) };
                 let trash = egui::Button::new(egui::RichText::new("Move to Trash").color(if permanent_default { v.text_color() } else { v.selection.stroke.color }));
                 let trash = if permanent_default { trash } else { trash.fill(v.selection.bg_fill) };
                 let mut clicked_cancel = false;

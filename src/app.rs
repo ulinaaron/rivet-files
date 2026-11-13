@@ -250,6 +250,39 @@ const ACCENTS: [([u8; 3], &str); 7] = [
     ([0x77, 0x76, 0x7b], "Grey"),
 ];
 
+/// Info / danger / warning / success: a fixed base hue (70%) tinted by the theme accent (30%),
+/// so action colors belong to the current palette.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct StatusColors {
+    pub info: Color32,
+    pub danger: Color32,
+    pub warning: Color32,
+    pub success: Color32,
+}
+
+impl StatusColors {
+    pub fn from_theme(theme: Color32) -> Self {
+        let m = |b: Color32| mix(b, theme, 0.3);
+        StatusColors {
+            info: m(Color32::from_rgb(0x35, 0x84, 0xe4)),
+            danger: m(Color32::from_rgb(0xe0, 0x1b, 0x24)),
+            warning: m(Color32::from_rgb(0xe5, 0xa5, 0x0a)),
+            success: m(Color32::from_rgb(0x26, 0xa2, 0x69)),
+        }
+    }
+
+    /// Readable text on a filled button of this color.
+    pub fn on(c: Color32) -> Color32 {
+        if palette::luminance(c) > 0.62 { Color32::from_gray(20) } else { Color32::WHITE }
+    }
+}
+
+/// The current status colors (set whenever the visuals change).
+pub(crate) fn status(ctx: &egui::Context) -> StatusColors {
+    ctx.data(|d| d.get_temp::<StatusColors>(egui::Id::new("rivet-status-colors")))
+        .unwrap_or_else(|| StatusColors::from_theme(Color32::from_rgb(0x35, 0x84, 0xe4)))
+}
+
 fn accent_color(s: &Settings) -> Color32 {
     let a = s.live_accent.unwrap_or(s.accent);
     Color32::from_rgb(a[0], a[1], a[2])
@@ -434,6 +467,11 @@ impl RivetApp {
                 let sel = app.tab().selected_paths();
                 app.pending.push(Action::OpenWithDialog(sel));
             }
+            Ok("rename") => {
+                if let Some(p) = app.tab().selected_paths().first().cloned() {
+                    app.pending.push(Action::Rename(p));
+                }
+            }
             Ok("delete") | Ok("delete-permanently") => {
                 let sel = app.tab().selected_paths();
                 let perm = std::env::var("RIVET_DIALOG").as_deref() == Ok("delete-permanently");
@@ -566,6 +604,8 @@ impl RivetApp {
             (None, ThemeChoice::Dark) => egui::ThemePreference::Dark,
         });
         let accent = accent_color(&self.s);
+        let status = StatusColors::from_theme(accent);
+        ctx.data_mut(|d| d.insert_temp(egui::Id::new("rivet-status-colors"), status));
         for theme in [egui::Theme::Light, egui::Theme::Dark] {
             let dark = theme == egui::Theme::Dark;
             // Start from a clean style each time so colours from an old palette never linger.
@@ -577,6 +617,8 @@ impl RivetApp {
                 v.selection.bg_fill = accent;
                 v.selection.stroke = Stroke::new(1.0, Color32::WHITE);
                 v.hyperlink_color = accent;
+                v.error_fg_color = status.danger;
+                v.warn_fg_color = status.warning;
                 if dark {
                     // Elevation by surface: content (lowest) < chrome < pop-ups.
                     v.extreme_bg_color = Color32::from_rgb(0x24, 0x24, 0x24);
@@ -1810,6 +1852,17 @@ impl eframe::App for RivetApp {
         let Ok(list) = std::env::var("RIVET_CLICKS") else { return };
         for item in list.split(';') {
             let Some((xy, f)) = item.split_once('@') else { continue };
+            // "hX,Y@N" only moves the pointer there (hover) from frame N on.
+            if let Some(rest) = xy.trim().strip_prefix('h') {
+                if let (Some((x, y)), Ok(f)) = (rest.split_once(','), f.trim().parse::<u32>()) {
+                    if let (Ok(x), Ok(y)) = (x.parse::<f32>(), y.parse::<f32>()) {
+                        if self.frames + 1 >= f {
+                            raw.events.push(egui::Event::PointerMoved(Pos2::new(x, y)));
+                        }
+                    }
+                }
+                continue;
+            }
             // "copy@N" sends Ctrl+C at frame N.
             if xy.trim() == "copy" {
                 if let Ok(f) = f.trim().parse::<u32>() {

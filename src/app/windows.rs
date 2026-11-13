@@ -90,10 +90,10 @@ pub(super) fn show<R>(ctx: &egui::Context, st: &mut WinState, chrome: &Chrome, a
             let resp = ui.interact(r, ui.id().with(("winbtn", *kind)), Sense::click());
             let hover = resp.hovered();
             if hover {
-                let c = if *kind == 2 { Color32::from_rgb(0xd9, 0x3f, 0x3f) } else { v.widgets.hovered.bg_fill };
+                let c = if *kind == 2 { super::status(ui.ctx()).danger } else { v.widgets.hovered.bg_fill };
                 ui.painter().circle_filled(r.center(), 11.0, c);
             }
-            let tint = if hover && *kind == 2 { Color32::WHITE } else { fg };
+            let tint = if hover && *kind == 2 { super::StatusColors::on(super::status(ui.ctx()).danger) } else { fg };
             match tex {
                 Some(t) => paint_tex(ui.painter(), t, Rect::from_center_size(r.center(), Vec2::splat(14.0)), tint),
                 None => {
