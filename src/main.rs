@@ -1,9 +1,10 @@
 //! Rivet Files — a classic Linux file manager (in the family of Nemo, Thunar and Caja),
 //! written in Rust with egui and no GTK or Qt.
 //!
-//! Usage: rivet [FOLDER] [--no-decorations | --decorations] [--screenshot FILE.png] [--measure SECS]
+//! Usage: `rivet --help`.
 
 mod app;
+mod cli;
 mod bench;
 mod builtin_icons;
 mod fonts;
@@ -87,7 +88,7 @@ fn main() -> eframe::Result {
                 return Ok(());
             }
             "-h" | "--help" => {
-                println!("Usage: rivet [FOLDER] [--no-decorations | --decorations] [--view icons|list|compact] [--tree] [--hide-menubar] [--home] [--install-desktop-entry] [--screenshot FILE.png] [--measure SECS]");
+                print!("{}", cli::usage());
                 return Ok(());
             }
             _ if a.starts_with("--screenshot=") => screenshot = Some(PathBuf::from(&a["--screenshot=".len()..])),
@@ -178,6 +179,13 @@ fn main() -> eframe::Result {
     }
 
     let options = eframe::NativeOptions { viewport, persist_window: false, ..Default::default() };
+
+    // winit panics from inside xkbcommon-dl when libxkbcommon-x11 is missing.
+    // Tell the person which package to install instead.
+    if let Err(msg) = cli::ensure_gui_libraries() {
+        eprintln!("{msg}");
+        std::process::exit(1);
+    }
 
     eframe::run_native(
         "Rivet",

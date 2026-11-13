@@ -530,10 +530,10 @@ impl RivetApp {
         egui::Panel::top("toolbar").show_separator_line(false)
             .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin::symmetric(12, 9)))
             .show(ui, |ui| {
-                // Right-click on empty toolbar space to customise it.
+                // Right-click on empty toolbar space to customize it.
                 let bg = ui.interact(ui.max_rect(), Id::unique("toolbar-bg"), Sense::click());
                 bg.context_menu(|ui| {
-                    if ui.button("Customise Toolbar…").clicked() {
+                    if ui.button("Customize Toolbar…").clicked() {
                         self.open_prefs();
                     }
                     if ui.button("Reset Toolbar").clicked() {

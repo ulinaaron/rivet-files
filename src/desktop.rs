@@ -40,7 +40,7 @@ pub fn entry_text(exe: &Path) -> String {
 Type=Application
 Name=Rivet Files
 GenericName=File Manager
-Comment=Browse and organise your files
+Comment=Browse and organize your files
 Exec={e} %U
 Icon=rivet-files
 Terminal=false
@@ -254,7 +254,7 @@ pub fn link_command_here(spot: LinkSpot) -> Result<String, String> {
                 Ok(format!("The rivet command now opens this build for everyone ({}).", dest.display()))
             } else {
                 Err(format!(
-                    "The password prompt was cancelled or isn't available. You can run this in a terminal instead (it's on your clipboard):\n\n{}",
+                    "The password prompt was canceled or isn't available. You can run this in a terminal instead (it's on your clipboard):\n\n{}",
                     link_command(spot)
                 ))
             }
@@ -270,7 +270,7 @@ pub fn unlink_command(spot: LinkSpot) -> Result<(), String> {
             LinkSpot::User => std::fs::remove_file(spot.path()).map_err(|e| e.to_string()),
             LinkSpot::System => {
                 let ok = Command::new("pkexec").arg("rm").arg(spot.path()).status().map(|s| s.success()).unwrap_or(false);
-                if ok { Ok(()) } else { Err("The password prompt was cancelled or isn't available.".into()) }
+                if ok { Ok(()) } else { Err("The password prompt was canceled or isn't available.".into()) }
             }
         },
     }
@@ -311,6 +311,8 @@ mod tests {
     fn exec_line_quotes_spaces() {
         let t = super::entry_text(std::path::Path::new("/home/me/My Apps/rivet"));
         assert!(t.contains("Exec=\"/home/me/My Apps/rivet\" %U"));
+        assert!(t.contains("Comment=Browse and organize your files"));
+        assert!(!t.contains("organise"));
         let app = crate::launch::DesktopApp {
             id: "x".into(),
             name: "x".into(),

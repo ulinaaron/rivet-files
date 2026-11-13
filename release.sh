@@ -33,12 +33,19 @@ for T in "$LOCAL_TAG" "$REMOTE_TAG"; do
     fi
 done
 
-cargo build --release
+./scripts/portable-build.sh
+RIVET_BIN=$(./scripts/portable-bin.sh)
 mkdir -p dist
 STAGE="dist/$NAME"
 rm -rf "$STAGE"
 mkdir -p "$STAGE"
-strip -o "$STAGE/rivet" target/release/rivet
+strip -o "$STAGE/rivet" "$RIVET_BIN"
+# Check the stripped file that goes into the tarball, not only the unstripped build.
+ROOT=$(pwd)
+# shellcheck disable=SC1091
+. ./scripts/ensure-zigbuild.sh
+./scripts/check-glibc.sh --max "$GLIBC_MAX_VERSION" "$STAGE/rivet"
+BIN_GLIBC=$(objdump -T "$STAGE/rivet" | sed -n 's/.*GLIBC_\([0-9][0-9.]*\).*/\1/p' | sort -Vu | tail -n 1)
 cp data/rivet-files.desktop data/rivet-files.svg install.sh README.md CHANGELOG.md LICENSE-MIT LICENSE-APACHE "$STAGE/"
 cp -r data/icons "$STAGE/icons"
 tar -C dist -czf "dist/$NAME.tar.gz" "$NAME"
@@ -70,7 +77,8 @@ cd $NAME
 ./install.sh          # adds Rivet to your app launcher (add --default to make it the default file manager)
 \`\`\`
 
-Built on $(. /etc/os-release && echo "$NAME" "$VERSION_ID") for $ARCH; needs glibc $(objdump -T target/release/rivet | grep -o 'GLIBC_[0-9.]*' | sort -Vu | tail -1 | cut -d_ -f2) or newer.
+Portable $ARCH build, linked against glibc $GLIBC_LINK_VERSION rather than the build machine's libc.
+The program's highest GLIBC symbol is $BIN_GLIBC. Counting the keyboard libraries bundled in the AppImage, the artifacts need glibc $(cat dist/glibc-highest) or newer, which Ubuntu 22.04 and Debian 12 both have.
 Older systems can build from source: \`cargo build --release\`.
 EOF
 

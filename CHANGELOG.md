@@ -11,12 +11,12 @@
 - Title bar setting: only in Preferences, clearer wording
 - Toolbar settings: up / down chevron buttons instead of text
 - Sidebar icon size: Off, Small, Medium, Large
-- Highlighted rows show the icon as a solid recoloured silhouette
+- Highlighted rows show the icon as a solid recolored silhouette
 - Active view / sidebar-mode buttons use the selected-file look; status bar padding
 - Grid view: one tile style for hover and selection; names stay visible
 - Faster big folders, zero idle CPU, 100k-file benchmark, mouse back/forward
 - README: cleaner layout with concise emoji feature list
-- Pop-up windows: close button only (no roll-up / maximise)
+- Pop-up windows: close button only (no roll-up / maximize)
 - Describe Rivet as a classic Linux file manager like Nemo, Thunar and Caja
 - CI workflow and README badges
 - README: logo above the title, not floated right
@@ -50,13 +50,13 @@ with egui. No GTK or Qt.
 - Open with the default app, Open With…, Open in Terminal, Properties with permissions
 
 ### Looks
-- Uses your system icon theme, or Rivet's own SVG icons recoloured from your palette
+- Uses your system icon theme, or Rivet's own SVG icons recolored from your palette
   (primary / secondary / tertiary)
-- Follows matugen, Noctalia and GTK colours live — no restart
+- Follows matugen, Noctalia and GTK colors live — no restart
 - Surface elevations instead of borders, roomy toolbar and sidebar
 - UI font and text size options
 - Optional window decorations (system title bar or a built-in one)
-- Customisable toolbar; hideable menu bar (Ctrl+M, Alt to peek, hamburger button)
+- Customizable toolbar; hideable menu bar (Ctrl+M, Alt to peek, hamburger button)
 - Preferences and Properties as movable, resizable windows inside the app
 
 ### System
