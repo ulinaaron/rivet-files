@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
 ### New
 - **Toolbar and status bar positions** (Preferences → Appearance → Window): the toolbar at the top
