@@ -19,6 +19,7 @@ use crate::thumbs::{self, Thumbnailer};
 
 mod chrome;
 mod dialogs;
+mod netview;
 mod views;
 mod windows;
 
@@ -109,6 +110,10 @@ pub struct RivetApp {
     tabs: Vec<Tab>,
     active: usize,
     clipboard: Option<(Vec<PathBuf>, bool)>,
+    /// The Network page (servers, shares, connecting).
+    net: netview::NetState,
+    net_scan_rx: Option<std::sync::mpsc::Receiver<netview::NetResult>>,
+    connect_ask: Option<netview::ConnectAsk>,
     /// Undo / redo for file actions.
     history: crate::undo::History,
     ops: Vec<Arc<Progress>>,
@@ -261,6 +266,7 @@ impl RivetApp {
         let theme_name = if settings.icon_theme.is_empty() { system_icon_theme.clone() } else { settings.icon_theme.clone() };
         let mime = MimeDb::load();
         let start_loc = match start {
+            Some(p) if p.to_string_lossy().starts_with("network:") => Location::Network,
             Some(p) if p.is_dir() => Location::Dir(std::fs::canonicalize(&p).unwrap_or(p)),
             Some(p) if p.is_file() => Location::Dir(p.parent().map(|x| x.to_path_buf()).unwrap_or_else(places::home)),
             _ => Location::Dir(places::home()),
@@ -278,6 +284,9 @@ impl RivetApp {
             tabs: vec![tab],
             active: 0,
             clipboard: None,
+            net: Default::default(),
+            net_scan_rx: None,
+            connect_ask: None,
             history: Default::default(),
             ops: Vec::new(),
             dialog: Dialog::None,
@@ -350,6 +359,7 @@ impl RivetApp {
         match std::env::var("RIVET_DIALOG").as_deref() {
             Ok("about") => app.dialog = Dialog::About,
             Ok("shortcuts") => app.dialog = Dialog::Shortcuts,
+            Ok("connect") => app.open_connect_dialog(),
             Ok("openwith") => {
                 let sel = app.tab().selected_paths();
                 app.pending.push(Action::OpenWithDialog(sel));
@@ -1209,7 +1219,7 @@ impl RivetApp {
         }
         let typing = ctx.egui_wants_keyboard_input();
         // Dialogs block shortcuts; in-app windows only while you're working in one.
-        let modal = !matches!(self.dialog, Dialog::None) || self.window_focus;
+        let modal = !matches!(self.dialog, Dialog::None) || self.window_focus || self.connect_ask.is_some();
         let (events, m) = ctx.input(|i| (i.events.clone(), i.modifiers));
         let pressed = |k: Key| events.iter().any(|e| matches!(e, egui::Event::Key { key, pressed: true, .. } if *key == k));
         let cmd = m.command;
@@ -1605,6 +1615,8 @@ impl eframe::App for RivetApp {
             self.prefs_window(&ctx);
         }
         self.properties_windows(&ctx);
+        self.net_poll();
+        self.connect_dialog(&ctx);
         // The last click decides whether the keyboard belongs to a window or the file view.
         if let Some(p) = ctx.input(|i| if i.pointer.any_pressed() { i.pointer.interact_pos() } else { None }) {
             self.window_focus = self.window_rects.iter().any(|r| r.contains(p));

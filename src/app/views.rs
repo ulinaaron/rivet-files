@@ -40,6 +40,10 @@ impl RivetApp {
                     });
                 });
             }
+            if matches!(loc, Location::Network) {
+                self.network_page(ui, ctx);
+                return;
+            }
             if let Some(err) = self.tab().error.clone() {
                 ui.centered_and_justified(|ui| {
                     ui.label(egui::RichText::new(err).size(15.0).color(ui.visuals().weak_text_color()));

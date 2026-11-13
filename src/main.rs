@@ -13,6 +13,7 @@ mod icons;
 mod launch;
 mod desktop;
 mod mime;
+mod network;
 mod niri;
 mod model;
 mod palette;

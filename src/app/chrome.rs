@@ -327,6 +327,9 @@ impl RivetApp {
             if ui.button("Network").clicked() {
                 self.pending.push(Action::Navigate(Location::Network));
             }
+            if ui.button("Connect to Server…").clicked() {
+                self.open_connect_dialog();
+            }
             ui.separator();
             if ui.add(egui::Button::new("Location…").shortcut_text("Ctrl+L")).clicked() {
                 self.path_editing = true;
@@ -609,6 +612,20 @@ impl RivetApp {
         }
         if resp.lost_focus() && enter {
             let txt = self.path_text.trim().to_string();
+            // Network addresses: network:/// shows the Network page, smb://, sftp://… connect.
+            if txt.starts_with("network:") {
+                self.pending.push(Action::Navigate(Location::Network));
+                self.path_editing = false;
+                return;
+            }
+            if txt.contains("://") && !txt.starts_with("file://") {
+                self.path_editing = false;
+                let host = crate::network::host_of(&txt);
+                let place = crate::network::NetPlace { name: if host.is_empty() { txt.clone() } else { host }, uri: txt };
+                self.navigate(Location::Network);
+                self.net_open(ui.ctx(), place, None);
+                return;
+            }
             let p = if let Some(rest) = txt.strip_prefix('~') {
                 places::home().join(rest.trim_start_matches('/'))
             } else if let Some(r) = txt.strip_prefix("file://") {
