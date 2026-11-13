@@ -19,6 +19,7 @@ mod network;
 mod model;
 mod palette;
 mod places;
+mod rename;
 mod preview;
 mod settings;
 mod thumbs;

@@ -262,7 +262,11 @@ impl RivetApp {
                 self.pending.push(Action::CopyLocation);
             }
             ui.separator();
-            if ui.add_enabled(sel.len() == 1 && !in_trash, egui::Button::new("Rename…").shortcut_text("F2")).clicked() {
+            if sel.len() > 1 {
+                if ui.add_enabled(!in_trash, egui::Button::new("Bulk Rename…").shortcut_text("F2")).clicked() {
+                    self.pending.push(Action::BulkRename(sel.clone()));
+                }
+            } else if ui.add_enabled(sel.len() == 1 && !in_trash, egui::Button::new("Rename…").shortcut_text("F2")).clicked() {
                 self.pending.push(Action::Rename(sel[0].clone()));
             }
             if in_trash {

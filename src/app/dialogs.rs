@@ -296,6 +296,9 @@ impl RivetApp {
             Dialog::Compress { .. } => {
                 close = self.compress_dialog(ctx);
             }
+            Dialog::BulkRename(_) => {
+                close = self.bulk_rename_dialog(ctx);
+            }
             Dialog::ConfirmEmptyTrash => {
                 let r = egui::Modal::new(Id::unique("emptytrash")).show(ctx, |ui| {
                     ui.set_width(380.0);

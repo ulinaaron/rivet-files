@@ -31,6 +31,7 @@ Rivet is powerful all the while being minimal. Make it your own — bloat the in
 - 🗂️ **Icon, list and compact views** with tabs and a clickable path bar
 - 🧭 **Sidebar** — places, bookmarks, drives with usage bars, network, or a folder tree, on the left or right
 - 📋 **Everything you expect** — copy, cut, paste, drag and drop, rename, Trash with restore
+- ✏️ **Bulk Rename** — insert, date / time, numbering, remove, search & replace and case changes, with a live preview
 - ↩️ **Undo and redo** — copies, moves, renames, Trash, new items, compress and extract
 - 🔍 **Instant filter** as you type, plus search through subfolders
 - 🖼️ **Picture thumbnails** and your system icon theme
@@ -127,7 +128,7 @@ Rivet talks to X11 or Wayland directly. It does not use GTK or Qt. A normal desk
 | `Ctrl+T` / `Ctrl+W` | New / close tab |
 | `Ctrl+H` | Show hidden files |
 | `Ctrl+1` `2` `3` | Icon / list / compact view |
-| `F2` · `Delete` | Rename · move to Trash |
+| `F2` · `Delete` | Rename (Bulk Rename with several selected) · move to Trash |
 | `Ctrl+M` | Show or hide the menu bar |
 | `F8` · `F9` · `F11` | Status bar · sidebar · Peek panel |
 | `Space` · `←` `→` · `Return` | Preview the selection · previous / next file · open it |
@@ -186,7 +187,6 @@ and `python3 docs/bench-100k.py`.
 - Freedesktop file picker integration
 - Tagging and pinning files
 - Zen mode
-- Bulk rename files
 
 ## 🛠️ For developers
 

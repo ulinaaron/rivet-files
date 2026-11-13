@@ -18,6 +18,7 @@ use crate::palette::{self, mix, Palette};
 use crate::thumbs::{self, Thumbnailer};
 
 mod chrome;
+mod bulkrename;
 mod dialogs;
 mod netview;
 mod peek;
@@ -62,6 +63,8 @@ enum Action {
     Run(PathBuf),
     /// Open the Preview light box on this file.
     QuickView(PathBuf),
+    /// Rename several items at once.
+    BulkRename(Vec<PathBuf>),
     /// Ask for a name and format, then make an archive of these items.
     Compress(Vec<PathBuf>),
     /// Unpack these archives next to themselves.
@@ -128,6 +131,7 @@ enum Dialog {
     Message(String, String),
     Shortcuts,
     Compress { paths: Vec<PathBuf>, name: String, format: crate::archive::Format, focus: bool },
+    BulkRename(Box<bulkrename::BulkState>),
 }
 
 /// What the delete confirmation shows.
@@ -500,6 +504,10 @@ impl RivetApp {
                 if let Some(p) = app.tab().selected_paths().first().cloned() {
                     app.pending.push(Action::QuickView(p));
                 }
+            }
+            Ok("bulkrename") => {
+                let sel = app.tab().selected_paths();
+                app.pending.push(Action::BulkRename(sel));
             }
             Ok("rename") => {
                 if let Some(p) = app.tab().selected_paths().first().cloned() {
@@ -1050,6 +1058,20 @@ impl RivetApp {
                         }
                     }
                 }
+                Action::BulkRename(paths) => {
+                    // In folder order, so numbering follows what you see.
+                    let t = self.tab();
+                    let items: Vec<(PathBuf, bool, Option<std::time::SystemTime>)> = t
+                        .visible
+                        .iter()
+                        .map(|&i| &t.entries[i])
+                        .filter(|e| paths.contains(&e.path))
+                        .map(|e| (e.path.clone(), e.is_dir, e.modified))
+                        .collect();
+                    if !items.is_empty() {
+                        self.dialog = Dialog::BulkRename(Box::new(bulkrename::BulkState::new(items)));
+                    }
+                }
                 Action::Rename(p) => {
                     let name = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
                     self.dialog = Dialog::Rename { path: p, text: name, focus: true };
@@ -1241,6 +1263,22 @@ impl RivetApp {
             Step::Moved(pairs) => self.ops.push(fsops::spawn_move_pairs(pairs.into_iter().map(|(from, to)| (to, from)).collect(), role)),
             Step::Trashed(pairs) => self.ops.push(fsops::spawn_op_role(OpKind::Restore, pairs.into_iter().map(|(_, t)| t).collect(), None, role)),
             Step::Restored(pairs) => self.ops.push(fsops::spawn_op_role(OpKind::Trash, pairs.into_iter().map(|(_, r)| r).collect(), None, role)),
+            Step::RenamedMany(pairs) => {
+                // Back to the old names, with the same two-pass safety as the rename itself.
+                let back: Vec<crate::rename::Planned> = pairs
+                    .iter()
+                    .map(|(old, new)| crate::rename::Planned { from: new.clone(), to: old.clone(), problem: None })
+                    .collect();
+                match crate::rename::apply(&back) {
+                    Ok(done) => {
+                        self.history.record_role(Step::RenamedMany(done.clone()), role);
+                        self.reload_all();
+                        let t = self.tab_mut();
+                        t.selected = done.iter().map(|(_, n)| n.clone()).collect();
+                    }
+                    Err(e) => self.message("Can't undo the rename", &e),
+                }
+            }
             Step::Renamed(old, new) => {
                 if old.symlink_metadata().is_ok() {
                     self.message("Can't undo the rename", &format!("“{}” already exists.", old.display()));
@@ -1644,6 +1682,8 @@ impl RivetApp {
         let sel = self.tab().selected_paths();
         if pressed(Key::F2) && sel.len() == 1 {
             self.pending.push(Action::Rename(sel[0].clone()));
+        } else if pressed(Key::F2) && sel.len() > 1 && !matches!(self.tab().loc, Location::Trash) {
+            self.pending.push(Action::BulkRename(sel.clone()));
         }
         if pressed(Key::Delete) {
             self.pending.push(if m.shift { Action::Delete } else { Action::AskDelete });

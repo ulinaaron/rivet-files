@@ -21,6 +21,8 @@ pub enum Step {
     Restored(Vec<(PathBuf, PathBuf)>),
     /// (old path, new path).
     Renamed(PathBuf, PathBuf),
+    /// A bulk rename: (old path, new path) for every item.
+    RenamedMany(Vec<(PathBuf, PathBuf)>),
     /// A new folder or document.
     Created(PathBuf),
 }
@@ -37,6 +39,7 @@ impl Step {
             Step::Moved(v) => format!("Move{}", count(v.len())),
             Step::Trashed(v) => format!("Move to Trash{}", count(v.len())),
             Step::Restored(v) => format!("Restore{}", count(v.len())),
+            Step::RenamedMany(v) => format!("Rename{}", count(v.len())),
             Step::Renamed(_, to) => format!("Rename to “{}”", to.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default()),
             Step::Created(p) => format!("Create “{}”", p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default()),
         }

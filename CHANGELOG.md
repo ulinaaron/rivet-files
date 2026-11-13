@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### New
+- **Bulk Rename**: select several items and press F2 (or right-click → Bulk Rename…). Insert /
+  overwrite text, date / time, numbering, remove characters, search & replace, upper / lower /
+  title / sentence case — on the name, the extension or both, with a live preview that flags
+  clashes before anything changes. One Ctrl+Z undoes the whole batch.
+
 ## 0.3.0
 
 ### New
