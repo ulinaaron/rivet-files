@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 — unreleased
+## 0.2.0
 
 ### New
 - **Peek panel** (F11, View menu, status bar): a big preview of the selection with all its details.
@@ -15,6 +15,8 @@
 
 ### Improved
 - Open With window redesigned; it always lists the current default app.
+- Roomier right-click menus.
+- Peek layout: small action buttons first, a full-width split *Open with …* button below (files only).
 - Tidier menus with consistent shortcut labels; roomier hamburger menu; wider menu bar hover.
 - Title bar setting reads *System* / *App*.
 - Check and screenshot windows stay out of the way on niri.
