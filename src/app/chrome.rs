@@ -530,10 +530,10 @@ impl RivetApp {
         egui::Panel::top("toolbar").show_separator_line(false)
             .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin::symmetric(12, 9)))
             .show(ui, |ui| {
-                // Right-click on empty toolbar space to customise it.
+                // Right-click on empty toolbar space to customize it.
                 let bg = ui.interact(ui.max_rect(), Id::unique("toolbar-bg"), Sense::click());
                 bg.context_menu(|ui| {
-                    if ui.button("Customise Toolbar…").clicked() {
+                    if ui.button("Customize Toolbar…").clicked() {
                         self.open_prefs();
                     }
                     if ui.button("Reset Toolbar").clicked() {
@@ -1086,6 +1086,14 @@ impl RivetApp {
         let root_usage = places::disk_space(Path::new("/")).map(|(t, f)| if t > 0 { 1.0 - f as f32 / t as f32 } else { 0.0 });
         let (resp, _) = self.place_row(ui, ctx, &["drive-harddisk-system", "drive-harddisk"], "File System", Some(Location::Dir("/".into())), root_usage, false);
         resp.context_menu(|ui| self.place_menu(ui, Path::new("/")));
+        // Flatpak's /usr and /etc are the runtime. The computer's copies are under /run/host.
+        if places::in_flatpak() {
+            let host = PathBuf::from("/run/host");
+            if host.is_dir() {
+                let (resp, _) = self.place_row(ui, ctx, &["drive-harddisk", "folder"], "Host system files", Some(Location::Dir(host.clone())), None, false);
+                let _ = resp.on_hover_text("The computer's /usr, /bin and /etc. Flatpak keeps its own copies of those at the top of File System.");
+            }
+        }
         let trash_icon: &[&str] = if self.trash_empty { &["user-trash"] } else { &["user-trash-full", "user-trash"] };
         let (resp, _) = self.place_row(ui, ctx, trash_icon, "Trash", Some(Location::Trash), None, false);
         resp.context_menu(|ui| {

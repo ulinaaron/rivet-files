@@ -5,6 +5,8 @@ on:
     branches: [main]
     tags: ["v*"]
   pull_request:
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -36,3 +38,122 @@ jobs:
 
       - name: Benchmark (folder timings, no window)
         run: ./target/release/rivet --bench "$GITHUB_WORKSPACE" /usr/share/icons
+
+  # Release artifacts are linked with Zig against glibc 2.31 and smoked on
+  # Ubuntu 22.04 (glibc 2.35). A binary that picked up GLIBC_2.43 from a newer
+  # host libm fails the symbol check and fails to start here.
+  portable-release:
+    name: Portable release (glibc)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Cache Zig and bundled library packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/rivet-build
+          key: rivet-zig-0.15.1-zigbuild-0.24.1-xkb-jammy
+
+      - name: Install packaging tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends binutils squashfs-tools curl ca-certificates xz-utils shared-mime-info
+
+      - name: Build the portable release binary
+        run: ./scripts/portable-build.sh
+
+      - name: Assert GLIBC symbol versions
+        run: ./scripts/check-glibc.sh --max 2.35 "$(./scripts/portable-bin.sh)"
+
+      - name: Build the AppImage (bundles keyboard libraries, checks their glibc)
+        run: ./appimage.sh
+
+      - name: Smoke-test on this glibc
+        run: |
+          bin=$(./scripts/portable-bin.sh)
+          "$bin" --version
+          "$bin" --help | grep -q -- '--measure'
+          "$bin" --help | grep -q -- '--bench'
+          "$bin" --bench "$GITHUB_WORKSPACE"
+          app=$(echo dist/Rivet_Files-*.AppImage)
+          # No FUSE on the runner: unpack the payload and run it.
+          APPIMAGE_EXTRACT_AND_RUN=1 "$app" --version
+          APPIMAGE_EXTRACT_AND_RUN=1 "$app" --help | grep -q -- '--export-icons'
+
+  # Builds the Flatpak from this checkout. On a published GitHub release, the
+  # bundle is attached next to the AppImage and the tarball.
+  flatpak:
+    name: Flatpak
+    if: github.event_name == 'pull_request' || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-48
+      options: --privileged
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || github.sha }}
+
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: rivet-files.flatpak
+          manifest-path: packaging/flatpak/io.github.ulinaaron.rivet-files.yml
+          cache-key: flatpak-26.08
+          # Download the metainfo screenshots into the repo and rewrite their
+          # URLs to dl.flathub.org/media, which is what the linter checks for.
+          mirror-screenshots-url: https://dl.flathub.org/media
+
+      - name: Lint the manifest and the build
+        run: |
+          set -eu
+          if ! command -v flatpak-builder-lint >/dev/null; then
+            flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+            flatpak install -y --noninteractive flathub org.flatpak.Builder
+          fi
+          # host, host-os and host-etc are errors until Flathub grants an
+          # exception. A file manager cannot browse the computer without them.
+          # Any other error still fails this job.
+          python3 - <<'PY'
+          import json, shutil, subprocess, sys
+          allowed = {
+              "finish-args-host-filesystem-access",
+              "finish-args-host-os-filesystem-access",
+              "finish-args-host-etc-filesystem-access",
+          }
+          if shutil.which("flatpak-builder-lint"):
+              lint = ["flatpak-builder-lint"]
+          else:
+              lint = [
+                  "flatpak", "run", f"--filesystem={subprocess.check_output(['pwd'], text=True).strip()}",
+                  "--command=flatpak-builder-lint", "org.flatpak.Builder",
+              ]
+          def run(args):
+              proc = subprocess.run(lint + args, text=True, capture_output=True)
+              print(proc.stdout)
+              if proc.stderr:
+                  print(proc.stderr, file=sys.stderr)
+              if not proc.stdout.strip():
+                  sys.exit(proc.returncode or 1)
+              try:
+                  data = json.loads(proc.stdout)
+              except json.JSONDecodeError:
+                  sys.exit(proc.returncode or 1)
+              unexpected = set(data.get("errors") or []) - allowed
+              if unexpected:
+                  print("unexpected linter errors:", sorted(unexpected), file=sys.stderr)
+                  sys.exit(1)
+              print("file-manager permissions pending a Flathub exception:", sorted(set(data.get("errors") or [])))
+          run(["manifest", "packaging/flatpak/io.github.ulinaaron.rivet-files.yml"])
+          run(["repo", "repo"])
+          PY
+
+      - name: Attach the bundle to the GitHub release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: rivet-files.flatpak
+          tag_name: ${{ github.event.release.tag_name }}

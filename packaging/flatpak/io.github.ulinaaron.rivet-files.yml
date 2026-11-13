@@ -1,0 +1,56 @@
+id: io.github.ulinaaron.rivet-files
+runtime: org.freedesktop.Platform
+runtime-version: '26.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: rivet
+finish-args:
+  # Display. fallback-x11 covers X11 sessions; Wayland is preferred when present.
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
+  # A file manager has to read and write the whole computer: home, other
+  # disks under /media, /run/media and /mnt, and Trash in ~/.local/share.
+  # host does not include the host /usr or /etc; those are host-os and host-etc,
+  # mounted at /run/host so the runtime's own /usr stays intact.
+  - --filesystem=host
+  - --filesystem=host-os
+  - --filesystem=host-etc
+  # Network shares the desktop has already mounted (gvfs).
+  - --filesystem=xdg-run/gvfs
+  - --filesystem=xdg-run/gvfsd
+  # Read the host dconf database as a file (host already allows ~/.config).
+  # GNOME keeps the icon theme there. No dconf bus name: the linter rejects it.
+  - --env=DCONF_USER_CONFIG_DIR=.config/dconf
+  # Listing drives does not need this. Unmount asks udisks on the system bus.
+  - --system-talk-name=org.freedesktop.UDisks2
+modules:
+  - name: rivet
+    buildsystem: simple
+    build-options:
+      append-path: /usr/lib/sdk/rust-stable/bin
+      env:
+        CARGO_HOME: /run/build/rivet/cargo
+        CARGO_NET_OFFLINE: "true"
+    build-commands:
+      - cargo --offline fetch --manifest-path Cargo.toml --locked
+      - cargo --offline build --release --locked
+      - install -Dm755 target/release/rivet -t ${FLATPAK_DEST}/bin
+      - install -Dm644 packaging/flatpak/io.github.ulinaaron.rivet-files.desktop -t ${FLATPAK_DEST}/share/applications
+      - install -Dm644 packaging/flatpak/io.github.ulinaaron.rivet-files.metainfo.xml -t ${FLATPAK_DEST}/share/metainfo
+      - install -Dm644 LICENSE-MIT LICENSE-APACHE -t ${FLATPAK_DEST}/share/licenses/io.github.ulinaaron.rivet-files
+      - |
+        find data/icons/hicolor -type f | while read -r f; do
+          rel=${f#data/icons/}
+          rel=$(printf '%s' "$rel" | sed 's/rivet-files\./io.github.ulinaaron.rivet-files./')
+          install -Dm644 "$f" "${FLATPAK_DEST}/share/icons/${rel}"
+        done
+    sources:
+      # This checkout, so CI builds the pull request. On Flathub, replace it
+      # with a git tag and the full commit of a release that contains this
+      # manifest's expectations. See packaging/README.md.
+      - type: dir
+        path: ../..
+      - cargo-sources.json

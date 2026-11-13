@@ -30,6 +30,12 @@ fn mime_roots() -> Vec<PathBuf> {
             v.push(p);
         }
     }
+    for d in crate::places::host_data_dirs() {
+        let p = d.join("mime");
+        if p.is_dir() && !v.contains(&p) {
+            v.push(p);
+        }
+    }
     v
 }
 

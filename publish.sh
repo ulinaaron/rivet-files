@@ -7,6 +7,6 @@ if git remote get-url origin >/dev/null 2>&1; then
     git push origin main
 else
     gh repo create rivet-files --public --source=. --remote=origin --push \
-        --description "Linux file manager like Nemo, Thunar and Caja, in Rust/egui — no GTK or Qt, system icons, live matugen colours"
+        --description "Linux file manager like Nemo, Thunar and Caja, in Rust/egui — no GTK or Qt, system icons, live matugen colors"
 fi
 gh repo view --json url -q .url

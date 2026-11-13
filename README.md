@@ -9,7 +9,7 @@
 [![Built with Rust](https://img.shields.io/badge/built%20with-Rust%20%2B%20egui-orange)](https://github.com/emilk/egui)
 ![No GTK or Qt](https://img.shields.io/badge/GTK%20%2F%20Qt-none-success)
 
-A  Linux file manager in the same vein as Nemo, Thunar and Caja — written in Rust. Does not use GTK or Qt.
+A Linux file manager in the same vein as Nemo, Thunar and Caja — written in Rust. Does not use GTK or Qt.
 
 ![Rivet Files showing a home folder](docs/screenshots/icons-wide.png)
 
@@ -59,11 +59,28 @@ Change your wallpaper or scheme and Rivet restyles itself within a second.
 
 Grab the latest from the [Releases page](https://github.com/ulinaaron/rivet-files/releases):
 
-- **AppImage** — one file: `chmod +x Rivet_Files-*.AppImage` and run it.
+- **AppImage** — one file, nothing else to install: `chmod +x Rivet_Files-*.AppImage` and run it.
+  It includes the keyboard libraries below and runs on Ubuntu 22.04, Debian 12, and newer.
   Preferences → System → *Add Rivet to the app launcher* puts it in your menus.
 - **Archive** — unpack `rivet-files-*-linux.tar.gz` and run `./install.sh`
-  (add `--default` to make Rivet your default file manager).
+  (add `--default` to make Rivet your default file manager). Same glibc baseline as the AppImage.
+  Install the libraries below if the desktop does not already have them.
 - **From source** — `cargo build --release && ./install.sh`
+- **Flatpak** — a `.flatpak` bundle is attached to GitHub releases once CI has built it.
+  It is not on Flathub until that submission is done; the manifest and the steps are in [packaging/README.md](packaging/README.md).
+  Inside the sandbox, home, other disks, Trash and `~/.config` theme files are the real ones. Host `/usr` and `/etc` are under **Host system files** (`/run/host`).
+- **Arch Linux** — PKGBUILDs for `rivet-files-bin` (the release tarball) and `rivet-files` (built from the git tag) are in `packaging/aur`. They are not in the AUR until published; see [packaging/README.md](packaging/README.md).
+
+### Libraries the window needs
+
+Rivet talks to X11 or Wayland directly. It does not use GTK or Qt. A normal desktop already has the display libraries (`libX11`, `libwayland-client`, `libwayland-cursor`, OpenGL). What a minimal install often lacks is the keyboard library loaded at startup: `libxkbcommon` on Wayland, and `libxkbcommon-x11` plus `libxcb-xkb` on X11. If one is missing, Rivet prints the install command instead of crashing. The AppImage already carries those three.
+
+| Distro | Install |
+| --- | --- |
+| Debian, Ubuntu | `sudo apt install libxkbcommon0 libxkbcommon-x11-0 libxcb-xkb1` |
+| Fedora, RHEL | `sudo dnf install libxkbcommon libxkbcommon-x11` |
+| Arch Linux | `sudo pacman -S libxkbcommon` |
+| openSUSE | `sudo zypper install libxkbcommon0 libxkbcommon-x11-0` |
 
 ## ⌨️ Handy shortcuts
 
@@ -134,9 +151,23 @@ cargo build --release
 ./target/release/rivet [FOLDER]
 ```
 
-Options: `--no-decorations`, `--decorations`, `--view icons|list|compact`, `--tree`,
-`--hide-menubar`, `--home`, `--version`, `--install-desktop-entry`, `--bench [FOLDER…]`,
-`--export-icons DIR`, `--screenshot FILE.png`.
+`rivet [FOLDER]` opens that folder (`~` and `file://` URLs work). `rivet --help` lists the same options:
+
+| Option | |
+| --- | --- |
+| `-h`, `--help` | Show this help and exit |
+| `-V`, `--version` | Print the version and exit |
+| `--home` | Open the home folder |
+| `--view icons\|list\|compact` | Starting view |
+| `--tree` | Show the sidebar as a folder tree |
+| `--hide-menubar` | Start with the menu bar hidden |
+| `--decorations` | Use the desktop's title bar |
+| `--no-decorations`, `--csd` | Use Rivet's own title bar |
+| `--screenshot FILE.png` | Save a picture of the window and exit |
+| `--measure SECS` | Open a window and exit after SECS seconds (default 15) |
+| `--bench [FOLDER...]` | Time folder reads without a window, then exit |
+| `--export-icons [DIR]` | Write the logo icons and exit (default `data/icons`) |
+| `--install-desktop-entry` | Add Rivet to the app launcher and exit |
 
 A global `rivet` command that always runs your latest build: `./link.sh` (system-wide, asks for
 your password) or `./link.sh --user` (`~/.local/bin`). Preferences → System has the same buttons.
@@ -150,7 +181,7 @@ In order of priority:
 
 1. `~/.config/rivet/colors.css` (`@define-color name #rrggbb;`)
 2. whichever is newer: your matugen outputs (learned by lining each template in
-   `~/.config/matugen/config.toml` up with its output) or generated GTK colour files
+   `~/.config/matugen/config.toml` up with its output) or generated GTK color files
    (`~/.config/gtk-{3,4}.0/gtk.css` / `colors.css`, following `@import`)
 3. the defaults of the installed GTK theme
 
@@ -164,9 +195,9 @@ Preferences → *Add Rivet template to matugen* registers a dedicated template i
 - **Screenshots** come from a throwaway sample home folder: `docs/make-screenshots.sh`
 - **Logo** master is `data/rivet-files.svg`; regenerate the PNG set with
   `rivet --export-icons data/icons` and copy the 512 px one to `docs/logo.png`
-- **AppImage**: `./appimage.sh` (needs `squashfs-tools`)
+- **AppImage**: `./appimage.sh` (needs `squashfs-tools`). It links for glibc 2.31 and bundles the keyboard libraries, so the one file runs on Ubuntu 22.04 and Debian 12.
 - **Release**: `./bump.sh` (patch, or `minor` / `major` / `X.Y.Z`) sets the version, writes the
-  changelog section and commits; then `./release.sh --publish`
+  changelog section and commits; then `./release.sh --publish`. The release binary is linked with Zig against glibc 2.31 (not the build machine's libc). CI rejects an ELF that needs a GLIBC symbol newer than 2.35.
 
 </details>
 

@@ -1,0 +1,32 @@
+name: Update AUR versions
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    name: Bump PKGBUILD checksums
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Download the release and rewrite packaging/aur
+        run: packaging/aur/bump.sh "${GITHUB_REF_NAME#v}"
+
+      - name: Commit the new version on main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packaging/aur
+          if git diff --cached --quiet; then
+            echo "AUR files already match this release."
+            exit 0
+          fi
+          git commit -m "aur: ${GITHUB_REF_NAME#v}"
+          git push origin HEAD:main

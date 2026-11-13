@@ -750,7 +750,7 @@ impl RivetApp {
                     });
                 });
 
-                section(ui, "Behaviour", &mut |ui| {
+                section(ui, "Behavior", &mut |ui| {
                     changed |= ui.checkbox(&mut self.s.single_click, "Single click to open items").changed();
                     changed |= ui.checkbox(&mut self.s.confirm_trash, "Ask before moving files to the Trash").changed();
                 });

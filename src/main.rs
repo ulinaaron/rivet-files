@@ -1,9 +1,10 @@
 //! Rivet Files — a classic Linux file manager (in the family of Nemo, Thunar and Caja),
 //! written in Rust with egui and no GTK or Qt.
 //!
-//! Usage: rivet [FOLDER] [--no-decorations | --decorations] [--screenshot FILE.png] [--measure SECS]
+//! Usage: `rivet --help`.
 
 mod app;
+mod cli;
 mod bench;
 mod builtin_icons;
 mod fonts;
@@ -87,7 +88,7 @@ fn main() -> eframe::Result {
                 return Ok(());
             }
             "-h" | "--help" => {
-                println!("Usage: rivet [FOLDER] [--no-decorations | --decorations] [--view icons|list|compact] [--tree] [--hide-menubar] [--home] [--install-desktop-entry] [--screenshot FILE.png] [--measure SECS]");
+                print!("{}", cli::usage());
                 return Ok(());
             }
             _ if a.starts_with("--screenshot=") => screenshot = Some(PathBuf::from(&a["--screenshot=".len()..])),
@@ -156,9 +157,11 @@ fn main() -> eframe::Result {
         settings.window_h = 700.0;
     }
 
+    // Flatpak sets this to the app id so the desktop matches the window.
+    let app_id = std::env::var("FLATPAK_ID").unwrap_or_else(|_| "rivet-files".into());
     let mut viewport = egui::ViewportBuilder::default()
         .with_title("Rivet")
-        .with_app_id("rivet-files")
+        .with_app_id(app_id)
         .with_inner_size([settings.window_w, settings.window_h])
         .with_min_inner_size([520.0, 340.0])
         .with_decorations(settings.decorations);
@@ -178,6 +181,13 @@ fn main() -> eframe::Result {
     }
 
     let options = eframe::NativeOptions { viewport, persist_window: false, ..Default::default() };
+
+    // winit panics from inside xkbcommon-dl when libxkbcommon-x11 is missing.
+    // Tell the person which package to install instead.
+    if let Err(msg) = cli::ensure_gui_libraries() {
+        eprintln!("{msg}");
+        std::process::exit(1);
+    }
 
     eframe::run_native(
         "Rivet",

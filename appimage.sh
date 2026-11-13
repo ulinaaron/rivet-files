@@ -25,11 +25,16 @@ if [ ! -s "$RUNTIME" ]; then
     mv "$RUNTIME.part" "$RUNTIME"
 fi
 
-cargo build --release
+# Linked for glibc 2.31, not whatever this machine's libm exports.
+./scripts/portable-build.sh >/dev/null
+RIVET_BIN=$(./scripts/portable-bin.sh)
 APPDIR="dist/AppDir"
 rm -rf "$APPDIR"
-mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons"
-strip -o "$APPDIR/usr/bin/rivet" target/release/rivet
+mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/lib" "$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons"
+strip -o "$APPDIR/usr/bin/rivet" "$RIVET_BIN"
+# winit dlopens these; ldd on rivet does not see them. Ubuntu 22.04 builds,
+# so the bundle itself does not need glibc 2.43.
+./scripts/bundle-runtime-libs.sh "$APPDIR/usr/lib"
 cp data/rivet-files.desktop "$APPDIR/rivet-files.desktop"
 cp data/rivet-files.desktop "$APPDIR/usr/share/applications/"
 cp data/rivet-files.svg "$APPDIR/rivet-files.svg"
@@ -38,9 +43,23 @@ cp data/icons/hicolor/256x256/apps/rivet-files.png "$APPDIR/.DirIcon"
 cat > "$APPDIR/AppRun" <<'EOF'
 #!/bin/sh
 HERE="$(dirname "$(readlink -f "$0")")"
+# Bundled libxkbcommon, libxkbcommon-x11 and libxcb-xkb. The system provides
+# libc, libX11, Wayland and OpenGL so they match the running desktop.
+export LD_LIBRARY_PATH="$HERE/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 exec "$HERE/usr/bin/rivet" "$@"
 EOF
 chmod +x "$APPDIR/AppRun"
+
+# The file we ship, plus every bundled library, must stay under the ceiling.
+ROOT=$(pwd)
+# shellcheck disable=SC1091
+. ./scripts/ensure-zigbuild.sh
+set -- "$APPDIR/usr/bin/rivet"
+for lib in "$APPDIR"/usr/lib/lib*.so.*; do
+    [ -f "$lib" ] || continue
+    set -- "$@" "$lib"
+done
+./scripts/check-glibc.sh --max "$GLIBC_MAX_VERSION" --record dist/glibc-highest "$@"
 
 rm -f "$OUT" dist/AppDir.squashfs
 mksquashfs "$APPDIR" dist/AppDir.squashfs -root-owned -noappend -comp zstd -quiet

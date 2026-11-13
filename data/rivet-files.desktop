@@ -2,7 +2,7 @@
 Type=Application
 Name=Rivet Files
 GenericName=File Manager
-Comment=Browse and organise your files
+Comment=Browse and organize your files
 Exec=rivet %U
 Icon=rivet-files
 Terminal=false

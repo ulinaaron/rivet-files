@@ -1,5 +1,5 @@
-//! Windows that live inside the app: a title bar with roll-up, maximise and close,
-//! drag to move (double-click to maximise), resize from the edges, and kept within
+//! Windows that live inside the app: a title bar with roll-up, maximize and close,
+//! drag to move (double-click to maximize), resize from the edges, and kept within
 //! the app's area. Several can be open at once and they don't block the file view.
 
 use eframe::egui::{self, Align2, Color32, Id, Pos2, Rect, Sense, Stroke, Vec2};
@@ -22,7 +22,7 @@ impl WinState {
     }
 }
 
-/// Textures for the title bar: (window icon, roll-up, maximise/restore, close).
+/// Textures for the title bar: (window icon, roll-up, maximize/restore, close).
 pub(super) struct Chrome {
     pub title: String,
     pub icon: Option<egui::TextureHandle>,
@@ -41,7 +41,7 @@ const HEADER_H: f32 = 36.0;
 
 /// Draw one in-app window. `area` is where it may live (the app minus a margin).
 pub(super) fn show<R>(ctx: &egui::Context, st: &mut WinState, chrome: &Chrome, area: Rect, min: Vec2, add: impl FnOnce(&mut egui::Ui) -> R) -> Shown<R> {
-    // Separate memory for the maximised state, so restoring brings back the old size.
+    // Separate memory for the maximized state, so restoring brings back the old size.
     let id = Id::unique(("inner-window", st.id, st.maximized, st.shaded));
     let size = st.size.min(area.size());
     let mut pos = st.pos.unwrap_or_else(|| area.center() - size / 2.0 + st.cascade);
@@ -77,7 +77,7 @@ pub(super) fn show<R>(ctx: &egui::Context, st: &mut WinState, chrome: &Chrome, a
             paint_tex(ui.painter(), t, Rect::from_center_size(Pos2::new(hrect.left() + 20.0, hrect.center().y), Vec2::splat(16.0)), Color32::WHITE);
         }
         ui.painter().text(hrect.center(), Align2::CENTER_CENTER, &chrome.title, crate::fonts::ui_font(13.5), v.strong_text_color());
-        // Pop-up windows only get a close button (no roll-up or maximise).
+        // Pop-up windows only get a close button (no roll-up or maximize).
         let buttons: [(&Option<egui::TextureHandle>, u8); 1] = [(&chrome.close, 2)];
         let mut x = hrect.right() - 8.0;
         for (tex, kind) in buttons.iter().rev() {
@@ -111,7 +111,7 @@ pub(super) fn show<R>(ctx: &egui::Context, st: &mut WinState, chrome: &Chrome, a
             }
             let tip = match kind {
                 0 => if shaded { "Unroll" } else { "Roll up" },
-                1 => if maximized { "Restore" } else { "Maximise" },
+                1 => if maximized { "Restore" } else { "Maximize" },
                 _ => "Close",
             };
             if resp.on_hover_text(tip).clicked() {
