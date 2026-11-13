@@ -3,6 +3,9 @@
 ## Unreleased
 
 ### New
+- **Preview**: a full-window light box for pictures, videos (muted playback), music covers and
+  text. Right-click → Preview or press Space; ← / → (or the side arrows) step through the folder,
+  Esc, Space or a click outside closes it.
 - **Preferences** has a sidebar of pages: Appearance (with Window), Views, Behavior, Menu (with the
   toolbar), System and About. Appearance is split into roomy groups: desktop colors, style and accent,
   icons, typography, window. Help → About opens the About page.

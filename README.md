@@ -26,6 +26,7 @@ as you like.
 - 🔍 **Instant filter** as you type, plus search through subfolders
 - 🖼️ **Picture thumbnails** and your system icon theme
 - 👀 **Peek panel** — big previews, videos that play right there, code colored by your theme, and full file details, on either side
+- 🔍 **Preview** — a full-window light box (Space or right-click → Preview); ← → step through the folder's pictures, videos and text
 - 🚀 **Open With** — pick any app from a searchable list, or set a new default
 - 🌐 **Network** — find servers, open SMB shares, log in, or connect to any address
 - 🗜️ **Compress and extract** — zip, tar.gz, tar.xz, tar.zst and 7z
@@ -120,6 +121,7 @@ Rivet talks to X11 or Wayland directly. It does not use GTK or Qt. A normal desk
 | `F2` · `Delete` | Rename · move to Trash |
 | `Ctrl+M` | Show or hide the menu bar |
 | `F9` · `F11` | Sidebar · Peek panel |
+| `Space` · `←` `→` | Preview the selection · previous / next file |
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / redo |
 | `F1` | All shortcuts |
 

@@ -59,20 +59,25 @@ fn has(bin: &str) -> bool {
 
 /// Build the preview (slow: call from a background thread).
 pub fn load(path: &Path, mime: &str, size: u64) -> Preview {
+    load_px(path, mime, size, PREVIEW_PX)
+}
+
+/// Like [`load`], with pictures and video frames up to `px` on their longest edge.
+pub fn load_px(path: &Path, mime: &str, size: u64, px: u32) -> Preview {
     match kind_of(mime) {
-        Kind::Image => image_preview(path, size),
-        Kind::Video => media_preview(path, true),
-        Kind::Audio => media_preview(path, false),
+        Kind::Image => image_preview(path, size, px),
+        Kind::Video => media_preview(path, true, px),
+        Kind::Audio => media_preview(path, false, px),
         Kind::Text => Preview { text: text_head(path), facts: text_facts(path, size), ..Default::default() },
         Kind::Other => Preview::default(),
     }
 }
 
-fn image_preview(path: &Path, size: u64) -> Preview {
+fn image_preview(path: &Path, size: u64, px: u32) -> Preview {
     let mut p = Preview::default();
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
     if ext == "svg" || ext == "svgz" {
-        p.image = crate::icons::load_image_file(path, PREVIEW_PX);
+        p.image = crate::icons::load_image_file(path, px);
         p.facts.push(("Format".into(), "Scalable vector".into()));
         return p;
     }
@@ -105,7 +110,7 @@ fn image_preview(path: &Path, size: u64) -> Preview {
         if mp >= 0.5 {
             p.facts.push(("Megapixels".into(), format!("{:.1} MP", mp)));
         }
-        let img = if img.width() > PREVIEW_PX || img.height() > PREVIEW_PX { img.thumbnail(PREVIEW_PX, PREVIEW_PX) } else { img };
+        let img = if img.width() > px || img.height() > px { img.thumbnail(px, px) } else { img };
         let rgba = img.to_rgba8();
         p.image = Some(egui::ColorImage::from_rgba_unmultiplied([rgba.width() as usize, rgba.height() as usize], rgba.as_raw()));
     }
@@ -181,7 +186,7 @@ fn probe_value<'a>(text: &'a str, key: &str) -> Option<&'a str> {
     text.lines().find_map(|l| l.strip_prefix(key).and_then(|r| r.strip_prefix('='))).map(str::trim).filter(|v| !v.is_empty() && *v != "N/A")
 }
 
-fn media_preview(path: &Path, video: bool) -> Preview {
+fn media_preview(path: &Path, video: bool, px: u32) -> Preview {
     let mut p = Preview::default();
     if !has("ffprobe") || !has("ffmpeg") {
         p.note = Some(if video { "Install ffmpeg to preview videos".into() } else { "Install ffmpeg to see details".into() });
@@ -226,9 +231,9 @@ fn media_preview(path: &Path, video: bool) -> Preview {
     }
     // A frame a little way in (skips black intros), or the album cover.
     let at = if video { duration.map(|d| (d * 0.1).min(30.0)).unwrap_or(0.0) } else { 0.0 };
-    p.image = frame_at(path, at, PREVIEW_PX);
+    p.image = frame_at(path, at, px);
     if p.image.is_none() && video && at > 0.0 {
-        p.image = frame_at(path, 0.0, PREVIEW_PX);
+        p.image = frame_at(path, 0.0, px);
     }
     p
 }

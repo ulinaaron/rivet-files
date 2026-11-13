@@ -545,6 +545,9 @@ impl RivetApp {
                     self.pending.push(Action::Open(p.clone()));
                 }
             }
+            if Self::quick_viewable(e) && ui.add(egui::Button::new("Preview").shortcut_text("Space")).clicked() {
+                self.pending.push(Action::QuickView(e.path.clone()));
+            }
             if e.is_executable() && ui.button("Run").clicked() {
                 self.pending.push(Action::Run(e.path.clone()));
             }

@@ -21,6 +21,7 @@ mod chrome;
 mod dialogs;
 mod netview;
 mod peek;
+mod quickview;
 mod views;
 mod windows;
 
@@ -59,6 +60,8 @@ enum Action {
     CloseTab(usize),
     NewTab,
     Run(PathBuf),
+    /// Open the Preview light box on this file.
+    QuickView(PathBuf),
     /// Ask for a name and format, then make an archive of these items.
     Compress(Vec<PathBuf>),
     /// Unpack these archives next to themselves.
@@ -168,6 +171,8 @@ pub struct RivetApp {
     net: netview::NetState,
     /// The Peek panel's preview and video player.
     peek: peek::PeekState,
+    /// The Preview light box, when open.
+    quick: Option<quickview::QuickView>,
     net_scan_rx: Option<std::sync::mpsc::Receiver<netview::NetResult>>,
     connect_ask: Option<netview::ConnectAsk>,
     /// Undo / redo for file actions.
@@ -377,6 +382,7 @@ impl RivetApp {
             clipboard: None,
             net: Default::default(),
             peek: Default::default(),
+            quick: None,
             net_scan_rx: None,
             connect_ask: None,
             history: Default::default(),
@@ -466,6 +472,11 @@ impl RivetApp {
             Ok("openwith") => {
                 let sel = app.tab().selected_paths();
                 app.pending.push(Action::OpenWithDialog(sel));
+            }
+            Ok("preview") => {
+                if let Some(p) = app.tab().selected_paths().first().cloned() {
+                    app.pending.push(Action::QuickView(p));
+                }
             }
             Ok("rename") => {
                 if let Some(p) = app.tab().selected_paths().first().cloned() {
@@ -1156,6 +1167,7 @@ impl RivetApp {
                         self.ops.push(crate::archive::spawn_extract(archives, into));
                     }
                 }
+                Action::QuickView(p) => self.open_quick_view(ctx, p),
                 Action::Run(p) => {
                     if let Err(e) = launch::run_executable(&p) {
                         self.message("Could not run", &e);
@@ -1403,7 +1415,7 @@ impl RivetApp {
         }
         let typing = ctx.egui_wants_keyboard_input();
         // Dialogs block shortcuts; in-app windows only while you're working in one.
-        let modal = !matches!(self.dialog, Dialog::None) || self.window_focus || self.connect_ask.is_some();
+        let modal = !matches!(self.dialog, Dialog::None) || self.window_focus || self.connect_ask.is_some() || self.quick.is_some();
         let (events, m) = ctx.input(|i| (i.events.clone(), i.modifiers));
         let pressed = |k: Key| events.iter().any(|e| matches!(e, egui::Event::Key { key, pressed: true, .. } if *key == k));
         let cmd = m.command;
@@ -1506,6 +1518,13 @@ impl RivetApp {
             }
         }
 
+        // Space: Preview the selected file (pictures, videos, music, text).
+        if pressed(Key::Space) && !cmd && !m.alt {
+            let sel = self.tab().selected_entries();
+            if let Some(e) = sel.first().filter(|e| sel.len() == 1 && Self::quick_viewable(e)) {
+                self.pending.push(Action::QuickView(e.path.clone()));
+            }
+        }
         if (m.alt && pressed(Key::ArrowLeft)) || pressed(Key::Backspace) || pressed(Key::BrowserBack) {
             self.go_back();
         }
@@ -1815,6 +1834,8 @@ impl eframe::App for RivetApp {
         self.properties_windows(&ctx);
         self.net_poll();
         self.connect_dialog(&ctx);
+        // Preview draws over everything else and takes the arrow keys while open.
+        self.quick_view(&ctx);
         // The last click decides whether the keyboard belongs to a window or the file view.
         if let Some(p) = ctx.input(|i| if i.pointer.any_pressed() { i.pointer.interact_pos() } else { None }) {
             self.window_focus = self.window_rects.iter().any(|r| r.contains(p));
@@ -1858,6 +1879,16 @@ impl eframe::App for RivetApp {
                         if self.frames + 1 >= f {
                             raw.events.push(egui::Event::PointerMoved(Pos2::new(x, y)));
                         }
+                    }
+                }
+                continue;
+            }
+            // "left@N" / "right@N" press an arrow key at frame N.
+            if matches!(xy.trim(), "left" | "right") {
+                if let Ok(f) = f.trim().parse::<u32>() {
+                    if self.frames + 1 == f {
+                        let key = if xy.trim() == "left" { egui::Key::ArrowLeft } else { egui::Key::ArrowRight };
+                        raw.events.push(egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers: Default::default() });
                     }
                 }
                 continue;
