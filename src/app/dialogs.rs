@@ -1488,22 +1488,33 @@ impl RivetApp {
                         });
                     }
                     PrefsTab::Modules => {
+                        // Each module: what it needs, and an on/off switch.
+                        section(ui, "Bulk Rename", &mut |ui| {
+                            egui::Grid::new("prefs-mod-bulk").num_columns(2).spacing([24.0, 14.0]).min_col_width(120.0).show(ui, |ui| {
+                                ui.label("Needs");
+                                ui.horizontal(|ui| check_label(ui, "Nothing extra"));
+                                ui.end_row();
+                                ui.label("Enabled");
+                                changed |= ui.checkbox(&mut self.s.bulk_rename, "Bulk Rename… (F2 with several items selected)").changed();
+                                ui.end_row();
+                            });
+                        });
                         section(ui, "Convert & Resize", &mut |ui| {
                             let version = crate::media::ffmpeg_version();
-                            egui::Grid::new("prefs-modules").num_columns(2).spacing([24.0, 14.0]).min_col_width(120.0).show(ui, |ui| {
-                                ui.label("Needs ffmpeg");
+                            egui::Grid::new("prefs-mod-media").num_columns(2).spacing([24.0, 14.0]).min_col_width(120.0).show(ui, |ui| {
+                                ui.label("Needs");
                                 match version {
                                     Some(ver) => {
-                                        ui.horizontal(|ui| check_label(ui, &format!("Installed ({ver})")));
+                                        ui.horizontal(|ui| check_label(ui, &format!("ffmpeg — installed ({ver})")));
                                     }
                                     None => {
-                                        ui.label(egui::RichText::new("Not installed").color(super::status(ui.ctx()).warning));
+                                        ui.label(egui::RichText::new("ffmpeg — not installed").color(super::status(ui.ctx()).warning));
                                     }
                                 }
                                 ui.end_row();
-                                ui.label("Right-click menu");
+                                ui.label("Enabled");
                                 ui.add_enabled_ui(version.is_some(), |ui| {
-                                    changed |= ui.checkbox(&mut self.s.media_tools, "Convert To… and Resize…").changed();
+                                    changed |= ui.checkbox(&mut self.s.media_tools, "Convert To… and Resize… in the right-click menu").changed();
                                 });
                                 ui.end_row();
                             });

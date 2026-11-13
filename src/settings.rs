@@ -72,6 +72,8 @@ pub struct Settings {
     pub toolbar_bottom: bool,
     /// Offer Convert / Resize in the right-click menu (needs ffmpeg).
     pub media_tools: bool,
+    /// The Bulk Rename module (F2 / right-click with several items selected).
+    pub bulk_rename: bool,
     /// Put the status bar at the top of the window (under the toolbar when both are there).
     pub statusbar_top: bool,
     /// The Peek panel: details and a large preview of the selected item.
@@ -119,6 +121,7 @@ impl Default for Settings {
             sidebar_right: false,
             toolbar_bottom: false,
             media_tools: true,
+            bulk_rename: true,
             statusbar_top: false,
             show_peek: false,
             peek_left: false,
@@ -181,6 +184,7 @@ impl Settings {
                 "sidebar_right" => s.sidebar_right = b,
                 "toolbar_bottom" => s.toolbar_bottom = b,
                 "media_tools" => s.media_tools = b,
+                "bulk_rename" => s.bulk_rename = b,
                 "statusbar_top" => s.statusbar_top = b,
                 "show_peek" => s.show_peek = b,
                 "peek_left" => s.peek_left = b,
@@ -198,12 +202,12 @@ impl Settings {
         let sort = match self.sort { SortKey::Name => "name", SortKey::Size => "size", SortKey::Type => "type", SortKey::Modified => "modified" };
         let theme = match self.theme { ThemeChoice::System => "system", ThemeChoice::Light => "light", ThemeChoice::Dark => "dark" };
         let text = format!(
-            "view={view}\nsort={sort}\nsort_desc={}\nfolders_first={}\nshow_hidden={}\nzoom={}\nlist_zoom={}\ndecorations={}\nicon_theme={}\nbuiltin_icons={}\nui_font={}\nui_font_size={}\nicon_color={}\ntheme={theme}\nshow_sidebar={}\nsidebar_icon={}\nsidebar_tree={}\nshow_statusbar={}\nshow_menubar={}\nshow_thumbnails={}\nsingle_click={}\nconfirm_trash={}\nfollow_desktop_colors={}\naccent=#{:02x}{:02x}{:02x}\nwindow_w={}\nwindow_h={}\nsidebar_width={}\ntoolbar={}\ncompress_format={}\nsidebar_right={}\nshow_peek={}\npeek_left={}\npeek_width={}\npeek_preview_h={}\ntoolbar_bottom={}\nstatusbar_top={}\nmedia_tools={}\n",
+            "view={view}\nsort={sort}\nsort_desc={}\nfolders_first={}\nshow_hidden={}\nzoom={}\nlist_zoom={}\ndecorations={}\nicon_theme={}\nbuiltin_icons={}\nui_font={}\nui_font_size={}\nicon_color={}\ntheme={theme}\nshow_sidebar={}\nsidebar_icon={}\nsidebar_tree={}\nshow_statusbar={}\nshow_menubar={}\nshow_thumbnails={}\nsingle_click={}\nconfirm_trash={}\nfollow_desktop_colors={}\naccent=#{:02x}{:02x}{:02x}\nwindow_w={}\nwindow_h={}\nsidebar_width={}\ntoolbar={}\ncompress_format={}\nsidebar_right={}\nshow_peek={}\npeek_left={}\npeek_width={}\npeek_preview_h={}\ntoolbar_bottom={}\nstatusbar_top={}\nmedia_tools={}\nbulk_rename={}\n",
             self.sort_desc, self.folders_first, self.show_hidden, self.zoom, self.list_zoom, self.decorations,
             self.icon_theme, self.builtin_icons, self.ui_font, self.ui_font_size, self.icon_color.id(), self.show_sidebar, self.sidebar_icon, self.sidebar_tree, self.show_statusbar, self.show_menubar, self.show_thumbnails,
             self.single_click, self.confirm_trash, self.follow_desktop_colors, self.accent[0], self.accent[1], self.accent[2],
             self.window_w, self.window_h, self.sidebar_width, toolbar_string(&self.toolbar), self.compress_format,
-            self.sidebar_right, self.show_peek, self.peek_left, self.peek_width, self.peek_preview_h, self.toolbar_bottom, self.statusbar_top, self.media_tools
+            self.sidebar_right, self.show_peek, self.peek_left, self.peek_width, self.peek_preview_h, self.toolbar_bottom, self.statusbar_top, self.media_tools, self.bulk_rename
         );
         let p = path();
         if let Some(d) = p.parent() {

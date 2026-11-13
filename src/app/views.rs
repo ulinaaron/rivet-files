@@ -615,7 +615,7 @@ impl RivetApp {
         if sel.len() == 1 && ui.add(egui::Button::new("Rename…").shortcut_text("F2")).clicked() {
             self.pending.push(Action::Rename(e.path.clone()));
         }
-        if sel.len() > 1 && ui.add(egui::Button::new("Bulk Rename…").shortcut_text("F2")).clicked() {
+        if sel.len() > 1 && self.s.bulk_rename && ui.add(egui::Button::new("Bulk Rename…").shortcut_text("F2")).clicked() {
             self.pending.push(Action::BulkRename(sel.clone()));
         }
         if ui.button("Move to Trash").clicked() {

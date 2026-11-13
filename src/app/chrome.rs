@@ -262,7 +262,7 @@ impl RivetApp {
                 self.pending.push(Action::CopyLocation);
             }
             ui.separator();
-            if sel.len() > 1 {
+            if sel.len() > 1 && self.s.bulk_rename {
                 if ui.add_enabled(!in_trash, egui::Button::new("Bulk Rename…").shortcut_text("F2")).clicked() {
                     self.pending.push(Action::BulkRename(sel.clone()));
                 }

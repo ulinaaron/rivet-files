@@ -1716,7 +1716,7 @@ impl RivetApp {
         let sel = self.tab().selected_paths();
         if pressed(Key::F2) && sel.len() == 1 {
             self.pending.push(Action::Rename(sel[0].clone()));
-        } else if pressed(Key::F2) && sel.len() > 1 && !matches!(self.tab().loc, Location::Trash) {
+        } else if pressed(Key::F2) && sel.len() > 1 && self.s.bulk_rename && !matches!(self.tab().loc, Location::Trash) {
             self.pending.push(Action::BulkRename(sel.clone()));
         }
         if pressed(Key::Delete) {
