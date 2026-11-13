@@ -756,100 +756,187 @@ impl RivetApp {
             chrome.icon = Some(t.clone());
         }
         let area = self.window_area(ctx);
-        let shown = super::windows::show(ctx, win, &chrome, area, Vec2::new(380.0, 240.0), |ui| {
+        let created = std::fs::metadata(&st.path).ok().and_then(|m| m.created().ok());
+        let accessed = std::fs::metadata(&st.path).ok().and_then(|m| m.accessed().ok());
+        let disk = places::disk_space(&st.path);
+        let shown = super::windows::show(ctx, win, &chrome, area, Vec2::new(420.0, 300.0), |ui| {
+            let v = ui.visuals().clone();
+            let weak = v.weak_text_color();
+            let card_fill = v.faint_bg_color;
+            ui.spacing_mut().item_spacing = Vec2::new(10.0, 8.0);
+            ui.add_space(6.0);
+            // ---- header: icon, editable name, one-line summary
             ui.horizontal(|ui| {
-                ui.selectable_value(&mut st.tab, 0, "Basic");
-                ui.selectable_value(&mut st.tab, 1, "Permissions");
-            });
-            ui.add_space(8.0);
-            if st.tab == 0 {
-                ui.horizontal(|ui| {
-                    if let Some(t) = &tex {
-                        ui.add(egui::Image::from_texture(t).fit_to_exact_size(Vec2::splat(64.0)));
-                    }
-                    ui.vertical(|ui| {
-                        ui.label("Name:");
-                        let r = ui.add(egui::TextEdit::singleline(&mut st.name).desired_width(260.0));
-                        if r.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter)) {
-                            rename = Some(st.name.clone());
-                        }
-                    });
-                });
+                if let Some(t) = &tex {
+                    ui.add(egui::Image::from_texture(t).fit_to_exact_size(Vec2::splat(56.0)));
+                }
                 ui.add_space(6.0);
-                egui::Grid::new("propgrid").num_columns(2).spacing([12.0, 6.0]).show(ui, |ui| {
-                    let row = |ui: &mut egui::Ui, k: &str, v: String| {
-                        ui.label(egui::RichText::new(k).strong());
-                        ui.label(v);
-                        ui.end_row();
+                ui.vertical(|ui| {
+                    ui.spacing_mut().item_spacing.y = 4.0;
+                    let field_bg = crate::palette::mix(v.window_fill, v.text_color(), 0.06);
+                    let r = egui::Frame::NONE
+                        .fill(field_bg)
+                        .corner_radius(super::R_MD)
+                        .inner_margin(egui::Margin::symmetric(10, 6))
+                        .show(ui, |ui| {
+                            ui.add(egui::TextEdit::singleline(&mut st.name).frame(egui::Frame::NONE).font(egui::FontId::proportional(15.0)).desired_width(f32::INFINITY))
+                        })
+                        .inner;
+                    if r.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter)) {
+                        rename = Some(st.name.clone());
+                    }
+                    let summary = match &st.entry {
+                        Some(e) if e.is_dir => match st.size {
+                            Some((bytes, count, _)) => format!("{desc} · {count} item{} · {}", if count == 1 { "" } else { "s" }, fsops::human_size(bytes)),
+                            None => desc.clone(),
+                        },
+                        Some(e) => format!("{desc} · {}", fsops::human_size(e.size)),
+                        None => desc.clone(),
                     };
-                    row(ui, "Type:", desc.clone());
-                    if let Some(e) = &st.entry {
-                        if e.is_dir {
-                            let v = match st.size {
-                                Some((bytes, count, complete)) => format!(
-                                    "{count} item{}, totalling {}{}",
-                                    if count == 1 { "" } else { "s" },
-                                    fsops::human_size(bytes),
-                                    if complete { "" } else { " (partial count)" }
-                                ),
-                                None => "—".into(),
-                            };
-                            row(ui, "Contents:", v);
-                        } else {
-                            row(ui, "Size:", format!("{} ({} bytes)", fsops::human_size(e.size), e.size));
-                        }
-                        if e.is_link {
-                            row(ui, "Link target:", std::fs::read_link(&e.path).map(|p| p.display().to_string()).unwrap_or_default());
-                        }
-                    }
-                    row(ui, "Location:", st.path.parent().map(|p| p.display().to_string()).unwrap_or_else(|| "/".into()));
-                    let fmt = |t: std::time::SystemTime| chrono::DateTime::<chrono::Local>::from(t).format("%A, %-d %B %Y, %H:%M").to_string();
-                    if let Some(m) = st.entry.as_ref().and_then(|e| e.modified) {
-                        row(ui, "Modified:", fmt(m));
-                    }
-                    if let Some(acc) = std::fs::metadata(&st.path).ok().and_then(|m| m.accessed().ok()) {
-                        row(ui, "Accessed:", fmt(acc));
-                    }
-                    if let Some((total, free)) = places::disk_space(&st.path) {
-                        row(ui, "Free space:", format!("{} of {}", fsops::human_size(free), fsops::human_size(total)));
+                    ui.label(egui::RichText::new(summary).color(weak));
+                });
+            });
+            ui.add_space(14.0);
+            // ---- segmented Basic / Permissions switch
+            let (track, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 32.0), Sense::hover());
+            ui.painter().rect_filled(track, super::R_MD, card_fill);
+            let half = track.width() / 2.0;
+            for (i, label) in ["Basic", "Permissions"].into_iter().enumerate() {
+                let r = Rect::from_min_size(track.min + Vec2::new(half * i as f32, 0.0), Vec2::new(half, track.height())).shrink(3.0);
+                let resp = ui.interact(r, ui.scope_id().with(("props-tab", i)), Sense::click());
+                if st.tab == i as u8 {
+                    let (fill, stroke) = super::selected_tile(&v, card_fill);
+                    ui.painter().rect_filled(r, super::R_SM, fill);
+                    ui.painter().rect_stroke(r, super::R_SM, stroke, egui::StrokeKind::Inside);
+                } else if resp.hovered() {
+                    ui.painter().rect_filled(r, super::R_SM, v.widgets.hovered.weak_bg_fill);
+                }
+                let fg = if st.tab == i as u8 { v.strong_text_color() } else { v.text_color() };
+                ui.painter().text(r.center(), egui::Align2::CENTER_CENTER, label, crate::fonts::ui_font(13.5), fg);
+                if resp.clicked() {
+                    st.tab = i as u8;
+                }
+            }
+            ui.add_space(14.0);
+            // A titled card of rows.
+            let card = |ui: &mut egui::Ui, title: &str, body: &mut dyn FnMut(&mut egui::Ui)| {
+                ui.label(egui::RichText::new(title.to_uppercase()).size(10.5).strong().color(weak));
+                egui::Frame::NONE.fill(card_fill).corner_radius(super::R_MD).inner_margin(egui::Margin::symmetric(16, 12)).show(ui, |ui| {
+                    ui.set_width(ui.available_width());
+                    body(ui);
+                });
+                ui.add_space(12.0);
+            };
+            let rows = |ui: &mut egui::Ui, id: &str, rows: Vec<(&str, String, Option<String>)>| {
+                egui::Grid::new(id).num_columns(2).spacing([18.0, 10.0]).min_col_width(92.0).show(ui, |ui| {
+                    for (k, val, sub) in rows {
+                        // Label and value both top-aligned, so two-line values line up.
+                        ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| ui.label(egui::RichText::new(k).color(weak)));
+                        ui.vertical(|ui| {
+                            ui.spacing_mut().item_spacing.y = 1.0;
+                            ui.add(egui::Label::new(val).wrap());
+                            if let Some(sub) = sub {
+                                ui.label(egui::RichText::new(sub).small().color(weak));
+                            }
+                        });
+                        ui.end_row();
                     }
                 });
-            } else {
-                egui::Grid::new("permgrid").num_columns(4).spacing([12.0, 6.0]).show(ui, |ui| {
-                    ui.label(egui::RichText::new("Owner:").strong());
-                    ui.label(&st.owner);
-                    ui.end_row();
-                    ui.label(egui::RichText::new("Group:").strong());
-                    ui.label(&st.group);
-                    ui.end_row();
-                    ui.label("");
-                    ui.label("Read");
-                    ui.label("Write");
-                    ui.label(if st.entry.as_ref().is_some_and(|e| e.is_dir) { "Open" } else { "Execute" });
-                    ui.end_row();
-                    let mut mode = st.mode;
-                    for (who, shift) in [("Owner", 6), ("Group", 3), ("Others", 0)] {
-                        ui.label(who);
-                        for bit in [4u32, 2, 1] {
-                            let mask = bit << shift;
-                            let mut on = mode & mask != 0;
-                            if ui.checkbox(&mut on, "").changed() {
-                                if on {
-                                    mode |= mask
-                                } else {
-                                    mode &= !mask
-                                }
+            };
+            let fmt = |t: std::time::SystemTime| chrono::DateTime::<chrono::Local>::from(t).format("%A, %-d %B %Y, %H:%M").to_string();
+            egui::ScrollArea::vertical().auto_shrink([false, true]).show(ui, |ui| {
+                if st.tab == 0 {
+                    card(ui, "General", &mut |ui| {
+                        let mut list: Vec<(&str, String, Option<String>)> = Vec::new();
+                        if let Some(e) = &st.entry {
+                            list.push(("Type", desc.clone(), (!e.is_dir).then(|| e.mime.clone())));
+                            if e.is_dir {
+                                let val = match st.size {
+                                    Some((bytes, count, complete)) => format!(
+                                        "{count} item{}, {}{}",
+                                        if count == 1 { "" } else { "s" },
+                                        fsops::human_size(bytes),
+                                        if complete { "" } else { " or more" }
+                                    ),
+                                    None => "Counting…".into(),
+                                };
+                                list.push(("Contents", val, None));
+                            } else {
+                                list.push(("Size", fsops::human_size(e.size), (e.size >= 1000).then(|| format!("{} bytes", e.size))));
+                            }
+                            if e.is_link {
+                                list.push(("Link to", std::fs::read_link(&e.path).map(|p| p.display().to_string()).unwrap_or_default(), None));
                             }
                         }
-                        ui.end_row();
+                        list.push(("Location", st.path.parent().map(|p| p.display().to_string()).unwrap_or_else(|| "/".into()), None));
+                        rows(ui, "props-general", list);
+                    });
+                    card(ui, "Dates", &mut |ui| {
+                        let mut list: Vec<(&str, String, Option<String>)> = Vec::new();
+                        if let Some(m) = st.entry.as_ref().and_then(|e| e.modified) {
+                            list.push(("Modified", fmt(m), None));
+                        }
+                        if let Some(c) = created {
+                            list.push(("Created", fmt(c), None));
+                        }
+                        if let Some(a) = accessed {
+                            list.push(("Last opened", fmt(a), None));
+                        }
+                        rows(ui, "props-dates", list);
+                    });
+                    if let Some((total, free)) = disk {
+                        card(ui, "Disk", &mut |ui| {
+                            let used = total.saturating_sub(free);
+                            let frac = if total > 0 { used as f32 / total as f32 } else { 0.0 };
+                            let (bar, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 6.0), Sense::hover());
+                            ui.painter().rect_filled(bar, 3.0, v.widgets.inactive.bg_fill);
+                            ui.painter().rect_filled(Rect::from_min_size(bar.min, Vec2::new(bar.width() * frac, bar.height())), 3.0, v.selection.bg_fill);
+                            ui.add_space(2.0);
+                            ui.label(format!("{} free of {}", fsops::human_size(free), fsops::human_size(total)));
+                        });
                     }
-                    if mode != st.mode {
-                        st.mode = mode;
-                        apply_mode = Some(mode);
-                    }
-                });
-                ui.label(egui::RichText::new(format!("Mode: {:04o}", st.mode & 0o7777)).small().weak());
-            }
+                } else {
+                    card(ui, "Ownership", &mut |ui| {
+                        rows(ui, "props-owner", vec![("Owner", st.owner.clone(), None), ("Group", st.group.clone(), None)]);
+                    });
+                    let is_dir = st.entry.as_ref().is_some_and(|e| e.is_dir);
+                    card(ui, "Access", &mut |ui| {
+                        let mut mode = st.mode;
+                        egui::Grid::new("props-perms").num_columns(4).spacing([32.0, 12.0]).min_col_width(64.0).show(ui, |ui| {
+                            ui.label("");
+                            for h in ["Read", "Write", if is_dir { "Open" } else { "Run" }] {
+                                ui.label(egui::RichText::new(h).color(weak));
+                            }
+                            ui.end_row();
+                            for (who, shift) in [("Owner", 6), ("Group", 3), ("Others", 0)] {
+                                ui.label(who);
+                                for bit in [4u32, 2, 1] {
+                                    let mask = bit << shift;
+                                    let mut on = mode & mask != 0;
+                                    if ui.checkbox(&mut on, "").changed() {
+                                        if on {
+                                            mode |= mask
+                                        } else {
+                                            mode &= !mask
+                                        }
+                                    }
+                                }
+                                ui.end_row();
+                            }
+                        });
+                        if mode != st.mode {
+                            st.mode = mode;
+                            apply_mode = Some(mode);
+                        }
+                        ui.add_space(4.0);
+                        let rwx: String = [6, 3, 0]
+                            .iter()
+                            .flat_map(|s| [(4, 'r'), (2, 'w'), (1, 'x')].map(|(b, c)| if st.mode >> s & b != 0 { c } else { '-' }))
+                            .collect();
+                        ui.label(egui::RichText::new(format!("{rwx}  ·  {:04o}", st.mode & 0o7777)).small().monospace().color(weak));
+                    });
+                }
+            });
         });
         if let Some(r) = shown.rect {
             self.window_rects.push(r);

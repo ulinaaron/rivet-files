@@ -494,6 +494,12 @@ impl RivetApp {
         if std::env::var_os("RIVET_PREFS_MAX").is_some() {
             app.prefs_win.maximized = true;
         }
+        // RIVET_PROPS_TAB=1 shows the Permissions side of opened Properties windows.
+        if std::env::var("RIVET_PROPS_TAB").as_deref() == Ok("1") {
+            for (_, st) in app.props.iter_mut() {
+                st.tab = 1;
+            }
+        }
         if std::env::var_os("RIVET_PROPS_ROLLED").is_some() {
             for (w, _) in &mut app.props {
                 w.shaded = true;
@@ -1277,7 +1283,7 @@ impl RivetApp {
         };
         let name = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "/".into());
         self.next_win_id += 1;
-        let mut win = windows::WinState::new(self.next_win_id, Vec2::new(440.0, 420.0));
+        let mut win = windows::WinState::new(self.next_win_id, Vec2::new(480.0, 560.0));
         // Cascade new windows a little so they don't sit exactly on top of each other.
         win.cascade = Vec2::splat(32.0 * (self.props.len() % 6) as f32);
         self.props.push((win, PropsState {
