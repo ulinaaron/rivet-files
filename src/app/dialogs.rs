@@ -881,7 +881,9 @@ impl RivetApp {
         let mut link_result: Option<Result<String, String>> = None;
         let mut changed = false;
         let mut resort = false;
-        let chrome = self.window_chrome("Preferences", &["preferences-system-symbolic", "emblem-system-symbolic", "preferences-system"], ctx);
+        let mut chrome = self.window_chrome("Preferences", &["preferences-system-symbolic", "emblem-system-symbolic", "preferences-system"], ctx);
+        // The page sidebar runs to the window's edges.
+        chrome.flush = true;
         let area = self.window_area(ctx);
         let mut win = std::mem::replace(&mut self.prefs_win, super::windows::WinState::new(0, Vec2::ZERO));
         // Test hook: RIVET_PREFS_SCROLL=PX opens Preferences scrolled down (for screenshots).
@@ -903,10 +905,10 @@ impl RivetApp {
                 egui::Frame::NONE
                     .fill(side_fill)
                     .corner_radius(egui::CornerRadius { sw: super::R_LG, ..Default::default() })
-                    .inner_margin(egui::Margin { left: 10, right: 10, top: 10, bottom: 10 })
+                    .inner_margin(egui::Margin { left: 10, right: 10, top: 6, bottom: 4 })
                     .show(ui, |ui| {
                         ui.set_width(168.0);
-                        ui.set_min_height(full_h - 20.0);
+                        ui.set_min_height(full_h - 10.0);
                         ui.vertical(|ui| {
                         ui.spacing_mut().item_spacing.y = 2.0;
                         for (i, t) in PrefsTab::ALL.iter().enumerate() {

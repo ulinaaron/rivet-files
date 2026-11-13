@@ -695,18 +695,19 @@ impl RivetApp {
             let size = tex.size_vec2();
             let scale = (rect.width() / size.x).min(rect.height() / size.y);
             let r = Rect::from_center_size(rect.center(), size * scale);
-            painter.rect_filled(r.translate(Vec2::new(0.0, 1.5)).expand(0.5), 2.0, Color32::from_black_alpha(28));
-            painter.rect_stroke(r, 1.0, Stroke::new(1.0, Color32::from_black_alpha(34)), StrokeKind::Outside);
+            painter.rect_filled(r.translate(Vec2::new(0.0, 1.0)), 1.5, Color32::from_black_alpha(18));
+            painter.rect_stroke(r, 1.0, Stroke::new(0.5, Color32::from_black_alpha(22)), StrokeKind::Outside);
             return;
         }
         let Some(mask) = self.entry_mask(ctx, e, z) else { return };
-        let d = (z / 48.0).clamp(0.6, 1.4);
-        // A hairline all round, then a soft shadow below.
-        for off in [Vec2::new(-0.7, 0.0), Vec2::new(0.7, 0.0), Vec2::new(0.0, -0.7)] {
-            paint_tex(painter, &mask, rect.translate(off * d), Color32::from_black_alpha(26));
+        // A barely-there edge and a soft shadow just below: enough to separate a white
+        // page from a white background without drawing an outline.
+        let d = (z / 48.0).clamp(0.5, 1.2);
+        for off in [Vec2::new(-0.4, 0.0), Vec2::new(0.4, 0.0), Vec2::new(0.0, -0.4)] {
+            paint_tex(painter, &mask, rect.translate(off * d), Color32::from_black_alpha(10));
         }
-        paint_tex(painter, &mask, rect.translate(Vec2::new(0.0, 1.0 * d)), Color32::from_black_alpha(34));
-        paint_tex(painter, &mask, rect.translate(Vec2::new(0.0, 2.2 * d)), Color32::from_black_alpha(16));
+        paint_tex(painter, &mask, rect.translate(Vec2::new(0.0, 0.8 * d)), Color32::from_black_alpha(20));
+        paint_tex(painter, &mask, rect.translate(Vec2::new(0.0, 1.8 * d)), Color32::from_black_alpha(9));
     }
 
     fn icon_or_mask(&mut self, ctx: &egui::Context, names: &[&str], px: f32, mask: bool) -> Option<egui::TextureHandle> {
@@ -1129,6 +1130,7 @@ impl RivetApp {
             shade: self.icon(ctx, &["window-minimize-symbolic", "go-up-symbolic"], 14.0),
             max: self.icon(ctx, &["window-maximize-symbolic"], 14.0),
             close: self.icon(ctx, &["window-close-symbolic"], 14.0),
+            flush: false,
         }
     }
 

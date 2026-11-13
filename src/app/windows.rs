@@ -29,6 +29,8 @@ pub(super) struct Chrome {
     pub shade: Option<egui::TextureHandle>,
     pub max: Option<egui::TextureHandle>,
     pub close: Option<egui::TextureHandle>,
+    /// No padding around the content (the window draws its own layout edge to edge).
+    pub flush: bool,
 }
 
 pub(super) struct Shown<R> {
@@ -131,8 +133,9 @@ pub(super) fn show<R>(ctx: &egui::Context, st: &mut WinState, chrome: &Chrome, a
             return None;
         }
         // ---- content
+        let margin = if chrome.flush { egui::Margin::ZERO } else { egui::Margin { left: 16, right: 16, top: 2, bottom: 16 } };
         let inner = egui::Frame::NONE
-            .inner_margin(egui::Margin { left: 16, right: 16, top: 2, bottom: 16 })
+            .inner_margin(margin)
             .show(ui, |ui| add(ui))
             .inner;
         Some(inner)
