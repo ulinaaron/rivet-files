@@ -973,8 +973,8 @@ impl RivetApp {
                     egui::Grid::new("prefs-window").num_columns(2).spacing([18.0, 10.0]).min_col_width(110.0).show(ui, |ui| {
                         ui.label("Title bar");
                         ui.horizontal(|ui| {
-                            changed |= ui.selectable_value(&mut self.s.decorations, true, "From your desktop").changed();
-                            changed |= ui.selectable_value(&mut self.s.decorations, false, "Rivet's own").changed();
+                            changed |= ui.selectable_value(&mut self.s.decorations, true, "System").changed();
+                            changed |= ui.selectable_value(&mut self.s.decorations, false, "App").changed();
                         });
                         ui.end_row();
                         ui.label("Sidebar");
