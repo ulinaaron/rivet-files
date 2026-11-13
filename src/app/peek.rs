@@ -430,7 +430,11 @@ impl RivetApp {
         let main_w = (width - icons_n * (30.0 + gap)).max(90.0);
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = gap;
-            if !in_trash {
+            if e.is_dir && !in_trash {
+                // Folders: no Open button (double-click opens them); the small buttons
+                // keep their place on the right.
+                ui.add_space(main_w);
+            } else if !in_trash {
                 // A split button: the left part opens with the default app, the chevron on
                 // the right brings up the Open With window to pick another one.
                 let split = !e.is_dir;
