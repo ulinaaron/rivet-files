@@ -10,6 +10,9 @@ use crate::model::{self, Location};
 use crate::places;
 use crate::settings::{SortKey, ToolItem, ViewMode};
 
+/// Extra side padding for the top-level menu bar items.
+const MENU_EXTRA_PAD: f32 = 3.0;
+
 impl RivetApp {
     pub(super) fn window_resize_edges(&mut self, ctx: &egui::Context) {
         use egui::{CursorIcon, ResizeDirection as RD};
@@ -97,7 +100,7 @@ impl RivetApp {
                         if csd {
                             // The menu bar takes all the width it is given, so give it just enough.
                             let font = egui::TextStyle::Button.resolve(ui.style());
-                            let pad = ui.spacing().button_padding.x * 2.0 + ui.spacing().item_spacing.x;
+                            let pad = (ui.spacing().button_padding.x + MENU_EXTRA_PAD) * 2.0 + ui.spacing().item_spacing.x;
                             let w: f32 = ["File", "Edit", "View", "Go", "Bookmarks", "Help"]
                                 .iter()
                                 .map(|l| ui.painter().layout_no_wrap(l.to_string(), font.clone(), Color32::WHITE).size().x + pad)
@@ -187,6 +190,8 @@ impl RivetApp {
         let in_dir = self.current_dir();
         let sel = self.tab().selected_paths();
         let in_trash = matches!(self.tab().loc, Location::Trash);
+        // A slightly wider hover area for File, Edit, View… (their menus set their own spacing).
+        ui.spacing_mut().button_padding.x += MENU_EXTRA_PAD;
         ui.menu_button("File", |ui| {
             self.roomy_menu(ui);
             if ui.add_enabled(in_dir.is_some(), egui::Button::new("Create New Folder").shortcut_text("Shift+Ctrl+N")).clicked() {
