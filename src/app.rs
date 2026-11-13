@@ -1883,11 +1883,15 @@ impl eframe::App for RivetApp {
                 }
                 continue;
             }
-            // "left@N" / "right@N" press an arrow key at frame N.
-            if matches!(xy.trim(), "left" | "right") {
+            // "left@N" / "right@N" / "enter@N" press that key at frame N.
+            if matches!(xy.trim(), "left" | "right" | "enter") {
                 if let Ok(f) = f.trim().parse::<u32>() {
                     if self.frames + 1 == f {
-                        let key = if xy.trim() == "left" { egui::Key::ArrowLeft } else { egui::Key::ArrowRight };
+                        let key = match xy.trim() {
+                            "left" => egui::Key::ArrowLeft,
+                            "right" => egui::Key::ArrowRight,
+                            _ => egui::Key::Enter,
+                        };
                         raw.events.push(egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers: Default::default() });
                     }
                 }

@@ -135,20 +135,22 @@ impl RivetApp {
         }
 
         // ---- keys (taken here so the file view doesn't also react)
-        let (left, right, home, end, close) = ctx.input_mut(|i| {
+        let (left, right, home, end, close, enter) = ctx.input_mut(|i| {
             (
                 i.consume_key(egui::Modifiers::NONE, Key::ArrowLeft) || i.consume_key(egui::Modifiers::NONE, Key::ArrowUp),
                 i.consume_key(egui::Modifiers::NONE, Key::ArrowRight) || i.consume_key(egui::Modifiers::NONE, Key::ArrowDown),
                 i.consume_key(egui::Modifiers::NONE, Key::Home),
                 i.consume_key(egui::Modifiers::NONE, Key::End),
                 i.consume_key(egui::Modifiers::NONE, Key::Escape) || i.consume_key(egui::Modifiers::NONE, Key::Space),
+                // Return opens the file in its default app, like the Open button.
+                i.consume_key(egui::Modifiers::NONE, Key::Enter),
             )
         });
 
         let screen = ctx.content_rect();
         let mut go: Option<usize> = None;
         let mut shut = close;
-        let mut open_with = false;
+        let mut open_with = enter;
         let mut choose_app = false;
         let mut toggle_play = false;
         let e = q.current().clone();
@@ -260,7 +262,7 @@ impl RivetApp {
                     for (dx, dy) in [(-1.0, -1.0), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0)] {
                         ui.painter().rect_filled(Rect::from_center_size(c + Vec2::new(dx * 3.4, dy * 3.4), Vec2::splat(5.0)), 1.5, Color32::WHITE);
                     }
-                    if mresp.on_hover_text(&open_label).clicked() {
+                    if mresp.on_hover_text(format!("{open_label} (Return)")).clicked() {
                         open_with = true;
                     }
                     if cresp.on_hover_text("Open with another application…").clicked() {

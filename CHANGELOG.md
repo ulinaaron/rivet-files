@@ -4,7 +4,7 @@
 
 ### New
 - **Preview**: a full-window light box for pictures, videos (muted playback), music covers and
-  text. Right-click → Preview or press Space; ← / → (or the side arrows) step through the folder,
+  text. Right-click → Preview or press Space; ← / → (or the side arrows) step through the folder, Return opens the file,
   Esc, Space or a click outside closes it. Its bottom split button opens with the default app
   (named, with its icon) or picks another one.
 - **Preferences** has a sidebar of pages: Appearance (with Window), Views, Behavior, Menu (with the
