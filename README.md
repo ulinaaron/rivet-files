@@ -11,6 +11,10 @@
 
 A Linux file manager in the same vein as Nemo, Thunar and Caja — written in Rust. Does not use GTK or Qt.
 
+Rivet aims to be powerful yet minimal. Nothing is locked down or only half adjustable: the
+interface is meant to bend to you, so you can work with as many or as few toolbar controls
+as you like.
+
 ![Rivet Files showing a home folder](docs/screenshots/icons-wide.png)
 
 ## ✨ Features
