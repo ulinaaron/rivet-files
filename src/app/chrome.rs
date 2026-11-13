@@ -12,6 +12,8 @@ use crate::settings::{SortKey, ToolItem, ViewMode};
 
 /// Extra side padding for the top-level menu bar items.
 const MENU_EXTRA_PAD: f32 = 3.0;
+/// Left/right padding of the toolbar, shared by the status bar so the two line up.
+const TOOLBAR_SIDE_PAD: i8 = 12;
 
 impl RivetApp {
     pub(super) fn window_resize_edges(&mut self, ctx: &egui::Context) {
@@ -552,7 +554,7 @@ impl RivetApp {
         let (left, right) = (layout[..split].to_vec(), layout[(split + 1).min(layout.len())..].to_vec());
         let panel = if self.s.toolbar_bottom { egui::Panel::bottom("toolbar") } else { egui::Panel::top("toolbar") };
         panel.show_separator_line(false)
-            .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin::symmetric(12, 9)))
+            .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin::symmetric(TOOLBAR_SIDE_PAD, 9)))
             .show(ui, |ui| {
                 // Right-click on empty toolbar space to customize it.
                 let bg = ui.interact(ui.max_rect(), Id::unique("toolbar-bg"), Sense::click());
@@ -934,11 +936,13 @@ impl RivetApp {
         // the Peek button sits on the Peek panel's side.
         let sidebar_right = self.s.sidebar_right;
         let peek_left = self.s.peek_left;
-        // A little more room on the side facing the window edge.
+        // Same side padding as the toolbar (so their buttons line up when stacked), and a little
+        // more room on the side facing the window edge.
+        let side = TOOLBAR_SIDE_PAD;
         let (panel, margin) = if self.s.statusbar_top {
-            (egui::Panel::top("status"), egui::Margin { left: 6, right: 6, top: 5, bottom: 4 })
+            (egui::Panel::top("status"), egui::Margin { left: side, right: side, top: 5, bottom: 4 })
         } else {
-            (egui::Panel::bottom("status"), egui::Margin { left: 6, right: 6, top: 3, bottom: 6 })
+            (egui::Panel::bottom("status"), egui::Margin { left: side, right: side, top: 3, bottom: 6 })
         };
         panel.show_separator_line(false)
             .frame(egui::Frame::NONE.fill(fill).inner_margin(margin))
