@@ -303,6 +303,9 @@ impl RivetApp {
             let mut c = false;
             c |= Self::menu_toggle(ui, &mut self.s.show_sidebar, "Sidebar", "F9");
             c |= Self::menu_toggle(ui, &mut self.s.show_peek, "Peek", "F11");
+            if ui.add(egui::Button::new("Filters…").shortcut_text("Ctrl+Shift+F")).clicked() {
+                self.toggle_filters();
+            }
             c |= Self::menu_toggle(ui, &mut self.s.show_statusbar, "Statusbar", "F8");
             c |= Self::menu_toggle(ui, &mut self.s.show_menubar, "Menubar", "Ctrl+M");
             c |= Self::menu_toggle(ui, &mut self.s.show_thumbnails, "Picture Thumbnails", "");
@@ -1007,25 +1010,23 @@ impl RivetApp {
     /// Places / folder tree / hide sidebar. In a right-to-left layout they come out
     /// mirrored, with "places" at the outer edge either way.
     fn status_sidebar_buttons(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        let (sb, tree, filt) = (self.s.show_sidebar, self.s.sidebar_tree, self.s.sidebar_filters);
-        if self.tool_button(ui, ctx, &["user-bookmarks-symbolic", "starred-symbolic", "bookmark-new-symbolic"], "★", "Show places", true, sb && !tree && !filt) {
+        let (sb, tree) = (self.s.show_sidebar, self.s.sidebar_tree);
+        if self.tool_button(ui, ctx, &["user-bookmarks-symbolic", "starred-symbolic", "bookmark-new-symbolic"], "★", "Show places", true, sb && !tree) {
             self.s.show_sidebar = true;
             self.s.sidebar_tree = false;
-            self.s.sidebar_filters = false;
             self.dirty_settings = true;
         }
-        if self.tool_button(ui, ctx, &["view-list-tree-symbolic", "folder-symbolic", "view-list-symbolic"], "🌲", "Show the folder tree", true, sb && tree && !filt) {
+        if self.tool_button(ui, ctx, &["view-list-tree-symbolic", "folder-symbolic", "view-list-symbolic"], "🌲", "Show the folder tree", true, sb && tree) {
             self.s.show_sidebar = true;
             self.s.sidebar_tree = true;
-            self.s.sidebar_filters = false;
             self.dirty_settings = true;
         }
-        // Filters: a drawn funnel (the same in every icon theme).
-        let resp = self.tool_button_resp(ui, ctx, &[], " ", "Show the filters", true, sb && filt);
+        // Filters: a drawn funnel (the same in every icon theme); opens the Filters panel.
+        let resp = self.tool_button_resp(ui, ctx, &[], " ", "Filters (Ctrl+Shift+F)", true, self.filters_open);
         let fg = ui.visuals().text_color();
         super::filterview::paint_funnel(ui.painter(), resp.rect.center(), 15.0, fg);
         if resp.clicked() {
-            self.show_filters();
+            self.toggle_filters();
         }
         let icons: &[&str] = if self.s.sidebar_right {
             &["sidebar-show-right-symbolic", "view-right-pane-symbolic", "view-dual-symbolic"]
@@ -1128,9 +1129,7 @@ impl RivetApp {
             .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin { left: 8, right: 8, top: 6, bottom: 10 }))
             .show(ui, |ui| {
                 egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
-                    if self.s.sidebar_filters {
-                        self.filters_view(ui);
-                    } else if self.s.sidebar_tree {
+                    if self.s.sidebar_tree {
                         self.tree_contents(ui, ctx);
                     } else {
                         self.sidebar_contents(ui, ctx);

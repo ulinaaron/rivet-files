@@ -20,12 +20,55 @@ pub(super) fn paint_funnel(p: &egui::Painter, c: Pos2, size: f32, color: Color32
 }
 
 impl RivetApp {
-    /// Open the sidebar on the Filters view.
+    /// Open the Filters panel.
     pub(super) fn show_filters(&mut self) {
-        self.s.show_sidebar = true;
-        self.s.sidebar_filters = true;
-        self.s.sidebar_tree = false;
-        self.dirty_settings = true;
+        self.filters_open = true;
+        self.filters_toggled = true;
+    }
+
+    /// Open or close the Filters panel (status bar funnel, View menu, Ctrl+Shift+F).
+    pub(super) fn toggle_filters(&mut self) {
+        self.filters_open = !self.filters_open;
+        self.filters_toggled = true;
+    }
+
+    /// The Filters panel: drops down over the top-right of the files, so the sidebar stays
+    /// free for getting around. Closes on Esc or a click outside it.
+    pub(super) fn filters_popover(&mut self, ctx: &egui::Context) {
+        let toggled = std::mem::take(&mut self.filters_toggled);
+        if !self.filters_open {
+            self.filters_rect = None;
+            return;
+        }
+        let Some(files) = self.files_rect else { return };
+        // A click outside closes it (not the click that opened it, nor one in an open list).
+        if !toggled {
+            let outside = ctx.input(|i| i.pointer.any_pressed() && i.pointer.interact_pos().is_some_and(|p| self.filters_rect.is_some_and(|r| !r.contains(p))));
+            let typing = ctx.egui_wants_keyboard_input();
+            let esc = !typing && !egui::Popup::is_any_open(ctx) && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape));
+            if (outside && !egui::Popup::is_any_open(ctx)) || esc {
+                self.filters_open = false;
+                self.filters_rect = None;
+                return;
+            }
+        }
+        let width = 300.0_f32.min(files.width() - 24.0);
+        // Below the filter strip when one is showing, so its buttons stay reachable.
+        let strip = self.tab().loc.dir().and_then(|d| self.s.filters.active_for(d)).is_some();
+        let top = files.top() + if strip { 46.0 } else { 12.0 };
+        let pos = Pos2::new(files.right() - width - 14.0, top);
+        let max_h = (files.bottom() - pos.y - 12.0).max(200.0);
+        let style = ctx.global_style();
+        let frame = egui::Frame::popup(&style).inner_margin(egui::Margin::symmetric(10, 8)).corner_radius(super::R_LG);
+        let r = egui::Area::new(egui::Id::unique("filters-panel")).order(egui::Order::Foreground).fixed_pos(pos).show(ctx, |ui| {
+            frame.show(ui, |ui| {
+                ui.set_width(width - 20.0);
+                egui::ScrollArea::vertical().max_height(max_h - 16.0).min_scrolled_height(max_h - 16.0).auto_shrink([false, true]).show(ui, |ui| {
+                    self.filters_view(ui);
+                });
+            });
+        });
+        self.filters_rect = Some(r.response.rect);
     }
 
     /// The thin strip at the top of the file area while a filter is on here.
@@ -98,6 +141,19 @@ impl RivetApp {
         let (hr, _) = ui.allocate_exact_size(Vec2::new(w, 26.0), Sense::hover());
         paint_funnel(ui.painter(), Pos2::new(hr.left() + 16.0, hr.center().y), 13.0, v.text_color());
         ui.painter().text(Pos2::new(hr.left() + 28.0, hr.center().y), egui::Align2::LEFT_CENTER, "Filters", crate::fonts::ui_font(13.5), v.text_color());
+        // Close (×), at the right of the header.
+        let cr = Rect::from_center_size(Pos2::new(hr.right() - 12.0, hr.center().y), Vec2::splat(24.0));
+        let cresp = ui.interact(cr, ui.scope_id().with("filters-close"), Sense::click()).on_hover_text("Close (Esc)");
+        if cresp.hovered() {
+            ui.painter().circle_filled(cr.center(), 11.0, v.widgets.hovered.weak_bg_fill);
+        }
+        let c = cr.center();
+        let st = Stroke::new(1.5, v.text_color());
+        ui.painter().line_segment([c + Vec2::new(-4.0, -4.0), c + Vec2::new(4.0, 4.0)], st);
+        ui.painter().line_segment([c + Vec2::new(4.0, -4.0), c + Vec2::new(-4.0, 4.0)], st);
+        if cresp.clicked() {
+            self.filters_open = false;
+        }
         let Some(dir) = self.tab().loc.dir().map(|d| d.to_path_buf()) else {
             ui.add_space(6.0);
             ui.horizontal(|ui| {

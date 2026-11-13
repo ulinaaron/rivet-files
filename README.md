@@ -133,6 +133,7 @@ Rivet talks to X11 or Wayland directly. It does not use GTK or Qt. A normal desk
 | `F2` · `Delete` | Rename (Bulk Rename with several selected) · move to Trash |
 | `Ctrl+M` | Show or hide the menu bar |
 | `F8` · `F9` · `F11` | Status bar · sidebar · Peek panel |
+| `Ctrl+Shift+F` | Filters |
 | `Space` · `←` `→` · `Return` | Preview the selection · previous / next file · open it |
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / redo |
 | `Ctrl+,` | Preferences |

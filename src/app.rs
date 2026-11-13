@@ -212,6 +212,11 @@ pub struct RivetApp {
     font_filter: String,
     /// Which filter the Filters sidebar is editing.
     filter_scope: Option<crate::filters::Scope>,
+    /// The Filters panel (drops down over the files), and where things were last frame.
+    filters_open: bool,
+    filters_toggled: bool,
+    filters_rect: Option<Rect>,
+    files_rect: Option<Rect>,
     /// A text field or drop-down list in Preferences was active last frame (Esc then only
     /// leaves it, instead of closing Preferences).
     prefs_busy_last: bool,
@@ -432,6 +437,10 @@ impl RivetApp {
             prefs_focus: false,
             font_filter: String::new(),
             filter_scope: None,
+            filters_open: false,
+            filters_toggled: false,
+            filters_rect: None,
+            files_rect: None,
             prefs_busy_last: false,
             file_list_focus: None,
             kb_nav: false,
@@ -560,6 +569,10 @@ impl RivetApp {
                 app.s.filters = crate::filters::FilterSet::parse(&text.replace("$START", &start));
                 app.resort_all();
             }
+        }
+        // RIVET_FILTERS_OPEN opens the Filters panel (for checks).
+        if std::env::var_os("RIVET_FILTERS_OPEN").is_some() {
+            app.filters_open = true;
         }
         if let Ok(v) = std::env::var("RIVET_EDIT_PATH") {
             app.start_path_editing();
@@ -1583,7 +1596,9 @@ impl RivetApp {
             self.path_focus = true;
             self.path_text = self.current_dir().map(|d| d.display().to_string()).unwrap_or_default();
         }
-        if cmd && pressed(Key::F) {
+        if cmd && m.shift && pressed(Key::F) {
+            self.toggle_filters();
+        } else if cmd && pressed(Key::F) {
             self.search_open = true;
             self.search_focus = true;
         }
@@ -2006,6 +2021,8 @@ impl eframe::App for RivetApp {
         self.properties_windows(&ctx);
         self.net_poll();
         self.connect_dialog(&ctx);
+        // The Filters panel drops down over the files.
+        self.filters_popover(&ctx);
         // Preview draws over everything else and takes the arrow keys while open.
         self.quick_view(&ctx);
         // The last click decides whether the keyboard belongs to a window or the file view.

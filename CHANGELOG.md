@@ -7,8 +7,9 @@
   documents, archives, code & text, other), by name (contains / excludes / includes patterns like
   `*.jpg, IMG_*`) and by date modified. A filter is global, for one folder, or for a folder and its
   subfolders; the most specific one is used (this folder, then a parent's “& subfolders”, then
-  global). A strip above the files says when one is on and how many items it hides; its funnel
-  opens the new Filters view of the sidebar (also a status bar button). Saved in ~/.config/rivet/filters.
+  global). A strip above the files says when one is on and how many items it hides; its funnel,
+  the status bar funnel, View → Filters… or Ctrl+Shift+F open the Filters panel over the files
+  (the sidebar stays free for getting around). Saved in ~/.config/rivet/filters.
 - **Convert & Resize module** (needs ffmpeg; Preferences → Modules shows whether it's installed and
   turns it on or off). Right-click → Convert To… for pictures (JPEG, PNG, WebP, GIF, BMP, TIFF), videos
   (MP4, WebM, MKV, GIF, MP3) and audio (MP3, Ogg, FLAC, WAV, M4A), one file or many, with a quality
