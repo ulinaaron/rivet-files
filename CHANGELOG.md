@@ -3,6 +3,10 @@
 ## Unreleased
 
 ### New
+- **Keyboard shortcuts window** (F1) redone: keys drawn as key caps, cards in two columns
+  (getting around, files, search and filter, view, panels and modes, tabs and window), a search
+  field ("rename", "ctrl d"), and a few missing shortcuts added. With Vim keys on they get their
+  own card at the top; Preferences → Behavior has a button to show them.
 - **Vim keys** (an option, off unless you turn it on in Preferences → Behavior): `j` `k` move,
   `h` goes to the parent folder, `l` opens, `gg` `G` jump to the first / last item, `H` `L` go
   back / forward, `yy` `dd` `p` copy, cut and paste, `/` searches, `:` opens Quick Actions and `~`

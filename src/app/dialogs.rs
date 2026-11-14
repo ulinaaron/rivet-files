@@ -438,83 +438,7 @@ impl RivetApp {
                 close = self.open_with_dialog(ctx);
             }
             Dialog::Shortcuts => {
-                const GROUPS: [(&str, &[(&str, &str)]); 5] = [
-                    ("Navigation", &[
-                        ("Alt+Left / Alt+Right", "Back / forward"),
-                        ("Alt+Up or Backspace", "Parent folder"),
-                        ("Alt+Home", "Home folder"),
-                        ("Ctrl+L", "Type a location"),
-                        ("Ctrl+F or just type", "Filter; Enter searches subfolders"),
-                        ("Ctrl+T / Ctrl+W", "New tab / close tab"),
-                        ("Ctrl+Tab", "Next tab"),
-                    ]),
-                    ("Files", &[
-                        ("Enter", "Open"),
-                        ("Ctrl+C / X / V", "Copy / cut / paste"),
-                        ("Ctrl+Z / Ctrl+Shift+Z", "Undo / redo"),
-                        ("F2", "Rename"),
-                        ("Delete", "Move to Trash or delete (asks)"),
-                        ("Shift+Delete", "Delete permanently"),
-                        ("Ctrl+Shift+N", "New folder"),
-                        ("Ctrl+A", "Select all"),
-                        ("Ctrl+I or Alt+Enter", "Properties"),
-                        ("Ctrl+D", "Bookmark this folder"),
-                    ]),
-                    ("View", &[
-                        ("Ctrl+1 / 2 / 3", "Icon / list / compact view"),
-                        ("Ctrl+ + / Ctrl+ −", "Zoom in / out"),
-                        ("Ctrl+H", "Show hidden files"),
-                        ("F5 or Ctrl+R", "Reload"),
-                    ]),
-                    ("Window", &[
-                        ("Ctrl+,", "Preferences"),
-                        ("F8", "Show or hide the status bar"),
-                        ("F9", "Show or hide the sidebar"),
-                        ("F11", "Show or hide the Peek panel"),
-                        ("F12", "Zen mode"),
-                        ("F7", "Terminal mode"),
-                        ("Ctrl+P", "Quick Open: go to any folder"),
-                        ("Ctrl+Shift+P", "Quick Actions: every command and option"),
-                        ("Ctrl+Shift+F", "Filters"),
-                        ("Ctrl+M or F10", "Show or hide the menu bar"),
-                        ("F1", "This list"),
-                        ("Ctrl+Q", "Close the window"),
-                    ]),
-                    ("Vim keys (Preferences → Behavior)", &[
-                        ("j / k", "Move down / up"),
-                        ("h / l", "Parent folder / open"),
-                        ("gg / G", "First / last item"),
-                        ("H / L", "Back / forward"),
-                        ("yy / dd / p", "Copy / cut / paste"),
-                        ("/", "Search this folder"),
-                        (":", "Quick Actions"),
-                        ("~", "Home"),
-                    ]),
-                ];
-                let r = egui::Modal::new(Id::unique("shortcuts")).show(ctx, |ui| {
-                    ui.set_width(460.0);
-                    ui.heading("Keyboard Shortcuts");
-                    ui.add_space(4.0);
-                    let weak = ui.visuals().weak_text_color();
-                    egui::ScrollArea::vertical().max_height((ctx.content_rect().height() - 180.0).max(240.0)).show(ui, |ui| {
-                        for (gi, (title, rows)) in GROUPS.iter().enumerate() {
-                            ui.add_space(6.0);
-                            ui.label(egui::RichText::new(*title).strong().color(weak));
-                            egui::Grid::new(("keys", gi)).num_columns(2).spacing([24.0, 6.0]).min_col_width(170.0).show(ui, |ui| {
-                                for (k, d) in rows.iter() {
-                                    ui.label(egui::RichText::new(*k).monospace());
-                                    ui.label(*d);
-                                    ui.end_row();
-                                }
-                            });
-                        }
-                    });
-                    ui.add_space(10.0);
-                    ui.button("Close").clicked()
-                });
-                if r.inner || r.should_close() {
-                    close = true;
-                }
+                close = self.keymap_dialog(ctx);
             }
         }
         if let Some(n) = next {
@@ -1463,8 +1387,8 @@ impl RivetApp {
                         });
                         section(ui, "Keyboard", &mut |ui| {
                             changed |= ui.checkbox(&mut self.s.vim_keys, "Vim keys").changed();
-                            if self.s.vim_keys {
-                                hint(ui, "j k move · h parent · l open · gg G top / bottom · H L back / forward · yy dd p copy, cut, paste · / search · : Quick Actions");
+                            if self.s.vim_keys && ui.button("Show the keys").clicked() {
+                                self.dialog = Dialog::Shortcuts;
                             }
                         });
                     }

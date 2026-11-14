@@ -29,6 +29,7 @@ mod views;
 mod windows;
 mod zen;
 mod commands;
+mod keymap;
 
 #[derive(Clone)]
 struct DragFiles(Vec<PathBuf>);
@@ -198,6 +199,8 @@ pub struct RivetApp {
     actions: Option<commands::QuickActions>,
     /// Vim keys: the first key of a two-key command (gg, yy, dd).
     vim_pending: Option<char>,
+    /// What's typed in the keyboard map's search field.
+    keymap_filter: String,
     /// Folders visited this session, newest first (Quick Open ranks them first).
     recent_dirs: Vec<PathBuf>,
     net_scan_rx: Option<std::sync::mpsc::Receiver<netview::NetResult>>,
@@ -498,6 +501,7 @@ impl RivetApp {
             spotlight: None,
             actions: None,
             vim_pending: None,
+            keymap_filter: String::new(),
             recent_dirs: Vec::new(),
             net_scan_rx: None,
             connect_ask: None,

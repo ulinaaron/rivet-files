@@ -36,7 +36,7 @@ fn pills<T: PartialEq + Copy>(ui: &mut egui::Ui, value: &mut T, choices: &[(T, &
 }
 
 /// Title on the left, a close button on the right. Returns true when close was clicked.
-fn header(ui: &mut egui::Ui, title: &str, close_icon: &Option<egui::TextureHandle>) -> bool {
+pub(super) fn header(ui: &mut egui::Ui, title: &str, close_icon: &Option<egui::TextureHandle>) -> bool {
     let danger = super::status(ui.ctx()).danger;
     let mut clicked = false;
     ui.horizontal(|ui| {
