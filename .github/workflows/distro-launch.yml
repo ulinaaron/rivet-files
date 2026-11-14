@@ -1,0 +1,278 @@
+# Proves a release build installs and opens on stock desktops.
+# Not part of pull-request CI. Run it by hand, or let a release tag start it.
+name: Distro launch
+
+on:
+  workflow_dispatch:
+    inputs:
+      ubuntu_22_04:
+        description: Ubuntu 22.04
+        type: boolean
+        default: true
+      ubuntu_24_04:
+        description: Ubuntu 24.04
+        type: boolean
+        default: true
+      debian_12:
+        description: Debian 12
+        type: boolean
+        default: true
+      fedora:
+        description: Fedora (latest)
+        type: boolean
+        default: true
+      arch:
+        description: Arch (latest)
+        type: boolean
+        default: true
+      displays:
+        description: X11 (Xvfb) and Wayland (Sway headless)
+        type: boolean
+        default: true
+      flatpak_launch:
+        description: Also build the Flatpak and open it under Xvfb
+        type: boolean
+        default: false
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: distro-launch-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    name: Choose distros
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+      skip: ${{ steps.set.outputs.skip }}
+    steps:
+      - id: set
+        env:
+          EVENT: ${{ github.event_name }}
+          U22: ${{ inputs.ubuntu_22_04 }}
+          U24: ${{ inputs.ubuntu_24_04 }}
+          DEB: ${{ inputs.debian_12 }}
+          FED: ${{ inputs.fedora }}
+          ARCH: ${{ inputs.arch }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          event = os.environ["EVENT"]
+          specs = [
+              ("ubuntu-22.04", "ubuntu:22.04", os.environ.get("U22", "")),
+              ("ubuntu-24.04", "ubuntu:24.04", os.environ.get("U24", "")),
+              ("debian-12", "debian:12", os.environ.get("DEB", "")),
+              ("fedora", "fedora:latest", os.environ.get("FED", "")),
+              ("arch", "archlinux:latest", os.environ.get("ARCH", "")),
+          ]
+          if event != "workflow_dispatch":
+              chosen = specs
+          else:
+              chosen = [s for s in specs if s[2] == "true"]
+          include = [{"id": a, "image": b} for a, b, _ in chosen]
+          path = os.environ["GITHUB_OUTPUT"]
+          with open(path, "a", encoding="utf-8") as fh:
+              fh.write(f"skip={'true' if not include else 'false'}\n")
+              fh.write("matrix<<EOF\n")
+              json.dump({"include": include or [{"id": "none", "image": "ubuntu:22.04"}]}, fh)
+              fh.write("\nEOF\n")
+          print("distros:", [a for a, _, _ in chosen])
+          PY
+
+  build:
+    name: Build release artifacts
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Cache Zig and bundled library packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/rivet-build
+          key: rivet-zig-0.15.1-zigbuild-0.24.1-xkb-jammy
+
+      - name: Install packaging tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends binutils squashfs-tools curl ca-certificates xz-utils shared-mime-info
+
+      - name: Portable tarball and AppImage
+        run: |
+          set -eu
+          ./utilities/rivet-dev portable
+          ./utilities/rivet-dev appimage
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          arch=$(uname -m)
+          name="rivet-files-$version-$arch-linux"
+          stage="dist/$name"
+          rm -rf "$stage"
+          mkdir -p "$stage"
+          strip -o "$stage/rivet" "$(./utilities/rivet-dev portable-bin)"
+          cp data/rivet-files.desktop data/rivet-files.svg utilities/lib/install.sh README.md CHANGELOG.md LICENSE-MIT LICENSE-APACHE "$stage/"
+          cp -r data/icons "$stage/icons"
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: launch-script
+          path: utilities/lib/distro-launch.sh
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-tarball
+          path: dist/rivet-files-*-linux.tar.gz
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-appimage
+          path: dist/Rivet_Files-*.AppImage
+          if-no-files-found: error
+
+  install:
+    name: Install on ${{ matrix.id }}
+    needs: [prepare, build]
+    if: needs.prepare.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.image }}
+      options: --user root
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: launch-script
+          path: utilities/lib
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-tarball
+          path: dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-appimage
+          path: dist
+
+      - name: Runtime libraries
+        run: |
+          chmod +x utilities/lib/distro-launch.sh
+          utilities/lib/distro-launch.sh deps
+
+      - name: Tarball install, launch, uninstall
+        run: utilities/lib/distro-launch.sh tarball dist/rivet-files-*-linux.tar.gz shots
+
+      - name: AppImage launch
+        run: utilities/lib/distro-launch.sh appimage dist/Rivet_Files-*.AppImage shots
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-${{ matrix.id }}
+          path: shots/
+          if-no-files-found: error
+
+  displays:
+    name: X11 and Wayland
+    needs: build
+    if: github.event_name != 'workflow_dispatch' || inputs.displays
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:24.04
+      options: --user root
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: launch-script
+          path: utilities/lib
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-tarball
+          path: dist
+
+      - name: Display libraries, Xvfb, Sway, grim
+        run: |
+          chmod +x utilities/lib/distro-launch.sh
+          utilities/lib/distro-launch.sh deps-display
+
+      - name: Launch on both backends
+        run: |
+          set -eu
+          work=$(mktemp -d)
+          tar -xzf dist/rivet-files-*-linux.tar.gz -C "$work"
+          bin=$(find "$work" -type f -name rivet -perm -111 | head -n 1)
+          utilities/lib/distro-launch.sh displays "$bin" shots
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-x11-wayland
+          path: shots/
+          if-no-files-found: error
+
+  flatpak-sockets:
+    name: Flatpak display sockets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Manifest allows Wayland and X11
+        run: |
+          set -eu
+          manifest=packaging/flatpak/io.github.ulinaaron.rivet-files.yml
+          grep -qx '  - --socket=wayland' "$manifest"
+          grep -qx '  - --socket=fallback-x11' "$manifest"
+
+  flatpak-launch:
+    name: Flatpak under Xvfb
+    if: inputs.flatpak_launch
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-48
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: rivet-files.flatpak
+          manifest-path: packaging/flatpak/io.github.ulinaaron.rivet-files.yml
+          cache-key: flatpak-26.08
+
+      - name: Open the Flatpak under Xvfb
+        run: |
+          set -eu
+          flatpak install -y --noninteractive rivet-files.flatpak
+          if command -v dnf >/dev/null; then
+            dnf install -y xorg-x11-server-Xvfb mesa-dri-drivers mesa-libGL mesa-libEGL
+          elif command -v apt-get >/dev/null; then
+            apt-get update
+            apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri libgl1 libegl1
+          fi
+          mkdir -p shots
+          work=$(mktemp -d)
+          cat >"$work/run-flatpak" <<'EOF'
+          #!/bin/sh
+          exec flatpak run --filesystem=host \
+            --unset-env=WAYLAND_DISPLAY --unset-env=WAYLAND_SOCKET \
+            --env=LIBGL_ALWAYS_SOFTWARE=1 --env=GALLIUM_DRIVER=llvmpipe \
+            io.github.ulinaaron.rivet-files "$@"
+          EOF
+          chmod +x "$work/run-flatpak" utilities/lib/distro-launch.sh
+          utilities/lib/distro-launch.sh x11 "$work/run-flatpak" shots
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshot-flatpak
+          path: shots/
+          if-no-files-found: warn

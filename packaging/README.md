@@ -26,7 +26,7 @@ flatpak run org.flatpak.Builder --force-clean --install --user flatpak-build pac
 flatpak run io.github.ulinaaron.rivet-files
 ```
 
-CI builds `rivet-files.flatpak` on pull requests and attaches that file to a published GitHub release.
+CI builds `rivet-files.flatpak` on pull requests and attaches that file to a published GitHub release. Installing that build on a clean distro, and opening it under X11 and Wayland, is a separate workflow described in [docs/testing.md](../docs/testing.md). It does not run on pull requests.
 
 When `Cargo.lock` changes, regenerate the offline crate list (no network during the Flatpak build):
 
