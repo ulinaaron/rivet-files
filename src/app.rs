@@ -1699,6 +1699,7 @@ impl RivetApp {
     /// arrow / Home / End / Enter presses (so every view handles it as usual); the rest runs
     /// directly. Typed letters no longer filter the folder ("/" does that).
     fn vim_translate(&mut self, events: &[egui::Event]) -> Vec<egui::Event> {
+        let grid = self.s.view != ViewMode::List;
         let key = |k: Key| egui::Event::Key { key: k, physical_key: None, pressed: true, repeat: false, modifiers: Default::default() };
         let mut out = Vec::new();
         for e in events {
@@ -1712,8 +1713,12 @@ impl RivetApp {
                             (_, 'g' | 'y' | 'd') => self.vim_pending = Some(c),
                             (_, 'j') => out.push(key(Key::ArrowDown)),
                             (_, 'k') => out.push(key(Key::ArrowUp)),
-                            (_, 'l') => out.push(key(Key::Enter)),
-                            (_, 'h') => self.go_up(),
+                            // In the grid views h / l move sideways; in the list (one column)
+                            // they go to the parent folder / open, like a terminal file manager.
+                            (_, 'h') if grid => out.push(key(Key::ArrowLeft)),
+                            (_, 'l') if grid => out.push(key(Key::ArrowRight)),
+                            (_, 'h' | '-') => self.go_up(),
+                            (_, 'l' | 'o') => out.push(key(Key::Enter)),
                             (_, 'G') => out.push(key(Key::End)),
                             (_, 'H') => self.go_back(),
                             (_, 'L') => self.go_forward(),

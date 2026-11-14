@@ -70,7 +70,8 @@ const APP: Group = ("Tabs and window", &[
 
 const VIM: Group = ("Vim keys", &[
     ("j/k", "Move down / up"),
-    ("h/l", "Parent folder / open"),
+    ("h/l", "Left / right (in the list: parent / open)"),
+    ("Minus/o", "Parent folder / open"),
     ("g g/G", "First / last item"),
     ("H/L", "Back / forward"),
     ("y y", "Copy"),

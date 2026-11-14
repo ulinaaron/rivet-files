@@ -7,8 +7,9 @@
   (getting around, files, search and filter, view, panels and modes, tabs and window), a search
   field ("rename", "ctrl d"), and a few missing shortcuts added. With Vim keys on they get their
   own card at the top; Preferences → Behavior has a button to show them.
-- **Vim keys** (an option, off unless you turn it on in Preferences → Behavior): `j` `k` move,
-  `h` goes to the parent folder, `l` opens, `gg` `G` jump to the first / last item, `H` `L` go
+- **Vim keys** (an option, off unless you turn it on in Preferences → Behavior): `h` `j` `k` `l`
+  move (in the list view `h` goes to the parent folder and `l` opens), `-` goes to the parent
+  folder and `o` opens in any view, `gg` `G` jump to the first / last item, `H` `L` go
   back / forward, `yy` `dd` `p` copy, cut and paste, `/` searches, `:` opens Quick Actions and `~`
   goes Home. Typing letters no longer filters the folder while it's on (`/` does).
 - **Terminal mode** (F7, Preferences → Appearance → Mode, View → Terminal Mode, or Quick Actions): a
