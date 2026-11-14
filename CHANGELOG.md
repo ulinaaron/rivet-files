@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.0
 
 ### New
 - **Zen mode** (F12, or View → Zen Mode): the files fill the window, with an empty border round
