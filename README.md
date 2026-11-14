@@ -190,6 +190,10 @@ Rivet talks to X11 or Wayland directly. It does not use GTK or Qt. A normal desk
 | `Ctrl+,` | Preferences |
 | `F1` | All shortcuts |
 
+Prefer Vim keys? Turn them on in Preferences → Behavior: `j` `k` move, `h` parent, `l` open,
+`gg` `G` first / last, `H` `L` back / forward, `yy` `dd` `p` copy / cut / paste, `/` search,
+`:` Quick Actions.
+
 ## ⚡ Performance
 
 **100,000 files** — one folder of empty files on btrfs, a fresh launch each time, median of five runs

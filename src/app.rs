@@ -196,6 +196,8 @@ pub struct RivetApp {
     spotlight: Option<zen::Spotlight>,
     /// Quick Actions (Ctrl+Shift+P), while open.
     actions: Option<commands::QuickActions>,
+    /// Vim keys: the first key of a two-key command (gg, yy, dd).
+    vim_pending: Option<char>,
     /// Folders visited this session, newest first (Quick Open ranks them first).
     recent_dirs: Vec<PathBuf>,
     net_scan_rx: Option<std::sync::mpsc::Receiver<netview::NetResult>>,
@@ -495,6 +497,7 @@ impl RivetApp {
             zen: Default::default(),
             spotlight: None,
             actions: None,
+            vim_pending: None,
             recent_dirs: Vec::new(),
             net_scan_rx: None,
             connect_ask: None,
@@ -1688,16 +1691,66 @@ impl RivetApp {
 
     // ---------------------------------------------------------------- keyboard
 
+    /// Vim keys: turn letters into the keys and commands they stand for. Movement becomes
+    /// arrow / Home / End / Enter presses (so every view handles it as usual); the rest runs
+    /// directly. Typed letters no longer filter the folder ("/" does that).
+    fn vim_translate(&mut self, events: &[egui::Event]) -> Vec<egui::Event> {
+        let key = |k: Key| egui::Event::Key { key: k, physical_key: None, pressed: true, repeat: false, modifiers: Default::default() };
+        let mut out = Vec::new();
+        for e in events {
+            match e {
+                egui::Event::Text(t) => {
+                    for c in t.chars() {
+                        match (self.vim_pending.take(), c) {
+                            (Some('g'), 'g') => out.push(key(Key::Home)),
+                            (Some('y'), 'y') => self.pending.push(Action::Copy),
+                            (Some('d'), 'd') => self.pending.push(Action::Cut),
+                            (_, 'g' | 'y' | 'd') => self.vim_pending = Some(c),
+                            (_, 'j') => out.push(key(Key::ArrowDown)),
+                            (_, 'k') => out.push(key(Key::ArrowUp)),
+                            (_, 'l') => out.push(key(Key::Enter)),
+                            (_, 'h') => self.go_up(),
+                            (_, 'G') => out.push(key(Key::End)),
+                            (_, 'H') => self.go_back(),
+                            (_, 'L') => self.go_forward(),
+                            (_, 'p') => self.pending.push(Action::Paste(None)),
+                            (_, '~') => self.navigate(Location::Dir(places::home())),
+                            (_, '/') => {
+                                self.search_open = true;
+                                self.search_focus = true;
+                            }
+                            (_, ':') => self.toggle_actions(),
+                            _ => {}
+                        }
+                    }
+                }
+                // The letter keys themselves are spent (shortcuts with Ctrl or Alt still work).
+                egui::Event::Key { key: k, modifiers: md, .. } if !md.command && !md.alt && k.name().len() == 1 && k.name().chars().all(|c| c.is_ascii_alphabetic()) => {}
+                egui::Event::Key { key: Key::Escape, .. } => {
+                    self.vim_pending = None;
+                    out.push(e.clone());
+                }
+                _ => out.push(e.clone()),
+            }
+        }
+        out
+    }
+
     fn keyboard(&mut self, ctx: &egui::Context, cols: usize) {
-        if self.screenshot.is_some() {
-            // A check must not be steered by whatever the person is typing elsewhere.
+        // A check must not be steered by whatever the person is typing elsewhere
+        // (unless it tests the keyboard itself: RIVET_KEYBOARD=1 with typed RIVET_CLICKS).
+        if self.screenshot.is_some() && std::env::var_os("RIVET_KEYBOARD").is_none() {
             return;
         }
         // A focused widget takes the keyboard — except the file list's own stop.
         let typing = ctx.egui_wants_keyboard_input() && ctx.memory(|m| m.focused()) != self.file_list_focus;
         // Dialogs block shortcuts; in-app windows only while you're working in one.
         let modal = !matches!(self.dialog, Dialog::None) || self.window_focus || self.connect_ask.is_some() || self.quick.is_some();
-        let (events, m) = ctx.input(|i| (i.events.clone(), i.modifiers));
+        let (mut events, m) = ctx.input(|i| (i.events.clone(), i.modifiers));
+        // Vim keys (an option): letters become commands while the file list has the keyboard.
+        if self.s.vim_keys && !typing && !modal && !self.prefs_focus && self.spotlight.is_none() && self.actions.is_none() {
+            events = self.vim_translate(&events);
+        }
         let pressed = |k: Key| events.iter().any(|e| matches!(e, egui::Event::Key { key, pressed: true, .. } if *key == k));
         let cmd = m.command;
 

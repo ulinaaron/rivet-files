@@ -3,6 +3,10 @@
 ## Unreleased
 
 ### New
+- **Vim keys** (an option, off unless you turn it on in Preferences → Behavior): `j` `k` move,
+  `h` goes to the parent folder, `l` opens, `gg` `G` jump to the first / last item, `H` `L` go
+  back / forward, `yy` `dd` `p` copy, cut and paste, `/` searches, `:` opens Quick Actions and `~`
+  goes Home. Typing letters no longer filters the folder while it's on (`/` does).
 - **Terminal mode** (F7, Preferences → Appearance → Mode, View → Terminal Mode, or Quick Actions): a
   GUI that feels like a TUI. Everything is monospace, icons are Nerd Font glyphs colored by kind
   (drawn from any installed Nerd Font, your monospace font first), corners are square, shadows are

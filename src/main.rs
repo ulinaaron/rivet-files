@@ -181,6 +181,9 @@ fn main() -> eframe::Result {
     if std::env::var_os("RIVET_NO_STATUSBAR").is_some() {
         settings.show_statusbar = false;
     }
+    if std::env::var_os("RIVET_VIM").is_some() {
+        settings.vim_keys = true;
+    }
     if std::env::var_os("RIVET_TERMINAL").is_some() {
         settings.terminal = true;
     }

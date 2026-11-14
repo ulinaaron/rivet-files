@@ -438,7 +438,7 @@ impl RivetApp {
                 close = self.open_with_dialog(ctx);
             }
             Dialog::Shortcuts => {
-                const GROUPS: [(&str, &[(&str, &str)]); 4] = [
+                const GROUPS: [(&str, &[(&str, &str)]); 5] = [
                     ("Navigation", &[
                         ("Alt+Left / Alt+Right", "Back / forward"),
                         ("Alt+Up or Backspace", "Parent folder"),
@@ -479,6 +479,16 @@ impl RivetApp {
                         ("Ctrl+M or F10", "Show or hide the menu bar"),
                         ("F1", "This list"),
                         ("Ctrl+Q", "Close the window"),
+                    ]),
+                    ("Vim keys (Preferences → Behavior)", &[
+                        ("j / k", "Move down / up"),
+                        ("h / l", "Parent folder / open"),
+                        ("gg / G", "First / last item"),
+                        ("H / L", "Back / forward"),
+                        ("yy / dd / p", "Copy / cut / paste"),
+                        ("/", "Search this folder"),
+                        (":", "Quick Actions"),
+                        ("~", "Home"),
                     ]),
                 ];
                 let r = egui::Modal::new(Id::unique("shortcuts")).show(ctx, |ui| {
@@ -1450,6 +1460,12 @@ impl RivetApp {
                         section(ui, "Opening and deleting", &mut |ui| {
                     changed |= ui.checkbox(&mut self.s.single_click, "Single click to open items").changed();
                     changed |= ui.checkbox(&mut self.s.confirm_trash, "Ask before moving files to the Trash").changed();
+                        });
+                        section(ui, "Keyboard", &mut |ui| {
+                            changed |= ui.checkbox(&mut self.s.vim_keys, "Vim keys").changed();
+                            if self.s.vim_keys {
+                                hint(ui, "j k move · h parent · l open · gg G top / bottom · H L back / forward · yy dd p copy, cut, paste · / search · : Quick Actions");
+                            }
                         });
                     }
                     PrefsTab::Menu => {
