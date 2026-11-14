@@ -6,7 +6,7 @@ use eframe::egui::{self, Color32, Id, Key, Pos2, Rect, Sense, Vec2};
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver};
 
-use super::{paint_tex, Action, RivetApp, R_LG, R_MD, R_SM};
+use super::{paint_tex, Action, RivetApp, r_lg, r_md, r_sm};
 use crate::model::Location;
 use crate::network::{self, Login, MountError, NetPlace};
 
@@ -208,7 +208,7 @@ impl RivetApp {
             let tile = |ui: &mut egui::Ui, tex: &Option<egui::TextureHandle>, title: &str, sub: &str, id: Id| -> egui::Response {
                 let (rect, resp) = ui.allocate_exact_size(Vec2::new(250.0, 58.0), Sense::click());
                 if resp.hovered() {
-                    ui.painter().rect_filled(rect, R_SM, v.widgets.hovered.weak_bg_fill);
+                    ui.painter().rect_filled(rect, r_sm(), v.widgets.hovered.weak_bg_fill);
                 }
                 let ir = Rect::from_center_size(Pos2::new(rect.left() + 28.0, rect.center().y), Vec2::splat(32.0));
                 if let Some(t) = tex {
@@ -326,7 +326,7 @@ impl RivetApp {
         let Some(ask) = &mut self.connect_ask else { return };
         let mut submit = false;
         let mut cancel = false;
-        let frame = egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(22)).corner_radius(R_LG);
+        let frame = egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(22)).corner_radius(r_lg());
         let r = egui::Modal::new(Id::unique("connect")).frame(frame).show(ctx, |ui| {
             ui.set_width(420.0);
             let v = ui.visuals().clone();
@@ -348,7 +348,7 @@ impl RivetApp {
             let field_bg = crate::palette::mix(v.window_fill, v.text_color(), 0.06);
             let field = |ui: &mut egui::Ui, label: &str, text: &mut String, password: bool, enabled: bool, focus: bool| {
                 ui.label(egui::RichText::new(label).small().color(v.weak_text_color()));
-                egui::Frame::NONE.fill(field_bg).corner_radius(R_MD).inner_margin(egui::Margin::symmetric(10, 5)).show(ui, |ui| {
+                egui::Frame::NONE.fill(field_bg).corner_radius(r_md()).inner_margin(egui::Margin::symmetric(10, 5)).show(ui, |ui| {
                     let resp = ui.add_enabled(enabled, egui::TextEdit::singleline(text).password(password).frame(egui::Frame::NONE).desired_width(f32::INFINITY));
                     if focus {
                         resp.request_focus();

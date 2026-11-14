@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver};
 use std::time::SystemTime;
 
-use super::{user_name, Action, RivetApp, R_MD, R_SM};
+use super::{user_name, Action, RivetApp, r_md, r_sm};
 use crate::fsops;
 use crate::model::Entry;
 use crate::preview::{self, Kind, Player, Preview};
@@ -91,15 +91,31 @@ impl RivetApp {
         let fill = ctx.global_style().visuals.panel_fill;
         let margin = egui::Margin { left: 10, right: 12, top: 8, bottom: 10 };
         let panel = if self.s.peek_left { egui::Panel::left("peek") } else { egui::Panel::right("peek") };
+        // Terminal mode: Peek is a box with its title in the top line.
+        let term = self.s.terminal;
+        let outer = if !term {
+            egui::Margin::ZERO
+        } else if self.s.peek_left {
+            egui::Margin { left: 6, right: 3, top: 9, bottom: 5 }
+        } else {
+            egui::Margin { left: 3, right: 6, top: 9, bottom: 5 }
+        };
+        let mut frame = egui::Frame::NONE.fill(fill).inner_margin(margin).outer_margin(outer);
+        if term {
+            frame = frame.stroke(super::tui_line(&ctx.global_style().visuals)).inner_margin(egui::Margin { left: 8, right: 8, top: 10, bottom: 6 });
+        }
         let resp = panel
             .show_separator_line(false)
             .resizable(true)
             .default_size(self.s.peek_width)
             .size_range(220.0..=640.0)
-            .frame(egui::Frame::NONE.fill(fill).inner_margin(margin))
+            .frame(frame)
             .show(ui, |ui| {
                 egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| self.peek_contents(ui, ctx));
             });
+        if term {
+            super::tui_panel(ui, resp.response.rect, outer, "Peek");
+        }
         let w = resp.response.rect.width();
         if (w - self.s.peek_width).abs() > 1.0 && ctx.input(|i| !i.pointer.any_down()) {
             self.s.peek_width = w;
@@ -205,17 +221,17 @@ impl RivetApp {
             let aspect = tw as f32 / th.max(1) as f32;
             let h = (width / aspect).min(max_h).max(60.0);
             let (rect, resp) = ui.allocate_exact_size(Vec2::new(width, h), if kind == Kind::Video { Sense::click() } else { Sense::hover() });
-            ui.painter().rect_filled(rect, R_MD, card_fill);
+            ui.painter().rect_filled(rect, r_md(), card_fill);
             let img_w = (h * aspect).min(width);
             let img_rect = Rect::from_center_size(rect.center(), Vec2::new(img_w, img_w / aspect));
-            egui::Image::from_texture(t).corner_radius(R_MD).paint_at(ui, img_rect);
+            egui::Image::from_texture(t).corner_radius(r_md()).paint_at(ui, img_rect);
             if kind == Kind::Video {
                 self.peek_video_controls(ui, ctx, &e, rect, resp);
             }
             self.peek_grip(ui, width);
         } else if let Some(text) = &text {
             let job = self.peek_highlighted(ui, &e, text);
-            egui::Frame::NONE.fill(card_fill).corner_radius(R_MD).inner_margin(egui::Margin::same(10)).show(ui, |ui| {
+            egui::Frame::NONE.fill(card_fill).corner_radius(r_md()).inner_margin(egui::Margin::same(10)).show(ui, |ui| {
                 ui.set_width(width - 20.0);
                 egui::ScrollArea::both().id_salt("peek-text").max_height(max_h).auto_shrink([false, true]).show(ui, |ui| {
                     ui.add(egui::Label::new(job).wrap_mode(egui::TextWrapMode::Extend));
@@ -224,7 +240,7 @@ impl RivetApp {
             self.peek_grip(ui, width);
         } else {
             let (rect, _) = ui.allocate_exact_size(Vec2::new(width, 150.0), Sense::hover());
-            ui.painter().rect_filled(rect, R_MD, card_fill);
+            ui.painter().rect_filled(rect, r_md(), card_fill);
             if let Some(t) = self.entry_icon(ctx, &e, 96.0, false) {
                 super::paint_tex(ui.painter(), &t, Rect::from_center_size(rect.center(), Vec2::splat(96.0)), Color32::WHITE);
             }
@@ -351,7 +367,7 @@ impl RivetApp {
             if let Some((total, free)) = crate::places::disk_space(&e.path) {
                 ui.add_space(8.0);
                 ui.label(egui::RichText::new("DISK").size(10.5).strong().color(weak));
-                egui::Frame::NONE.fill(card_fill).corner_radius(R_MD).inner_margin(egui::Margin::symmetric(10, 9)).show(ui, |ui| {
+                egui::Frame::NONE.fill(card_fill).corner_radius(r_md()).inner_margin(egui::Margin::symmetric(10, 9)).show(ui, |ui| {
                     ui.set_width(width - 20.0);
                     let used = total.saturating_sub(free);
                     let frac = if total > 0 { used as f32 / total as f32 } else { 0.0 };
@@ -470,8 +486,8 @@ impl RivetApp {
                 let under = ui.visuals().panel_fill;
                 let (base, border) = super::selected_tile(&v, under);
                 let hover = crate::palette::mix(under, v.selection.bg_fill, 0.42);
-                ui.painter().rect_filled(r, R_MD, base);
-                let rad = R_MD;
+                ui.painter().rect_filled(r, r_md(), base);
+                let rad = r_md();
                 if resp.hovered() {
                     let cr = if split { egui::CornerRadius { nw: rad, sw: rad, ne: 0, se: 0 } } else { egui::CornerRadius::same(rad) };
                     ui.painter().rect_filled(main_r, cr, hover);
@@ -511,7 +527,7 @@ impl RivetApp {
                 job.wrap = egui::text::TextWrapping::truncate_at_width(r.right() - x - 8.0);
                 let g = ui.painter().layout_job(job);
                 ui.painter().galley(Pos2::new(x, r.center().y - g.size().y / 2.0), g, fg);
-                ui.painter().rect_stroke(Rect::from_min_max(r.min, Pos2::new(r.right() + chevron_w, r.bottom())), R_MD, border, egui::StrokeKind::Inside);
+                ui.painter().rect_stroke(Rect::from_min_max(r.min, Pos2::new(r.right() + chevron_w, r.bottom())), r_md(), border, egui::StrokeKind::Inside);
                 if resp.on_hover_text(&label).clicked() {
                     if e.is_dir && here {
                         self.pending.push(Action::Terminal(e.path.clone()));
@@ -533,7 +549,7 @@ impl RivetApp {
         let weak = ui.visuals().weak_text_color();
         ui.add_space(8.0);
         ui.label(egui::RichText::new(title.to_uppercase()).size(10.5).strong().color(weak));
-        egui::Frame::NONE.fill(card_fill).corner_radius(R_MD).inner_margin(egui::Margin::symmetric(10, 8)).show(ui, |ui| {
+        egui::Frame::NONE.fill(card_fill).corner_radius(r_md()).inner_margin(egui::Margin::symmetric(10, 8)).show(ui, |ui| {
             ui.set_width(width - 20.0);
             let key_w = 84.0;
             egui::Grid::new(("peek", title)).num_columns(2).spacing([10.0, 6.0]).min_col_width(key_w).max_col_width((width - 20.0 - key_w - 10.0).max(60.0)).show(ui, |ui| {
@@ -592,7 +608,7 @@ impl RivetApp {
         ui.horizontal(|ui| {
             let (br, bresp) = ui.allocate_exact_size(Vec2::splat(22.0), Sense::click());
             if bresp.hovered() {
-                ui.painter().rect_filled(br, R_SM, v.widgets.hovered.weak_bg_fill);
+                ui.painter().rect_filled(br, r_sm(), v.widgets.hovered.weak_bg_fill);
             }
             let c = br.center();
             let col = v.text_color();
@@ -652,7 +668,7 @@ impl RivetApp {
         let v = ui.visuals().clone();
         let width = ui.available_width();
         let (rect, _) = ui.allocate_exact_size(Vec2::new(width, 150.0), Sense::hover());
-        ui.painter().rect_filled(rect, R_MD, card_fill);
+        ui.painter().rect_filled(rect, r_md(), card_fill);
         let shown: Vec<&Entry> = sel.iter().take(3).collect();
         let n = shown.len() as f32;
         for (i, e) in shown.iter().enumerate().rev() {

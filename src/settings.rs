@@ -88,6 +88,10 @@ pub struct Settings {
     pub toolbar: Vec<ToolItem>,
     /// Zen mode: the files fill the window; the bars slide in from the edges on hover.
     pub zen: bool,
+    /// Terminal mode: monospace text, Nerd Font glyphs for icons, square boxes.
+    pub terminal: bool,
+    /// The monospace font, for terminal mode and text previews ("" = the system's).
+    pub mono_font: String,
 }
 
 impl Default for Settings {
@@ -134,6 +138,8 @@ impl Default for Settings {
             peek_preview_h: PEEK_PREVIEW_H,
             toolbar: ToolItem::default_layout(),
             zen: false,
+            terminal: false,
+            mono_font: String::new(),
         }
     }
 }
@@ -196,6 +202,8 @@ impl Settings {
                 "show_peek" => s.show_peek = b,
                 "peek_left" => s.peek_left = b,
                 "zen" => s.zen = b,
+                "terminal" => s.terminal = b,
+                "mono_font" => s.mono_font = v.to_string(),
                 "peek_preview_h" => s.peek_preview_h = f.unwrap_or(PEEK_PREVIEW_H).clamp(100.0, 1200.0),
                 "peek_width" => s.peek_width = f.unwrap_or(s.peek_width).clamp(200.0, 700.0),
                 "sidebar_width" => s.sidebar_width = f.unwrap_or(s.sidebar_width).clamp(120.0, 500.0),
@@ -210,12 +218,12 @@ impl Settings {
         let sort = match self.sort { SortKey::Name => "name", SortKey::Size => "size", SortKey::Type => "type", SortKey::Modified => "modified" };
         let theme = match self.theme { ThemeChoice::System => "system", ThemeChoice::Light => "light", ThemeChoice::Dark => "dark" };
         let text = format!(
-            "view={view}\nsort={sort}\nsort_desc={}\nfolders_first={}\nshow_hidden={}\nzoom={}\nlist_zoom={}\ndecorations={}\nicon_theme={}\nbuiltin_icons={}\nui_font={}\nui_font_size={}\nicon_color={}\ntheme={theme}\nshow_sidebar={}\nsidebar_icon={}\nsidebar_tree={}\nshow_statusbar={}\nshow_menubar={}\nshow_thumbnails={}\nsingle_click={}\nconfirm_trash={}\nfollow_desktop_colors={}\naccent=#{:02x}{:02x}{:02x}\nwindow_w={}\nwindow_h={}\nsidebar_width={}\ntoolbar={}\ncompress_format={}\nsidebar_right={}\nshow_peek={}\npeek_left={}\npeek_width={}\npeek_preview_h={}\ntoolbar_bottom={}\nstatusbar_top={}\nmedia_tools={}\nbulk_rename={}\nzen={}\n",
+            "view={view}\nsort={sort}\nsort_desc={}\nfolders_first={}\nshow_hidden={}\nzoom={}\nlist_zoom={}\ndecorations={}\nicon_theme={}\nbuiltin_icons={}\nui_font={}\nui_font_size={}\nicon_color={}\ntheme={theme}\nshow_sidebar={}\nsidebar_icon={}\nsidebar_tree={}\nshow_statusbar={}\nshow_menubar={}\nshow_thumbnails={}\nsingle_click={}\nconfirm_trash={}\nfollow_desktop_colors={}\naccent=#{:02x}{:02x}{:02x}\nwindow_w={}\nwindow_h={}\nsidebar_width={}\ntoolbar={}\ncompress_format={}\nsidebar_right={}\nshow_peek={}\npeek_left={}\npeek_width={}\npeek_preview_h={}\ntoolbar_bottom={}\nstatusbar_top={}\nmedia_tools={}\nbulk_rename={}\nzen={}\nterminal={}\nmono_font={}\n",
             self.sort_desc, self.folders_first, self.show_hidden, self.zoom, self.list_zoom, self.decorations,
             self.icon_theme, self.builtin_icons, self.ui_font, self.ui_font_size, self.icon_color.id(), self.show_sidebar, self.sidebar_icon, self.sidebar_tree, self.show_statusbar, self.show_menubar, self.show_thumbnails,
             self.single_click, self.confirm_trash, self.follow_desktop_colors, self.accent[0], self.accent[1], self.accent[2],
             self.window_w, self.window_h, self.sidebar_width, toolbar_string(&self.toolbar), self.compress_format,
-            self.sidebar_right, self.show_peek, self.peek_left, self.peek_width, self.peek_preview_h, self.toolbar_bottom, self.statusbar_top, self.media_tools, self.bulk_rename, self.zen
+            self.sidebar_right, self.show_peek, self.peek_left, self.peek_width, self.peek_preview_h, self.toolbar_bottom, self.statusbar_top, self.media_tools, self.bulk_rename, self.zen, self.terminal, self.mono_font
         );
         let p = path();
         if let Some(d) = p.parent() {

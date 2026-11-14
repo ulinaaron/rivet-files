@@ -273,7 +273,12 @@ pub struct RivetApp {
     /// The font choice currently loaded (to avoid reloading every frame) and its resolved name.
     applied_font: Option<String>,
     font_name: String,
+    /// The monospace family in use, and the Nerd Font found for terminal mode's icons.
+    mono_name: String,
+    nerd_font: Option<Arc<crate::nerd::NerdFont>>,
     font_families: Vec<String>,
+    mono_families: Vec<String>,
+    mono_filter: String,
     toolbar_drawing: bool,
     /// Menus opened from the hamburger button get roomier items.
     roomy_menus: bool,
@@ -288,10 +293,21 @@ pub struct RivetApp {
 /// One radius scale for the whole app. Nested shapes use the next step down by the
 /// padding between them, so corners stay concentric (e.g. a MD bar with 4 px
 /// padding holds SM pills).
-pub(crate) const R_XS: u8 = 4; // tiny things: swatches, selection band
-pub(crate) const R_SM: u8 = 6; // controls: buttons, pills, tabs, items, list rows
-pub(crate) const R_MD: u8 = 10; // bars and cards: location bar, sidebar rows, menus, settings cards
-pub(crate) const R_LG: u8 = 14; // big surfaces: the file area, in-app windows
+/// Corner radii. Terminal mode squares everything off (see `set_square`).
+static SQUARE: AtomicBool = AtomicBool::new(false);
+pub(crate) fn set_square(on: bool) {
+    SQUARE.store(on, Ordering::Relaxed);
+}
+pub(crate) fn square() -> bool {
+    SQUARE.load(Ordering::Relaxed)
+}
+fn radius(r: u8) -> u8 {
+    if square() { 0 } else { r }
+}
+pub(crate) fn r_xs() -> u8 { radius(4) } // tiny things: swatches, selection band
+pub(crate) fn r_sm() -> u8 { radius(6) } // controls: buttons, pills, tabs, items, list rows
+pub(crate) fn r_md() -> u8 { radius(10) } // bars and cards: location bar, sidebar rows, menus, settings cards
+pub(crate) fn r_lg() -> u8 { radius(14) } // big surfaces: the file area, in-app windows
 
 const ACCENTS: [([u8; 3], &str); 7] = [
     ([0x35, 0x84, 0xe4], "Blue"),
@@ -404,6 +420,41 @@ pub(crate) fn arrow_label(ui: &mut egui::Ui, color: Color32) {
     ui.painter().line_segment([c + Vec2::new(1.5, 4.0), c + Vec2::new(5.5, 0.0)], st);
 }
 
+/// Terminal mode's box line.
+pub(crate) fn tui_line(v: &egui::Visuals) -> Stroke {
+    Stroke::new(1.0, v.widgets.noninteractive.bg_stroke.color)
+}
+
+/// Terminal mode: a box's title written into its top border, like " Places ".
+pub(crate) fn tui_title(ui: &egui::Ui, rect: Rect, title: &str) {
+    let v = ui.visuals();
+    let font = egui::FontId::monospace(12.0 * crate::fonts::scale());
+    let mut job = egui::text::LayoutJob::simple_singleline(format!(" {title} "), font, v.strong_text_color());
+    job.wrap = egui::text::TextWrapping::truncate_at_width((rect.width() - 24.0).max(20.0));
+    let g = ui.painter().layout_job(job);
+    let pos = Pos2::new(rect.left() + 10.0, rect.top() - g.size().y / 2.0);
+    let painter = ui.ctx().layer_painter(ui.layer_id());
+    painter.rect_filled(Rect::from_min_size(pos, g.size()), 0.0, v.extreme_bg_color);
+    painter.galley(pos, g, v.strong_text_color());
+}
+
+/// Terminal mode: finish a panel drawn as a box — fill the gap round it (panels leave
+/// their outer margin unpainted) and write its title into the top line.
+pub(crate) fn tui_panel(ui: &egui::Ui, panel: Rect, m: egui::Margin, title: &str) {
+    let b = Rect::from_min_max(panel.min + Vec2::new(m.left as f32, m.top as f32), panel.max - Vec2::new(m.right as f32, m.bottom as f32));
+    let painter = ui.ctx().layer_painter(ui.layer_id());
+    let bg = ui.visuals().extreme_bg_color;
+    for r in [
+        Rect::from_min_max(panel.min, Pos2::new(panel.right(), b.top())),
+        Rect::from_min_max(Pos2::new(panel.left(), b.bottom()), panel.max),
+        Rect::from_min_max(Pos2::new(panel.left(), b.top()), Pos2::new(b.left(), b.bottom())),
+        Rect::from_min_max(Pos2::new(b.right(), b.top()), Pos2::new(panel.right(), b.bottom())),
+    ] {
+        painter.rect_filled(r, 0.0, bg);
+    }
+    tui_title(ui, b, title);
+}
+
 fn paint_tex(painter: &egui::Painter, tex: &egui::TextureHandle, rect: Rect, tint: Color32) {
     let size = tex.size_vec2();
     let scale = (rect.width() / size.x).min(rect.height() / size.y);
@@ -500,7 +551,11 @@ impl RivetApp {
             app_icon: None,
             applied_font: None,
             font_name: String::new(),
+            mono_name: String::new(),
+            nerd_font: None,
             font_families: Vec::new(),
+            mono_families: Vec::new(),
+            mono_filter: String::new(),
             toolbar_drawing: false,
             roomy_menus: false,
             flat_buttons: false,
@@ -658,10 +713,11 @@ impl RivetApp {
             crate::fonts::desktop_font_cached().map(|(_, pt)| crate::fonts::points_to_ui(pt)).unwrap_or(crate::fonts::BASE_SIZE)
         };
         crate::fonts::set_scale(size / crate::fonts::BASE_SIZE);
-        if self.applied_font.as_deref() == Some(self.s.ui_font.as_str()) {
+        let key = format!("{}|{}|{}", self.s.ui_font, self.s.mono_font, self.s.terminal);
+        if self.applied_font.as_deref() == Some(key.as_str()) {
             return;
         }
-        self.applied_font = Some(self.s.ui_font.clone());
+        self.applied_font = Some(key);
         let mut defs = egui::FontDefinitions::default();
         if let Some((name, path)) = crate::fonts::resolve(&self.s.ui_font) {
             if let Ok(bytes) = std::fs::read(&path) {
@@ -669,6 +725,22 @@ impl RivetApp {
                 defs.families.entry(egui::FontFamily::Proportional).or_default().insert(0, "ui-font".into());
                 self.font_name = name;
             }
+        }
+        // The monospace font: text previews, and every label in terminal mode.
+        let mono = crate::fonts::resolve_mono(&self.s.mono_font);
+        if let Some((name, path)) = &mono {
+            if let Ok(bytes) = std::fs::read(path) {
+                defs.font_data.insert("mono-font".into(), Arc::new(egui::FontData::from_owned(bytes)));
+                defs.families.entry(egui::FontFamily::Monospace).or_default().insert(0, "mono-font".into());
+                if self.s.terminal {
+                    defs.families.entry(egui::FontFamily::Proportional).or_default().insert(0, "mono-font".into());
+                }
+                self.mono_name = name.clone();
+            }
+        }
+        // Nerd Font glyphs for terminal mode's icons: from the monospace font if it has them.
+        if self.s.terminal && self.nerd_font.as_ref().is_none_or(|f| mono.as_ref().is_some_and(|(_, p)| *p != f.path)) {
+            self.nerd_font = crate::nerd::find(mono.as_ref().map(|(_, p)| p.as_path())).map(Arc::new);
         }
         ctx.set_fonts(defs);
     }
@@ -698,6 +770,16 @@ impl RivetApp {
 
     /// Keep Rivet's own icon set (if chosen) coloured like the rest of the window.
     fn sync_builtin_icons(&mut self, ctx: &egui::Context) {
+        // Terminal mode: Nerd Font glyphs in file-kind colours.
+        let nerd = match (&self.nerd_font, self.s.terminal) {
+            (Some(f), true) => {
+                let st = ctx.style_of(ctx.theme());
+                let v = &st.visuals;
+                Some((f.clone(), crate::nerd::NerdColors::from_theme(accent_color(&self.s), v.text_color(), v.dark_mode)))
+            }
+            _ => None,
+        };
+        self.icons.set_nerd(nerd);
         if !self.s.builtin_icons {
             self.icons.set_builtin(None);
             return;
@@ -714,7 +796,7 @@ impl RivetApp {
 
     fn apply_visuals(&mut self, ctx: &egui::Context) {
         let pal = if self.s.follow_desktop_colors { self.palette.clone() } else { None };
-        let key = format!("{:?}{:?}{:?}{}", self.s.theme, self.s.accent, pal, crate::fonts::scale());
+        let key = format!("{:?}{:?}{:?}{}{}", self.s.theme, self.s.accent, pal, crate::fonts::scale(), self.s.terminal);
         if self.applied_visuals.as_ref() == Some(&key) {
             return;
         }
@@ -766,10 +848,10 @@ impl RivetApp {
                     v.widgets.hovered.weak_bg_fill = Color32::from_rgb(0xdc, 0xdc, 0xe0);
                 }
                 for w in [&mut v.widgets.noninteractive, &mut v.widgets.inactive, &mut v.widgets.hovered, &mut v.widgets.active, &mut v.widgets.open] {
-                    w.corner_radius = CornerRadius::same(R_SM);
+                    w.corner_radius = CornerRadius::same(r_sm());
                 }
-                v.window_corner_radius = CornerRadius::same(R_LG);
-                v.menu_corner_radius = CornerRadius::same(R_MD);
+                v.window_corner_radius = CornerRadius::same(r_lg());
+                v.menu_corner_radius = CornerRadius::same(r_md());
                 // No outlines: pop-ups stand out by their raised surface and shadow.
                 v.window_stroke = Stroke::NONE;
                 if let Some(p) = pal.as_ref().filter(|p| p.is_dark() == dark) {
@@ -803,6 +885,19 @@ impl RivetApp {
                     if let Some(d) = p.destructive {
                         v.error_fg_color = d;
                     }
+                }
+                if self.s.terminal {
+                    // Terminal mode: one flat background, thin box lines, nothing floating.
+                    let fg = v.text_color();
+                    v.panel_fill = v.extreme_bg_color;
+                    v.faint_bg_color = v.extreme_bg_color;
+                    let line = mix(v.extreme_bg_color, fg, 0.28);
+                    v.window_stroke = Stroke::new(1.0, line);
+                    v.window_shadow = egui::Shadow::NONE;
+                    v.popup_shadow = egui::Shadow::NONE;
+                    v.widgets.noninteractive.bg_stroke = Stroke::new(1.0, line);
+                    v.widgets.inactive.bg_stroke = Stroke::new(1.0, line);
+                    v.window_fill = mix(v.extreme_bg_color, fg, 0.04);
                 }
                 st.spacing.item_spacing = Vec2::new(6.0, 4.0);
                 st.spacing.button_padding = Vec2::new(6.0, 3.0);
@@ -839,7 +934,8 @@ impl RivetApp {
     }
 
     fn entry_texture(&mut self, ctx: &egui::Context, e: &Entry, px: f32) -> Option<egui::TextureHandle> {
-        if self.s.show_thumbnails && px >= 32.0 && thumbs::can_thumbnail(&e.mime) {
+        // Terminal mode shows glyphs in the file list; pictures are seen in Peek and Preview.
+        if self.s.show_thumbnails && !self.s.terminal && px >= 32.0 && thumbs::can_thumbnail(&e.mime) {
             if let Some(t) = self.thumbs.get(&e.path, e.size) {
                 return Some(t);
             }
@@ -1445,7 +1541,7 @@ impl RivetApp {
         let Some(r) = ctx.read_response(id) else { return };
         let accent = accent_color(&self.s);
         // The file list's ring sits just inside its edge; small controls get one just outside.
-        let (rect, radius) = if Some(id) == self.file_list_focus { (r.interact_rect.shrink(2.0), R_LG) } else { (r.interact_rect.expand(2.0), R_SM) };
+        let (rect, radius) = if Some(id) == self.file_list_focus { (r.interact_rect.shrink(2.0), r_lg()) } else { (r.interact_rect.expand(2.0), r_sm()) };
         let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, egui::Id::unique("focus-ring")));
         painter.rect_stroke(rect, radius, Stroke::new(2.0, accent), StrokeKind::Outside);
     }
@@ -1910,7 +2006,7 @@ impl RivetApp {
 
     fn drop_highlight(&self, ui: &egui::Ui, rect: Rect, resp: &egui::Response, is_dir: bool) {
         if is_dir && resp.dnd_hover_payload::<DragFiles>().is_some() {
-            ui.painter().rect_stroke(rect, R_SM, Stroke::new(2.0, accent_color(&self.s)), StrokeKind::Inside);
+            ui.painter().rect_stroke(rect, r_sm(), Stroke::new(2.0, accent_color(&self.s)), StrokeKind::Inside);
         }
     }
 
@@ -2017,6 +2113,7 @@ impl eframe::App for RivetApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let frame_start = Instant::now();
         let ctx = ui.ctx().clone();
+        set_square(self.s.terminal);
         self.apply_font(&ctx);
         self.apply_visuals(&ctx);
         self.sync_builtin_icons(&ctx);

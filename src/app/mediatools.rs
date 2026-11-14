@@ -3,7 +3,7 @@
 use eframe::egui::{self, Id, Key, Vec2};
 use std::path::PathBuf;
 
-use super::{Dialog, RivetApp, R_LG, R_MD};
+use super::{Dialog, RivetApp, r_lg, r_md};
 use crate::media::{self, Keep, Size};
 use crate::preview::Kind;
 
@@ -87,14 +87,14 @@ fn footer(ui: &mut egui::Ui, note: &str, action: &str, enabled: bool) -> (bool, 
 
 fn card(ui: &mut egui::Ui, body: impl FnOnce(&mut egui::Ui)) {
     let fill = ui.visuals().faint_bg_color;
-    egui::Frame::NONE.fill(fill).corner_radius(R_MD).inner_margin(egui::Margin::symmetric(16, 14)).show(ui, |ui| {
+    egui::Frame::NONE.fill(fill).corner_radius(r_md()).inner_margin(egui::Margin::symmetric(16, 14)).show(ui, |ui| {
         ui.set_width(ui.available_width());
         body(ui);
     });
 }
 
 fn frame(ctx: &egui::Context) -> egui::Frame {
-    egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(22)).corner_radius(R_LG)
+    egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(22)).corner_radius(r_lg())
 }
 
 impl RivetApp {

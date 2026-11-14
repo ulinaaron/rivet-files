@@ -5,7 +5,7 @@ use eframe::egui::{self, Id, Key, Vec2};
 use std::path::PathBuf;
 use std::time::SystemTime;
 
-use super::{Dialog, RivetApp, R_LG, R_MD};
+use super::{Dialog, RivetApp, r_lg, r_md};
 use crate::rename::{self, CaseMode, DateSource, From, Mode, Part, Rules};
 
 pub(super) struct BulkState {
@@ -37,7 +37,7 @@ fn field(ui: &mut egui::Ui, text: &mut String, hint: &str, width: f32) -> egui::
     let bg = crate::palette::mix(v.window_fill, v.text_color(), 0.06);
     egui::Frame::NONE
         .fill(bg)
-        .corner_radius(R_MD)
+        .corner_radius(r_md())
         .inner_margin(egui::Margin::symmetric(10, 4))
         .show(ui, |ui| {
             ui.add(
@@ -66,7 +66,7 @@ impl RivetApp {
         let mut ok = false;
         let mut cancel = false;
 
-        let frame = egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(22)).corner_radius(R_LG);
+        let frame = egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(22)).corner_radius(r_lg());
         let r = egui::Modal::new(Id::unique("bulk-rename")).frame(frame).show(ctx, |ui| {
             ui.set_width(760.0);
             let v = ui.visuals().clone();
@@ -107,7 +107,7 @@ impl RivetApp {
             ui.horizontal_top(|ui| {
             // ---- the methods, as a list like the Preferences pages
             let list_w = 196.0;
-            egui::Frame::NONE.fill(card).corner_radius(R_MD).inner_margin(egui::Margin::same(6)).show(ui, |ui| {
+            egui::Frame::NONE.fill(card).corner_radius(r_md()).inner_margin(egui::Margin::same(6)).show(ui, |ui| {
                 ui.set_width(list_w - 12.0);
                 ui.vertical(|ui| {
                 ui.spacing_mut().item_spacing.y = 2.0;
@@ -116,10 +116,10 @@ impl RivetApp {
                     let sel = rl.mode == *m;
                     if sel {
                         let (fill, stroke) = super::selected_tile(&v, card);
-                        ui.painter().rect_filled(r, super::R_SM, fill);
-                        ui.painter().rect_stroke(r, super::R_SM, stroke, egui::StrokeKind::Inside);
+                        ui.painter().rect_filled(r, super::r_sm(), fill);
+                        ui.painter().rect_stroke(r, super::r_sm(), stroke, egui::StrokeKind::Inside);
                     } else if resp.hovered() {
-                        ui.painter().rect_filled(r, super::R_SM, v.widgets.hovered.weak_bg_fill);
+                        ui.painter().rect_filled(r, super::r_sm(), v.widgets.hovered.weak_bg_fill);
                     }
                     let fg = if sel { v.strong_text_color() } else { v.text_color() };
                     if let Some(t) = &mode_icons[i] {
@@ -133,7 +133,7 @@ impl RivetApp {
                 });
             });
             // ---- its settings
-            egui::Frame::NONE.fill(card).corner_radius(R_MD).inner_margin(egui::Margin::symmetric(16, 14)).show(ui, |ui| {
+            egui::Frame::NONE.fill(card).corner_radius(r_md()).inner_margin(egui::Margin::symmetric(16, 14)).show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 ui.set_min_height(6.0 * 34.0 - 16.0);
                 egui::Grid::new("bulk-opts").num_columns(2).spacing([18.0, 12.0]).min_col_width(110.0).show(ui, |ui| {
@@ -250,7 +250,7 @@ impl RivetApp {
             // ---- preview
             ui.add_space(10.0);
             ui.label(egui::RichText::new("PREVIEW").size(10.5).strong().color(weak));
-            egui::Frame::NONE.fill(card).corner_radius(R_MD).inner_margin(egui::Margin::symmetric(14, 10)).show(ui, |ui| {
+            egui::Frame::NONE.fill(card).corner_radius(r_md()).inner_margin(egui::Margin::symmetric(14, 10)).show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 egui::ScrollArea::vertical().max_height(260.0).auto_shrink([false, true]).show(ui, |ui| {
                     let col = (ui.available_width() - 40.0) / 2.0;

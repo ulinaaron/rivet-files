@@ -99,6 +99,59 @@ fn danger_button(ui: &mut egui::Ui, label: &str) -> bool {
     ui.add(egui::Button::new(egui::RichText::new(label).color(super::StatusColors::on(d))).fill(d)).clicked()
 }
 
+/// A font family list you can type into: Enter picks the closest match. `system_label` is
+/// the "use the system's" entry (an empty `value`). Returns whether the choice changed.
+fn font_picker(ui: &mut egui::Ui, id: &str, value: &mut String, families: &[String], filter: &mut String, system_label: &str) -> bool {
+    let mut changed = false;
+    let current = if value.is_empty() { system_label.to_string() } else { value.clone() };
+    let opened = egui::ComboBox::from_id_salt(id).selected_text(current).width(260.0).height(320.0).show_ui(ui, |ui| {
+        let field_bg = crate::palette::mix(ui.visuals().window_fill, ui.visuals().text_color(), 0.06);
+        let search = egui::Frame::NONE
+            .fill(field_bg)
+            .corner_radius(super::r_sm())
+            .inner_margin(egui::Margin::symmetric(8, 4))
+            .show(ui, |ui| ui.add(egui::TextEdit::singleline(filter).frame(egui::Frame::NONE).hint_text("Type a font name…").desired_width(f32::INFINITY)))
+            .inner;
+        search.request_focus();
+        let pick_best = ui.input(|i| i.key_pressed(Key::Enter));
+        ui.add_space(4.0);
+        let typed = filter.trim().to_string();
+        let mut matches: Vec<(i32, &String)> = families.iter().filter_map(|f| super::chrome::fuzzy_score(f, &typed).map(|s| (s, f))).collect();
+        if !typed.is_empty() {
+            matches.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(b.1)));
+        }
+        let show_system = typed.is_empty() || super::chrome::fuzzy_score(system_label, &typed).is_some();
+        if pick_best && !typed.is_empty() {
+            if let Some((_, best)) = matches.first() {
+                *value = (*best).clone();
+                changed = true;
+                ui.close();
+            }
+        }
+        if show_system && ui.selectable_label(value.is_empty(), system_label).clicked() {
+            value.clear();
+            changed = true;
+        }
+        if show_system && !matches.is_empty() {
+            ui.separator();
+        }
+        if matches.is_empty() && !show_system {
+            ui.label(egui::RichText::new("No matching font").color(ui.visuals().weak_text_color()));
+        }
+        for (_, fam) in matches {
+            if ui.selectable_label(*value == *fam, fam.as_str()).clicked() {
+                *value = fam.clone();
+                changed = true;
+            }
+        }
+    });
+    // Start fresh the next time the list opens.
+    if opened.inner.is_none() {
+        filter.clear();
+    }
+    changed
+}
+
 /// A filled button in the theme-tinted success color (e.g. Rename).
 fn success_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
     let c = super::status(ui.ctx()).success;
@@ -113,7 +166,7 @@ impl RivetApp {
         let Dialog::Compress { paths, name, format, focus } = &mut self.dialog else { return true };
         let mut ok = false;
         let mut cancel = false;
-        let frame = egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(22)).corner_radius(super::R_LG);
+        let frame = egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(22)).corner_radius(super::r_lg());
         let r = egui::Modal::new(Id::unique("compress")).frame(frame).show(ctx, |ui| {
             ui.set_width(420.0);
             let v = ui.visuals().clone();
@@ -127,7 +180,7 @@ impl RivetApp {
             ui.add_space(14.0);
             ui.label(egui::RichText::new("Archive name").small().color(v.weak_text_color()));
             let field_bg = crate::palette::mix(v.window_fill, v.text_color(), 0.06);
-            egui::Frame::NONE.fill(field_bg).corner_radius(super::R_MD).inner_margin(egui::Margin::symmetric(10, 5)).show(ui, |ui| {
+            egui::Frame::NONE.fill(field_bg).corner_radius(super::r_md()).inner_margin(egui::Margin::symmetric(10, 5)).show(ui, |ui| {
                 ui.horizontal(|ui| {
                     let ext_w = ui.painter().layout_no_wrap(format.ext().into(), egui::TextStyle::Body.resolve(ui.style()), Color32::WHITE).size().x;
                     let resp = ui.add(egui::TextEdit::singleline(name).frame(egui::Frame::NONE).desired_width(ui.available_width() - ext_w - 8.0));
@@ -150,9 +203,9 @@ impl RivetApp {
                 let (rect, resp) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 40.0), if avail { Sense::click() } else { Sense::hover() });
                 if chosen {
                     let (fill, stroke) = super::selected_tile(&v, v.window_fill);
-                    ui.painter().rect(rect, super::R_SM, fill, stroke, egui::StrokeKind::Inside);
+                    ui.painter().rect(rect, super::r_sm(), fill, stroke, egui::StrokeKind::Inside);
                 } else if resp.hovered() {
-                    ui.painter().rect_filled(rect, super::R_SM, v.widgets.hovered.weak_bg_fill);
+                    ui.painter().rect_filled(rect, super::r_sm(), v.widgets.hovered.weak_bg_fill);
                 }
                 let fg = if avail { v.text_color() } else { v.weak_text_color().gamma_multiply(0.6) };
                 let sub = v.weak_text_color();
@@ -211,7 +264,7 @@ impl RivetApp {
         match &mut self.dialog {
             Dialog::None => {}
             Dialog::Rename { path, text, focus } => {
-                let frame = egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(22)).corner_radius(super::R_LG);
+                let frame = egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(22)).corner_radius(super::r_lg());
                 let r = egui::Modal::new(Id::unique("rename")).frame(frame).show(ctx, |ui| {
                     ui.set_width(380.0);
                     ui.heading("Rename");
@@ -220,7 +273,7 @@ impl RivetApp {
                     let field_bg = crate::palette::mix(v.window_fill, v.text_color(), 0.06);
                     let resp = egui::Frame::NONE
                         .fill(field_bg)
-                        .corner_radius(super::R_MD)
+                        .corner_radius(super::r_md())
                         .inner_margin(egui::Margin::symmetric(10, 7))
                         .show(ui, |ui| ui.add(egui::TextEdit::singleline(text).frame(egui::Frame::NONE).desired_width(f32::INFINITY)))
                         .inner;
@@ -490,7 +543,7 @@ impl RivetApp {
 
         let mut choice: Option<bool> = None; // Some(true) = permanently, Some(false) = trash
         // A roomier box than the default dialog frame.
-        let frame = egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(22)).corner_radius(super::R_LG);
+        let frame = egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(22)).corner_radius(super::r_lg());
         let r = egui::Modal::new(Id::unique("confirmdel")).frame(frame).show(ctx, |ui| {
             ui.set_width(440.0);
             let v = ui.visuals().clone();
@@ -513,7 +566,7 @@ impl RivetApp {
             });
             if n > 1 {
                 ui.add_space(8.0);
-                egui::Frame::NONE.fill(v.faint_bg_color).corner_radius(super::R_SM).inner_margin(egui::Margin::symmetric(10, 8)).show(ui, |ui| {
+                egui::Frame::NONE.fill(v.faint_bg_color).corner_radius(super::r_sm()).inner_margin(egui::Margin::symmetric(10, 8)).show(ui, |ui| {
                     ui.set_width(ui.available_width());
                     for (name, tex) in &preview {
                         ui.horizontal(|ui| {
@@ -640,7 +693,7 @@ impl RivetApp {
         let Dialog::OpenWith { show_all, filter, chosen, remember, focus, .. } = &mut self.dialog else { return true };
         let mut launch_now = false;
         let mut cancel = false;
-        let frame = egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(22)).corner_radius(super::R_LG);
+        let frame = egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(22)).corner_radius(super::r_lg());
         let r = egui::Modal::new(Id::unique("openwith")).frame(frame).show(ctx, |ui| {
             ui.set_width(460.0);
             let v = ui.visuals().clone();
@@ -664,7 +717,7 @@ impl RivetApp {
             ui.add_space(12.0);
             // ---- search
             let field = crate::palette::mix(v.window_fill, v.text_color(), 0.06);
-            egui::Frame::NONE.fill(field).corner_radius(super::R_MD).inner_margin(egui::Margin::symmetric(10, 4)).show(ui, |ui| {
+            egui::Frame::NONE.fill(field).corner_radius(super::r_md()).inner_margin(egui::Margin::symmetric(10, 4)).show(ui, |ui| {
                 ui.horizontal(|ui| {
                     if let Some(t) = &search_icon {
                         let (r, _) = ui.allocate_exact_size(Vec2::new(18.0, 24.0), Sense::hover());
@@ -698,10 +751,10 @@ impl RivetApp {
                     let selected = *chosen == Some(*i);
                     if selected {
                         let (fill, stroke) = super::selected_tile(&v, v.window_fill);
-                        ui.painter().rect_filled(rect, super::R_SM, fill);
-                        ui.painter().rect_stroke(rect, super::R_SM, stroke, egui::StrokeKind::Inside);
+                        ui.painter().rect_filled(rect, super::r_sm(), fill);
+                        ui.painter().rect_stroke(rect, super::r_sm(), stroke, egui::StrokeKind::Inside);
                     } else if resp.hovered() {
-                        ui.painter().rect_filled(rect, super::R_SM, v.widgets.hovered.weak_bg_fill);
+                        ui.painter().rect_filled(rect, super::r_sm(), v.widgets.hovered.weak_bg_fill);
                     }
                     let ir = Rect::from_center_size(Pos2::new(rect.left() + 24.0, rect.center().y), Vec2::splat(28.0));
                     if let Some(Some(t)) = icons.get(i) {
@@ -819,7 +872,7 @@ impl RivetApp {
                     let field_bg = crate::palette::mix(v.window_fill, v.text_color(), 0.06);
                     let r = egui::Frame::NONE
                         .fill(field_bg)
-                        .corner_radius(super::R_MD)
+                        .corner_radius(super::r_md())
                         .inner_margin(egui::Margin::symmetric(10, 6))
                         .show(ui, |ui| {
                             ui.add(egui::TextEdit::singleline(&mut st.name).frame(egui::Frame::NONE).font(egui::FontId::proportional(15.0)).desired_width(f32::INFINITY))
@@ -842,17 +895,17 @@ impl RivetApp {
             ui.add_space(14.0);
             // ---- segmented Basic / Permissions switch
             let (track, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 32.0), Sense::hover());
-            ui.painter().rect_filled(track, super::R_MD, card_fill);
+            ui.painter().rect_filled(track, super::r_md(), card_fill);
             let half = track.width() / 2.0;
             for (i, label) in ["Basic", "Permissions"].into_iter().enumerate() {
                 let r = Rect::from_min_size(track.min + Vec2::new(half * i as f32, 0.0), Vec2::new(half, track.height())).shrink(3.0);
                 let resp = ui.interact(r, ui.scope_id().with(("props-tab", i)), Sense::click());
                 if st.tab == i as u8 {
                     let (fill, stroke) = super::selected_tile(&v, card_fill);
-                    ui.painter().rect_filled(r, super::R_SM, fill);
-                    ui.painter().rect_stroke(r, super::R_SM, stroke, egui::StrokeKind::Inside);
+                    ui.painter().rect_filled(r, super::r_sm(), fill);
+                    ui.painter().rect_stroke(r, super::r_sm(), stroke, egui::StrokeKind::Inside);
                 } else if resp.hovered() {
-                    ui.painter().rect_filled(r, super::R_SM, v.widgets.hovered.weak_bg_fill);
+                    ui.painter().rect_filled(r, super::r_sm(), v.widgets.hovered.weak_bg_fill);
                 }
                 let fg = if st.tab == i as u8 { v.strong_text_color() } else { v.text_color() };
                 ui.painter().text(r.center(), egui::Align2::CENTER_CENTER, label, crate::fonts::ui_font(13.5), fg);
@@ -864,7 +917,7 @@ impl RivetApp {
             // A titled card of rows.
             let card = |ui: &mut egui::Ui, title: &str, body: &mut dyn FnMut(&mut egui::Ui)| {
                 ui.label(egui::RichText::new(title.to_uppercase()).size(10.5).strong().color(weak));
-                egui::Frame::NONE.fill(card_fill).corner_radius(super::R_MD).inner_margin(egui::Margin::symmetric(16, 12)).show(ui, |ui| {
+                egui::Frame::NONE.fill(card_fill).corner_radius(super::r_md()).inner_margin(egui::Margin::symmetric(16, 12)).show(ui, |ui| {
                     ui.set_width(ui.available_width());
                     body(ui);
                 });
@@ -1049,6 +1102,9 @@ impl RivetApp {
         if self.font_families.is_empty() {
             self.font_families = crate::fonts::families();
         }
+        if self.mono_families.is_empty() {
+            self.mono_families = crate::fonts::mono_families();
+        }
         if self.installed_themes.is_empty() {
             self.installed_themes = icons::installed_themes();
         }
@@ -1081,7 +1137,7 @@ impl RivetApp {
                 let side_fill = crate::palette::mix(v.window_fill, v.panel_fill, 0.6);
                 egui::Frame::NONE
                     .fill(side_fill)
-                    .corner_radius(egui::CornerRadius { sw: super::R_LG, ..Default::default() })
+                    .corner_radius(egui::CornerRadius { sw: super::r_lg(), ..Default::default() })
                     .inner_margin(egui::Margin { left: 10, right: 10, top: 6, bottom: 4 })
                     .show(ui, |ui| {
                         ui.set_width(168.0);
@@ -1097,10 +1153,10 @@ impl RivetApp {
                             let sel = *t == tab_now;
                             if sel {
                                 let (fill, stroke) = super::selected_tile(&v, side_fill);
-                                ui.painter().rect_filled(r, super::R_SM, fill);
-                                ui.painter().rect_stroke(r, super::R_SM, stroke, egui::StrokeKind::Inside);
+                                ui.painter().rect_filled(r, super::r_sm(), fill);
+                                ui.painter().rect_stroke(r, super::r_sm(), stroke, egui::StrokeKind::Inside);
                             } else if resp.hovered() {
-                                ui.painter().rect_filled(r, super::R_SM, v.widgets.hovered.weak_bg_fill);
+                                ui.painter().rect_filled(r, super::r_sm(), v.widgets.hovered.weak_bg_fill);
                             }
                             let fg = if sel { v.strong_text_color() } else { v.text_color() };
                             if let Some(tex) = &tab_icons[i] {
@@ -1129,7 +1185,7 @@ impl RivetApp {
                 let section = |ui: &mut egui::Ui, title: &str, body: &mut dyn FnMut(&mut egui::Ui)| {
                     ui.label(egui::RichText::new(title).strong().size(14.5));
                     ui.add_space(4.0);
-                    egui::Frame::NONE.fill(card_fill).corner_radius(super::R_MD).inner_margin(egui::Margin::symmetric(18, 16)).show(ui, |ui| {
+                    egui::Frame::NONE.fill(card_fill).corner_radius(super::r_md()).inner_margin(egui::Margin::symmetric(18, 16)).show(ui, |ui| {
                         ui.set_width(ui.available_width());
                         body(ui);
                     });
@@ -1153,8 +1209,8 @@ impl RivetApp {
                                 ui.spacing_mut().item_spacing.x = 6.0;
                                 for c in [p.accent, p.window_bg, p.view_bg, p.window_fg].into_iter().flatten() {
                                     let (r, _) = ui.allocate_exact_size(Vec2::splat(16.0), Sense::hover());
-                                    ui.painter().rect_filled(r, super::R_XS, c);
-                                    ui.painter().rect_stroke(r, super::R_XS, Stroke::new(1.0, weak), egui::StrokeKind::Inside);
+                                    ui.painter().rect_filled(r, super::r_xs(), c);
+                                    ui.painter().rect_stroke(r, super::r_xs(), Stroke::new(1.0, weak), egui::StrokeKind::Inside);
                                 }
                                 ui.add_space(4.0);
                                 let name = p.source.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
@@ -1187,6 +1243,20 @@ impl RivetApp {
                                 changed |= ui.selectable_value(&mut self.s.theme, ThemeChoice::Light, "Light").changed();
                                 changed |= ui.selectable_value(&mut self.s.theme, ThemeChoice::Dark, "Dark").changed();
                             });
+                        });
+                        ui.end_row();
+                        // Terminal mode: the same layout, dressed like a terminal program.
+                        ui.label("Look");
+                        ui.vertical(|ui| {
+                            ui.horizontal(|ui| {
+                                changed |= ui.selectable_value(&mut self.s.terminal, false, "Standard").changed();
+                                changed |= ui.selectable_value(&mut self.s.terminal, true, "Terminal").changed();
+                            });
+                            if self.s.terminal && self.nerd_font.is_none() {
+                                hint(ui, "No Nerd Font found, so icons stay as they are. Install one (or pick one as the monospace font) for terminal-style icons.");
+                            } else {
+                                hint(ui, "Monospace text, Nerd Font icons and plain boxes");
+                            }
                         });
                         ui.end_row();
                         ui.label("Accent");
@@ -1273,55 +1343,15 @@ impl RivetApp {
                         // UI font family and size.
                         ui.label("Font");
                         let system_name = crate::fonts::desktop_font_cached().map(|(f, _)| f).unwrap_or_else(|| "Sans".into());
-                        let current = if self.s.ui_font.is_empty() { format!("System ({system_name})") } else { self.s.ui_font.clone() };
-                        let opened = egui::ComboBox::from_id_salt("uifont").selected_text(current).width(260.0).height(320.0).show_ui(ui, |ui| {
-                            // Type to narrow the list to the closest matches; Enter picks the best one.
-                            let field_bg = crate::palette::mix(ui.visuals().window_fill, ui.visuals().text_color(), 0.06);
-                            let search = egui::Frame::NONE
-                                .fill(field_bg)
-                                .corner_radius(super::R_SM)
-                                .inner_margin(egui::Margin::symmetric(8, 4))
-                                .show(ui, |ui| ui.add(egui::TextEdit::singleline(&mut self.font_filter).frame(egui::Frame::NONE).hint_text("Type a font name…").desired_width(f32::INFINITY)))
-                                .inner;
-                            search.request_focus();
-                            let pick_best = ui.input(|i| i.key_pressed(Key::Enter));
-                            ui.add_space(4.0);
-                            let typed = self.font_filter.trim().to_string();
-                            let mut matches: Vec<(i32, &String)> =
-                                self.font_families.iter().filter_map(|f| super::chrome::fuzzy_score(f, &typed).map(|s| (s, f))).collect();
-                            if !typed.is_empty() {
-                                matches.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(b.1)));
-                            }
-                            let system_label = format!("System ({system_name})");
-                            let show_system = typed.is_empty() || super::chrome::fuzzy_score(&system_label, &typed).is_some();
-                            if pick_best && !typed.is_empty() {
-                                if let Some((_, best)) = matches.first() {
-                                    self.s.ui_font = (*best).clone();
-                                    changed = true;
-                                    ui.close();
-                                }
-                            }
-                            if show_system && ui.selectable_label(self.s.ui_font.is_empty(), system_label).clicked() {
-                                self.s.ui_font.clear();
-                                changed = true;
-                            }
-                            if show_system && !matches.is_empty() {
-                                ui.separator();
-                            }
-                            if matches.is_empty() && !show_system {
-                                ui.label(egui::RichText::new("No matching font").color(ui.visuals().weak_text_color()));
-                            }
-                            for (_, fam) in matches {
-                                if ui.selectable_label(self.s.ui_font == *fam, fam.as_str()).clicked() {
-                                    self.s.ui_font = fam.clone();
-                                    changed = true;
-                                }
-                            }
+                        changed |= font_picker(ui, "uifont", &mut self.s.ui_font, &self.font_families, &mut self.font_filter, &format!("System ({system_name})"));
+                        ui.end_row();
+                        // The monospace font: text previews, and everything in terminal mode.
+                        ui.label("Monospace font");
+                        ui.vertical(|ui| {
+                            let mono_system = format!("System ({})", crate::fonts::resolve_mono("").map(|(f, _)| f).unwrap_or_else(|| "Monospace".into()));
+                            changed |= font_picker(ui, "monofont", &mut self.s.mono_font, &self.mono_families, &mut self.mono_filter, &mono_system);
+                            hint(ui, "Used for text previews, and for everything in terminal mode");
                         });
-                        // Start fresh the next time the list opens.
-                        if opened.inner.is_none() {
-                            self.font_filter.clear();
-                        }
                         ui.end_row();
                         ui.label("Text size");
                         ui.horizontal(|ui| {
@@ -1439,7 +1469,7 @@ impl RivetApp {
                         // The location bar and the menu button can be moved but not removed.
                         let fixed = path || item == ToolItem::Menu;
                         let row_fill = if path { ui.visuals().selection.bg_fill.gamma_multiply(0.18) } else { Color32::TRANSPARENT };
-                        egui::Frame::NONE.fill(row_fill).corner_radius(super::R_SM).inner_margin(egui::Margin::symmetric(6, 2)).show(ui, |ui| {
+                        egui::Frame::NONE.fill(row_fill).corner_radius(super::r_sm()).inner_margin(egui::Margin::symmetric(6, 2)).show(ui, |ui| {
                             ui.horizontal(|ui| {
                                 ui.set_width(ui.available_width());
                                 let (icons, fb) = item.icons();
@@ -1532,7 +1562,7 @@ impl RivetApp {
                         }
                         let warn = super::status(ui.ctx()).warning;
                         let card_fill = ui.visuals().faint_bg_color;
-                        egui::Frame::NONE.fill(card_fill).corner_radius(super::R_MD).inner_margin(egui::Margin::symmetric(18, 6)).show(ui, |ui| {
+                        egui::Frame::NONE.fill(card_fill).corner_radius(super::r_md()).inner_margin(egui::Margin::symmetric(18, 6)).show(ui, |ui| {
                             ui.set_width(ui.available_width());
                             let row = |ui: &mut egui::Ui, title: &str, about: egui::RichText, on: &mut bool, enabled: bool| -> bool {
                                 let mut flipped = false;

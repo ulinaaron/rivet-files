@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use super::chrome::{folder_matches, fuzzy_score};
-use super::{paint_tex, Action, RivetApp, R_LG, R_MD, R_SM};
+use super::{paint_tex, Action, RivetApp, r_lg, r_md, r_sm};
 use crate::model::Location;
 use crate::places;
 
@@ -144,7 +144,11 @@ impl RivetApp {
         let fill = ctx.global_style().visuals.panel_fill;
         let dark = ctx.global_style().visuals.dark_mode;
         let shadow = egui::Shadow { offset: [0, 4], blur: 24, spread: 0, color: Color32::from_black_alpha(if dark { 120 } else { 50 }) };
-        let card = egui::Frame::NONE.fill(fill).corner_radius(R_LG).shadow(shadow);
+        let card = if self.s.terminal {
+            egui::Frame::NONE.fill(fill).stroke(super::tui_line(&ctx.global_style().visuals))
+        } else {
+            egui::Frame::NONE.fill(fill).corner_radius(r_lg()).shadow(shadow)
+        };
         let inner = area.shrink(GAP);
         // The side panels make room for the toolbar while it's out.
         let tb_h = self.zen.rects[1].map_or(50.0, |r| r.height());
@@ -265,7 +269,7 @@ impl RivetApp {
             .show(ctx, |ui| {
                 ui.multiply_opacity(alpha);
                 let v = ui.visuals().clone();
-                egui::Frame::popup(ui.style()).corner_radius(R_MD).inner_margin(egui::Margin::symmetric(16, 10)).show(ui, |ui| {
+                egui::Frame::popup(ui.style()).corner_radius(r_md()).inner_margin(egui::Margin::symmetric(16, 10)).show(ui, |ui| {
                     ui.label(egui::RichText::new(text).color(v.strong_text_color()));
                 });
             });
@@ -535,7 +539,7 @@ impl RivetApp {
         let w = 600f32.min(screen.width() - 40.0);
         let top = (screen.height() * 0.16).max(30.0);
         let id = Id::unique("spotlight");
-        let frame = egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(8)).corner_radius(R_LG);
+        let frame = egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(8)).corner_radius(r_lg());
         let area = egui::Modal::default_area(id).anchor(Align2::CENTER_TOP, Vec2::new(0.0, top));
         let backdrop = Color32::from_black_alpha(if ctx.global_style().visuals.dark_mode { 90 } else { 50 });
         let r = egui::Modal::new(id).area(area).frame(frame).backdrop_color(backdrop).show(ctx, |ui| {
@@ -561,8 +565,8 @@ impl RivetApp {
                     let active = i == sp.sel;
                     if active {
                         let (fill, stroke) = super::selected_tile(&v, v.window_fill);
-                        ui.painter().rect_filled(rect, R_SM, fill);
-                        ui.painter().rect_stroke(rect, R_SM, stroke, egui::StrokeKind::Inside);
+                        ui.painter().rect_filled(rect, r_sm(), fill);
+                        ui.painter().rect_stroke(rect, r_sm(), stroke, egui::StrokeKind::Inside);
                         if up || down {
                             ui.scroll_to_rect(rect, None);
                         }

@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use super::{R_LG, R_SM, R_XS, accent_color, fmt_time, paint_tex, Action, DragFiles, RivetApp};
+use super::{r_lg, r_sm, r_xs, accent_color, fmt_time, paint_tex, Action, DragFiles, RivetApp};
 use crate::fsops;
 use crate::launch;
 use crate::model::{Entry, Location};
@@ -22,17 +22,27 @@ impl RivetApp {
         let round_bottom = (self.s.show_statusbar && !self.s.statusbar_top) || self.s.toolbar_bottom;
         // Round the right-hand corners too when a panel (sidebar or Peek) sits on the right.
         let right_panel = (self.s.show_sidebar && self.s.sidebar_right) || (self.s.show_peek && !self.s.peek_left);
-        let r = if right_panel { R_LG } else { 0 };
-        let mut corner = egui::CornerRadius { nw: R_LG, ne: r, sw: if round_bottom { R_LG } else { 0 }, se: if round_bottom { r } else { 0 } };
+        let r = if right_panel { r_lg() } else { 0 };
+        let mut corner = egui::CornerRadius { nw: r_lg(), ne: r, sw: if round_bottom { r_lg() } else { 0 }, se: if round_bottom { r } else { 0 } };
         // Zen mode: the files sit on one rounded card with an empty border all round, which is
         // where the pointer goes to slide the hidden bars in.
         let mut outer = egui::Frame::NONE.fill(chrome);
         if self.s.zen {
-            corner = egui::CornerRadius::same(R_LG);
+            corner = egui::CornerRadius::same(r_lg());
             outer = outer.inner_margin(egui::Margin::same(super::zen::ZEN_GUTTER));
         }
+        // Terminal mode: the files sit in a box titled with where you are.
+        let term = self.s.terminal;
+        let mut inner = egui::Frame::NONE.fill(bg).corner_radius(corner).inner_margin(egui::Margin { left: 6, top: 6, right: 0, bottom: 4 });
+        if term {
+            if !self.s.zen {
+                outer = outer.inner_margin(egui::Margin { left: 3, right: 3, top: 9, bottom: 5 });
+            }
+            inner = inner.stroke(super::tui_line(&ctx.global_style().visuals)).inner_margin(egui::Margin { left: 6, top: 10, right: 1, bottom: 4 });
+        }
+        let mut box_rect = None;
         let central = egui::CentralPanel::no_frame().frame(outer).show(ui, |ui| {
-            egui::Frame::NONE.fill(bg).corner_radius(corner).inner_margin(egui::Margin { left: 6, top: 6, right: 0, bottom: 4 }).show(ui, |ui| {
+            let r = inner.show(ui, |ui| {
             ui.set_min_size(ui.available_size());
             // Keyboard: the whole file list is one Tab stop (files themselves aren't), and while
             // it has focus the arrow keys move through the files instead of between widgets.
@@ -98,7 +108,22 @@ impl RivetApp {
                 ViewMode::Compact => self.compact_view(ui, ctx),
             };
             });
+            box_rect = Some(r.response.rect);
         });
+        if let (true, Some(b)) = (term, box_rect) {
+            let title = match &self.tab().loc {
+                crate::model::Location::Dir(p) => {
+                    let home = crate::places::home();
+                    match p.strip_prefix(&home) {
+                        Ok(rest) if rest.as_os_str().is_empty() => "~".to_string(),
+                        Ok(rest) => format!("~/{}", rest.display()),
+                        Err(_) => p.display().to_string(),
+                    }
+                }
+                other => other.title(),
+            };
+            super::tui_title(ui, b, &title);
+        }
         // Remembered so the Filters panel can drop down over the files.
         self.files_rect = Some(central.response.rect);
         cols
@@ -123,8 +148,8 @@ impl RivetApp {
                 let a = rect.min + start.to_vec2();
                 let band = Rect::from_two_pos(a, cur);
                 let accent = accent_color(&self.s);
-                ui.painter().rect_filled(band, R_XS, accent.gamma_multiply(0.18));
-                ui.painter().rect_stroke(band, R_XS, Stroke::new(1.0, accent), StrokeKind::Inside);
+                ui.painter().rect_filled(band, r_xs(), accent.gamma_multiply(0.18));
+                ui.painter().rect_stroke(band, r_xs(), Stroke::new(1.0, accent), StrokeKind::Inside);
                 let t = &mut self.tabs[self.active];
                 let sel: HashSet<PathBuf> = item_rects.iter().filter(|(_, r)| r.intersects(band)).map(|(i, _)| t.entries[t.visible[*i]].path.clone()).collect();
                 t.selected = sel;
@@ -233,10 +258,10 @@ impl RivetApp {
                     expanded = Some((Rect::from_min_max(tile.min, Pos2::new(tile.right(), bottom)), tex, icon_rect, tint, galley, text_pos, fg, e.is_link, e.clone()));
                 } else {
                     if selected {
-                        ui.painter().rect_filled(tile, R_SM, sel_fill);
-                        ui.painter().rect_stroke(tile, R_SM, sel_stroke, StrokeKind::Inside);
+                        ui.painter().rect_filled(tile, r_sm(), sel_fill);
+                        ui.painter().rect_stroke(tile, r_sm(), sel_stroke, StrokeKind::Inside);
                     } else if resp.hovered() {
-                        ui.painter().rect_filled(tile, R_SM, v.widgets.hovered.weak_bg_fill.gamma_multiply(0.8));
+                        ui.painter().rect_filled(tile, r_sm(), v.widgets.hovered.weak_bg_fill.gamma_multiply(0.8));
                     }
                     if let Some(t) = &tex {
                         let painter = ui.painter().clone();
@@ -262,10 +287,10 @@ impl RivetApp {
                 let v = ui.visuals().clone();
                 let p = ui.painter();
                 // Opaque base first so neighbours underneath don't show through.
-                p.rect_filled(tile, R_SM, v.extreme_bg_color);
+                p.rect_filled(tile, r_sm(), v.extreme_bg_color);
                 let (fill, stroke) = super::selected_tile(&v, v.extreme_bg_color);
-                p.rect_filled(tile, R_SM, fill);
-                p.rect_stroke(tile, R_SM, stroke, StrokeKind::Inside);
+                p.rect_filled(tile, r_sm(), fill);
+                p.rect_stroke(tile, r_sm(), stroke, StrokeKind::Inside);
                 if let Some(t) = &tex {
                     let painter = p.clone();
                     self.icon_lift(ctx, &painter, &ent, t, icon_rect, v.dark_mode);
@@ -309,7 +334,7 @@ impl RivetApp {
 
         let (hrect, _) = ui.allocate_exact_size(Vec2::new(full_w, header_h), Sense::hover());
         let v = ui.visuals().clone();
-        ui.painter().rect_filled(hrect.shrink2(Vec2::new(4.0, 1.0)), R_SM, v.faint_bg_color);
+        ui.painter().rect_filled(hrect.shrink2(Vec2::new(4.0, 1.0)), r_sm(), v.faint_bg_color);
         let mut x = hrect.left() + 4.0;
         for (i, (label, key, w)) in columns.iter().enumerate() {
             let r = Rect::from_min_size(Pos2::new(x, hrect.top()), Vec2::new(*w, header_h));
@@ -370,11 +395,11 @@ impl RivetApp {
                 // Rows are inset and rounded like every other item.
                 let pill = row.shrink2(Vec2::new(4.0, 0.0));
                 if selected {
-                    ui.painter().rect_filled(pill, R_SM, v.selection.bg_fill);
+                    ui.painter().rect_filled(pill, r_sm(), v.selection.bg_fill);
                 } else if resp.hovered() {
-                    ui.painter().rect_filled(pill, R_SM, v.widgets.hovered.weak_bg_fill);
+                    ui.painter().rect_filled(pill, r_sm(), v.widgets.hovered.weak_bg_fill);
                 } else if vi % 2 == 1 {
-                    ui.painter().rect_filled(pill, R_SM, v.faint_bg_color);
+                    ui.painter().rect_filled(pill, r_sm(), v.faint_bg_color);
                 }
                 self.drop_highlight(ui, row, &resp, e.is_dir);
                 let fg = if selected { v.selection.stroke.color } else { v.text_color() };
@@ -471,9 +496,9 @@ impl RivetApp {
                 let resp = ui.interact(item, Id::unique(("item", &e.path)), Sense::CLICK | Sense::DRAG);
                 let v = ui.visuals().clone();
                 if selected {
-                    ui.painter().rect_filled(item, R_SM, v.selection.bg_fill);
+                    ui.painter().rect_filled(item, r_sm(), v.selection.bg_fill);
                 } else if resp.hovered() {
-                    ui.painter().rect_filled(item, R_SM, v.widgets.hovered.weak_bg_fill);
+                    ui.painter().rect_filled(item, r_sm(), v.widgets.hovered.weak_bg_fill);
                 }
                 self.drop_highlight(ui, item, &resp, e.is_dir);
                 let fg = if selected { v.selection.stroke.color } else { v.text_color() };
@@ -513,7 +538,7 @@ impl RivetApp {
         let tip_fg = ctx.global_style().visuals.selection.stroke.color;
         let g = painter.layout_no_wrap(text, crate::fonts::ui_font(13.0), tip_fg);
         let r = Rect::from_min_size(pos + Vec2::new(14.0, 10.0), g.size() + Vec2::new(14.0, 8.0));
-        painter.rect_filled(r, R_SM, accent_color(&self.s));
+        painter.rect_filled(r, r_sm(), accent_color(&self.s));
         painter.galley(r.min + Vec2::new(7.0, 4.0), g, tip_fg);
         ctx.set_cursor_icon(egui::CursorIcon::Grabbing);
     }

@@ -3,7 +3,7 @@
 use eframe::egui::{self, Align2, Color32, Id, Key, Pos2, Rect, Sense, Stroke, StrokeKind, Vec2};
 
 use super::chrome::fuzzy_score;
-use super::{Action, Dialog, RivetApp, R_LG, R_SM};
+use super::{Action, Dialog, RivetApp, r_lg, r_sm};
 use crate::model::Location;
 use crate::places;
 use crate::settings::{SortKey, ThemeChoice, ViewMode};
@@ -37,6 +37,7 @@ enum Cmd {
     Statusbar,
     Menubar,
     Zen,
+    TerminalMode,
     Filters,
     ZoomIn,
     ZoomOut,
@@ -112,6 +113,7 @@ impl RivetApp {
         add(Cmd::Statusbar, "View", "Statusbar", "F8", Some(s.show_statusbar), true);
         add(Cmd::Menubar, "View", "Menubar", "Ctrl+M", Some(s.show_menubar), true);
         add(Cmd::Zen, "View", "Zen Mode", "F12", Some(s.zen), true);
+        add(Cmd::TerminalMode, "View", "Terminal Mode", "", Some(s.terminal), true);
         add(Cmd::Filters, "View", "Filters", "Ctrl+Shift+F", None, true);
         add(Cmd::Reload, "View", "Reload", "F5", None, true);
         add(Cmd::ZoomIn, "View", "Zoom In", "Ctrl++", None, true);
@@ -211,6 +213,7 @@ impl RivetApp {
                 self.toggle_zen();
                 dirty = false;
             }
+            Cmd::TerminalMode => self.s.terminal = !self.s.terminal,
             Cmd::Filters => self.toggle_filters(),
             Cmd::ZoomIn => self.zoom(1),
             Cmd::ZoomOut => self.zoom(-1),
@@ -320,7 +323,7 @@ impl RivetApp {
         let w = 600f32.min(screen.width() - 40.0);
         let top = (screen.height() * 0.16).max(30.0);
         let id = Id::unique("quick-actions");
-        let frame = egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(8)).corner_radius(R_LG);
+        let frame = egui::Frame::popup(&ctx.global_style()).inner_margin(egui::Margin::same(8)).corner_radius(r_lg());
         let area = egui::Modal::default_area(id).anchor(Align2::CENTER_TOP, Vec2::new(0.0, top));
         let backdrop = Color32::from_black_alpha(if ctx.global_style().visuals.dark_mode { 90 } else { 50 });
         let before = qa.query.clone();
@@ -344,8 +347,8 @@ impl RivetApp {
                     }
                     if i == qa.sel {
                         let (fill, stroke) = super::selected_tile(&v, v.window_fill);
-                        ui.painter().rect_filled(rect, R_SM, fill);
-                        ui.painter().rect_stroke(rect, R_SM, stroke, StrokeKind::Inside);
+                        ui.painter().rect_filled(rect, r_sm(), fill);
+                        ui.painter().rect_stroke(rect, r_sm(), stroke, StrokeKind::Inside);
                         if up || down {
                             ui.scroll_to_rect(rect, None);
                         }

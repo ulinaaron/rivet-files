@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 
-use super::{Action, RivetApp, R_LG, R_MD};
+use super::{Action, RivetApp, r_lg, r_md};
 use crate::fsops;
 use crate::model::Entry;
 use crate::preview::{self, Kind, Player, Preview};
@@ -242,14 +242,14 @@ impl RivetApp {
                     let base = crate::palette::mix(Color32::from_gray(24), accent, 0.42);
                     let hover = crate::palette::mix(Color32::from_gray(24), accent, 0.6);
                     let border = Stroke::new(1.0, accent.gamma_multiply(0.85));
-                    ui.painter().rect_filled(full, R_MD, base);
+                    ui.painter().rect_filled(full, r_md(), base);
                     if mresp.hovered() {
-                        ui.painter().rect_filled(main_r, egui::CornerRadius { nw: R_MD, sw: R_MD, ne: 0, se: 0 }, hover);
+                        ui.painter().rect_filled(main_r, egui::CornerRadius { nw: r_md(), sw: r_md(), ne: 0, se: 0 }, hover);
                     }
                     if cresp.hovered() {
-                        ui.painter().rect_filled(chev_r, egui::CornerRadius { nw: 0, sw: 0, ne: R_MD, se: R_MD }, hover);
+                        ui.painter().rect_filled(chev_r, egui::CornerRadius { nw: 0, sw: 0, ne: r_md(), se: r_md() }, hover);
                     }
-                    ui.painter().rect_stroke(full, R_MD, border, egui::StrokeKind::Inside);
+                    ui.painter().rect_stroke(full, r_md(), border, egui::StrokeKind::Inside);
                     ui.painter().line_segment([Pos2::new(chev_r.left(), full.top() + 1.0), Pos2::new(chev_r.left(), full.bottom() - 1.0)], border);
                     let mut x = main_r.left() + 14.0;
                     if let Some(t) = &app_icon {
@@ -279,7 +279,7 @@ impl RivetApp {
                     let r = Rect::from_center_size(stage.center(), size * scale);
                     // The picture itself doesn't close the light box.
                     let iresp = ui.interact(r, egui::Id::unique("quick-image"), Sense::click());
-                    egui::Image::from_texture(t).corner_radius(R_MD).paint_at(ui, r);
+                    egui::Image::from_texture(t).corner_radius(r_md()).paint_at(ui, r);
                     if kind == Kind::Video {
                         if !playing {
                             let c = r.center();
@@ -301,7 +301,7 @@ impl RivetApp {
                 } else if let Some(job) = &highlighted {
                     let w = stage.width().min(900.0);
                     let card = Rect::from_center_size(stage.center(), Vec2::new(w, stage.height()));
-                    ui.painter().rect_filled(card, R_LG, v.extreme_bg_color);
+                    ui.painter().rect_filled(card, r_lg(), v.extreme_bg_color);
                     let _ = ui.interact(card, egui::Id::unique("quick-text"), Sense::click());
                     let mut cui = ui.new_child(egui::UiBuilder::new().max_rect(card.shrink(18.0)));
                     egui::ScrollArea::both().id_salt("quick-text-scroll").show(&mut cui, |ui| {

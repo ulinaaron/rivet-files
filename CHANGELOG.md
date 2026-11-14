@@ -3,6 +3,13 @@
 ## Unreleased
 
 ### New
+- **Terminal mode** (Preferences → Appearance → Look, View → Terminal Mode, or Quick Actions): a
+  GUI that feels like a TUI. Everything is monospace, icons are Nerd Font glyphs colored by kind
+  (drawn from any installed Nerd Font, your monospace font first), corners are square, shadows are
+  gone and the sidebar, files and Peek sit in plain boxes with their titles in the border. Picture
+  thumbnails give way to glyphs in the file list (Peek and Preview still show pictures).
+- **Monospace font** (Preferences → Appearance → Typography): used for text and code previews,
+  and for everything in terminal mode. Type to find a font, like the interface font.
 - **Zen mode** (F12, or View → Zen Mode): the files fill the window, edge to edge. Move the pointer
   to the toolbar's edge, the sidebar's edge or Peek's edge and that panel slides in over the files;
   move away and it slides back out. Peek takes the other side if it shares one with the sidebar.

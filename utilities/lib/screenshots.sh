@@ -112,6 +112,9 @@ RIVET_ICON_THEME=Papirus RIVET_ZEN=1 RIVET_ZEN_SHOW=toolbar,sidebar \
     "$BIN" "$H/Documents" --screenshot "$OUT/zen-wide.png"
 RIVET_ICON_THEME=Papirus RIVET_ZEN=1 RIVET_SPOTLIGHT=p \
     "$BIN" "$H" --screenshot "$OUT/quick-open-wide.png"
+# Terminal mode on a code file (needs a Nerd Font installed for the glyph icons).
+RIVET_TERMINAL=1 RIVET_PEEK=1 RIVET_SELECT=4 \
+    "$BIN" "$H/Projects" --view list --screenshot "$OUT/terminal-wide.png"
 
 # The same window recoloured by different matugen-style schemes (Rivet's own icons).
 # palette NAME ACCENT ACCENT_FG WINDOW_BG WINDOW_FG HEADERBAR VIEW POPOVER SECONDARY TERTIARY [VIEW_OPTS]

@@ -45,6 +45,9 @@ pub struct IconTheme {
     builtin_tex: HashMap<(&'static str, u32), egui::TextureHandle>,
     /// Single-colour versions of icons, for drawing on the highlight colour.
     masks: HashMap<(String, u32), Option<egui::TextureHandle>>,
+    /// Terminal mode: Nerd Font glyphs answer before anything else.
+    nerd: Option<(std::sync::Arc<crate::nerd::NerdFont>, crate::nerd::NerdColors)>,
+    nerd_tex: HashMap<(String, u32), Option<egui::TextureHandle>>,
 }
 
 pub fn icon_base_dirs() -> Vec<PathBuf> {
@@ -316,7 +319,7 @@ impl IconTheme {
                 }
             }
         }
-        Self { name: name.to_string(), chain, found: HashMap::new(), textures: HashMap::new(), builtin: None, builtin_tex: HashMap::new(), masks: HashMap::new() }
+        Self { name: name.to_string(), chain, found: HashMap::new(), textures: HashMap::new(), builtin: None, builtin_tex: HashMap::new(), masks: HashMap::new(), nerd: None, nerd_tex: HashMap::new() }
     }
 
     fn build_index(theme: &mut Theme) {
@@ -403,8 +406,46 @@ impl IconTheme {
         }
     }
 
+    /// Switch terminal mode's Nerd Font glyphs on (with these colours) or off.
+    pub fn set_nerd(&mut self, nerd: Option<(std::sync::Arc<crate::nerd::NerdFont>, crate::nerd::NerdColors)>) {
+        let same = match (&self.nerd, &nerd) {
+            (None, None) => true,
+            (Some((a, ca)), Some((b, cb))) => a.path == b.path && ca == cb,
+            _ => false,
+        };
+        if !same {
+            self.nerd = nerd;
+            self.nerd_tex.clear();
+        }
+    }
+
+    /// The Nerd Font glyph for the first name that has one: in its kind's colour, or white
+    /// (to be tinted) for symbolic icons and masks.
+    fn nerd_texture(&mut self, ctx: &egui::Context, names: &[&str], px: u32, mask: bool) -> Option<Option<egui::TextureHandle>> {
+        let (font, colors) = self.nerd.as_ref()?;
+        for n in names {
+            let Some((key, symbolic)) = crate::builtin_icons::lookup(n) else { continue };
+            let Some(ch) = crate::nerd::glyph_for(key) else { continue };
+            let k = (format!("{}{key}", if mask { "m:" } else { "" }), px);
+            if let Some(t) = self.nerd_tex.get(&k) {
+                return Some(t.clone());
+            }
+            let fill = if symbolic || mask { egui::Color32::WHITE } else { colors.for_key(key) };
+            let t = font
+                .svg(ch, fill)
+                .and_then(|svg| render_svg(svg.as_bytes(), px))
+                .map(|img| ctx.load_texture(format!("nerd:{}:{px}", k.0), img, egui::TextureOptions::LINEAR));
+            self.nerd_tex.insert(k, t.clone());
+            return Some(t);
+        }
+        None
+    }
+
     /// Get a texture for the first available icon name, rendered at `px` pixels.
     pub fn texture(&mut self, ctx: &egui::Context, names: &[&str], px: u32) -> Option<egui::TextureHandle> {
+        if let Some(t) = self.nerd_texture(ctx, names, px, false) {
+            return t;
+        }
         if let Some(colors) = self.builtin {
             for n in names {
                 if let Some((key, _)) = crate::builtin_icons::lookup(n) {
@@ -444,6 +485,9 @@ impl IconTheme {
     /// A single-colour (white, tint it) version of the first available icon: its shape,
     /// with a little shading kept so inner details such as document lines stay visible.
     pub fn mask(&mut self, ctx: &egui::Context, names: &[&str], px: u32) -> Option<egui::TextureHandle> {
+        if let Some(t) = self.nerd_texture(ctx, names, px, true) {
+            return t;
+        }
         if let Some(colors) = self.builtin {
             for n in names {
                 if let Some((key, _)) = crate::builtin_icons::lookup(n) {

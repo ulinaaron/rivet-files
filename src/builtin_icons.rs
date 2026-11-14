@@ -62,7 +62,7 @@ fn from_hsv(h: f32, s: f32, v: f32) -> Color32 {
 }
 
 /// A sibling colour: the accent's hue turned by `deg`, kept vivid enough to read.
-fn hue(accent: Color32, deg: f32) -> Color32 {
+pub(crate) fn hue(accent: Color32, deg: f32) -> Color32 {
     let (h, s, v) = to_hsv(accent);
     from_hsv(h + deg, s.clamp(0.42, 0.8), v.clamp(0.62, 0.86))
 }
@@ -147,6 +147,7 @@ pub fn lookup(name: &str) -> Option<(&'static str, bool)> {
         "application-pdf" => "file-pdf",
         "text-csv" => "file-sheet",
         "text-x-generic" | "text-plain" | "application-x-zerosize" | "text-x-readme" => "file-text",
+        "text-rust" | "text-x-rust" | "text-markdown" | "application-toml" | "application-x-yaml" => "file-code",
         "text-html" | "text-css" | "application-json" | "application-xml" | "application-javascript" | "application-x-shellscript" => "file-code",
         n if n.starts_with("drive-harddisk") => "drive",
         n if n.starts_with("image-") => "file-image",

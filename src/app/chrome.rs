@@ -4,7 +4,7 @@ use eframe::egui::{self, Align2, Color32, CornerRadius, Id, Key, Pos2, Rect, Sen
 use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
 
-use super::{R_MD, R_SM, accent_color, paint_tex, Action, Dialog, DragFiles, RivetApp};
+use super::{r_md, r_sm, accent_color, paint_tex, Action, Dialog, DragFiles, RivetApp};
 use crate::fsops;
 use crate::model::{self, Location};
 use crate::places;
@@ -314,6 +314,9 @@ impl RivetApp {
             if Self::menu_toggle(ui, &mut zen, "Zen Mode", "F12") {
                 self.toggle_zen();
             }
+            if Self::menu_toggle(ui, &mut self.s.terminal, "Terminal Mode", "") {
+                self.dirty_settings = true;
+            }
             ui.separator();
             if ui.add(egui::Button::new("Filters").shortcut_text("Ctrl+Shift+F")).clicked() {
                 self.toggle_filters();
@@ -445,8 +448,8 @@ impl RivetApp {
             let (fill, stroke) = super::selected_tile(v, v.panel_fill);
             let r = resp.rect;
             ui.painter().set(under, egui::Shape::Vec(vec![
-                egui::Shape::rect_filled(r, R_SM, fill),
-                egui::Shape::rect_stroke(r, R_SM, stroke, StrokeKind::Inside),
+                egui::Shape::rect_filled(r, r_sm(), fill),
+                egui::Shape::rect_stroke(r, r_sm(), stroke, StrokeKind::Inside),
             ]));
         }
         resp.on_hover_text(tip)
@@ -625,9 +628,11 @@ impl RivetApp {
             let v = ui.visuals();
             let elevated = crate::palette::mix(v.window_fill, v.text_color(), 0.04);
             let shadow = egui::Shadow { offset: [0, 1], blur: 6, spread: 0, color: Color32::from_black_alpha(if v.dark_mode { 90 } else { 40 }) };
+            // Terminal mode: a plain box instead of a raised bar.
+            let (elevated, shadow, stroke) = if self.s.terminal { (v.extreme_bg_color, egui::Shadow::NONE, super::tui_line(v)) } else { (elevated, shadow, Stroke::NONE) };
             ui.allocate_ui_with_layout(Vec2::new(path_w, 32.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                egui::Frame::NONE.fill(elevated).shadow(shadow).corner_radius(R_MD).inner_margin(egui::Margin::same(4)).show(ui, |ui| {
-                    // Even padding all round; pills inside use R_MD − 4 = R_SM, so corners nest.
+                egui::Frame::NONE.fill(elevated).shadow(shadow).stroke(stroke).corner_radius(r_md()).inner_margin(egui::Margin::same(4)).show(ui, |ui| {
+                    // Even padding all round; pills inside use r_md() − 4 = r_sm(), so corners nest.
                     ui.set_min_width(ui.available_width());
                     ui.set_min_height(24.0);
                     if self.search_open {
@@ -846,7 +851,7 @@ impl RivetApp {
         let bg = ui.interact(area, Id::unique("crumbs-bg"), Sense::click_and_drag());
         if bg.hovered() {
             // Lift the bar a touch on hover instead of drawing an outline.
-            ui.painter().rect_filled(area.expand(4.0), R_MD, ui.visuals().text_color().gamma_multiply(0.05));
+            ui.painter().rect_filled(area.expand(4.0), r_md(), ui.visuals().text_color().gamma_multiply(0.05));
             ui.ctx().set_cursor_icon(egui::CursorIcon::Text);
         }
         if bg.clicked() || bg.drag_started() {
@@ -934,7 +939,7 @@ impl RivetApp {
                     let (rect, resp) = ui.allocate_exact_size(Vec2::new(w, 28.0), Sense::click());
                     let v = ui.visuals().clone();
                     let bg = if sel { v.extreme_bg_color } else if resp.hovered() { v.widgets.hovered.weak_bg_fill } else { v.panel_fill };
-                    ui.painter().rect_filled(rect, CornerRadius { nw: R_SM, ne: R_SM, sw: 0, se: 0 }, bg);
+                    ui.painter().rect_filled(rect, CornerRadius { nw: r_sm(), ne: r_sm(), sw: 0, se: 0 }, bg);
                     if sel {
                         ui.painter().line_segment([rect.left_bottom(), rect.right_bottom()], Stroke::new(2.0, accent_color(&self.s)));
                     }
@@ -1144,11 +1149,19 @@ impl RivetApp {
     pub(super) fn sidebar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         let fill = ctx.global_style().visuals.panel_fill;
         let panel = if self.s.sidebar_right { egui::Panel::right("sidebar") } else { egui::Panel::left("sidebar") };
+        let term = self.s.terminal;
+        // Terminal mode: the sidebar is a box with its title in the top line.
+        let (frame, outer) = if term {
+            let o = if self.s.sidebar_right { egui::Margin { left: 3, right: 6, top: 9, bottom: 5 } } else { egui::Margin { left: 6, right: 3, top: 9, bottom: 5 } };
+            (egui::Frame::NONE.fill(fill).stroke(super::tui_line(&ctx.global_style().visuals)).inner_margin(egui::Margin { left: 6, right: 6, top: 8, bottom: 6 }).outer_margin(o), o)
+        } else {
+            (egui::Frame::NONE.fill(fill).inner_margin(egui::Margin { left: 8, right: 8, top: 6, bottom: 10 }), egui::Margin::ZERO)
+        };
         let resp = panel.show_separator_line(false)
             .resizable(true)
             .default_size(self.s.sidebar_width)
             .size_range(120.0..=420.0)
-            .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin { left: 8, right: 8, top: 6, bottom: 10 }))
+            .frame(frame)
             .show(ui, |ui| {
                 egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
                     if self.s.sidebar_tree {
@@ -1158,6 +1171,9 @@ impl RivetApp {
                     }
                 });
             });
+        if term {
+            super::tui_panel(ui, resp.response.rect, outer, if self.s.sidebar_tree { "Folders" } else { "Places" });
+        }
         let w = resp.response.rect.width();
         if (w - self.s.sidebar_width).abs() > 1.0 && ctx.input(|i| !i.pointer.any_down()) {
             self.s.sidebar_width = w;
@@ -1204,13 +1220,13 @@ impl RivetApp {
         let v = ui.visuals().clone();
         let accent = accent_color(&self.s);
         if active {
-            ui.painter().rect_filled(rect, R_MD, accent);
+            ui.painter().rect_filled(rect, r_md(), accent);
         } else if resp.hovered() {
-            ui.painter().rect_filled(rect, R_MD, v.widgets.hovered.weak_bg_fill);
+            ui.painter().rect_filled(rect, r_md(), v.widgets.hovered.weak_bg_fill);
         }
         let droppable = loc.as_ref().is_some_and(|l| l.dir().is_some() || *l == Location::Trash);
         if droppable && resp.dnd_hover_payload::<DragFiles>().is_some() {
-            ui.painter().rect_stroke(rect, R_MD, Stroke::new(2.0, accent), StrokeKind::Inside);
+            ui.painter().rect_stroke(rect, r_md(), Stroke::new(2.0, accent), StrokeKind::Inside);
         }
         let fg = if active { v.selection.stroke.color } else { v.text_color() };
         let row_mid = if usage.is_some() { rect.top() + 15.0 * sc + grow / 2.0 } else { rect.center().y };
@@ -1427,9 +1443,9 @@ impl RivetApp {
             let active = current.as_deref() == Some(p.as_path());
             let v = ui.visuals().clone();
             if active {
-                ui.painter().rect_filled(rect, R_MD, accent);
+                ui.painter().rect_filled(rect, r_md(), accent);
             } else if resp.hovered() {
-                ui.painter().rect_filled(rect, R_MD, v.widgets.hovered.weak_bg_fill);
+                ui.painter().rect_filled(rect, r_md(), v.widgets.hovered.weak_bg_fill);
             }
             let fg = if active { v.selection.stroke.color } else { v.text_color() };
             let x = rect.left() + 4.0 + depth as f32 * 14.0;
@@ -1493,7 +1509,7 @@ impl RivetApp {
                 self.pending.push(Action::Transfer(pl.0.clone(), p.clone(), ctx.input(|i| i.modifiers.ctrl)));
             }
             if resp.dnd_hover_payload::<DragFiles>().is_some() {
-                ui.painter().rect_stroke(rect, R_MD, Stroke::new(2.0, accent), StrokeKind::Inside);
+                ui.painter().rect_stroke(rect, r_md(), Stroke::new(2.0, accent), StrokeKind::Inside);
             }
             resp.context_menu(|ui| { Self::comfy_menu(ui); self.place_menu(ui, &p) });
         }

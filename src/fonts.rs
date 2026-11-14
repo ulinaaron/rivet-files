@@ -106,6 +106,28 @@ pub fn file_for(family: &str) -> Option<PathBuf> {
     if p.is_file() { Some(p) } else { None }
 }
 
+/// Installed monospace families (for the monospace font picker), sorted.
+pub fn mono_families() -> Vec<String> {
+    let text = run("fc-list", &["--format", "%{family[0]}\n", ":spacing=mono:style=Regular"]).unwrap_or_default();
+    let mut v: Vec<String> = text.lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect();
+    v.sort_by_key(|a| a.to_lowercase());
+    v.dedup();
+    v
+}
+
+/// The monospace font file: the chosen family, else the system's "monospace".
+pub fn resolve_mono(choice: &str) -> Option<(String, PathBuf)> {
+    if !choice.is_empty() {
+        if let Some(p) = file_for(choice) {
+            return Some((choice.to_string(), p));
+        }
+    }
+    let out = run("fc-match", &["-f", "%{family[0]}|%{file}", "monospace:style=Regular"])?;
+    let (fam, file) = out.split_once('|')?;
+    let p = PathBuf::from(file.trim());
+    p.is_file().then(|| (fam.to_string(), p))
+}
+
 /// Fallback when fontconfig's tools are missing: look for a few common files.
 fn common_sans() -> Option<PathBuf> {
     let candidates = ["NotoSans-Regular.ttf", "Cantarell-Regular.otf", "Ubuntu-R.ttf", "DejaVuSans.ttf", "LiberationSans-Regular.ttf"];

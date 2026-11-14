@@ -53,7 +53,8 @@ Rivet is powerful all the while being minimal. Make it your own — bloat the in
 **Making it yours**
 - 🎨 **Follows your colors** — Matugen, Noctalia, Dux Shell, and GTK themes, live, no restart
 - 💜 **Built-in icon set** recolored from your palette (primary, secondary or tertiary)
-- 🧰 **Your layout** — custom toolbar at the top or bottom, status bar top, bottom or off, fonts, text size, hideable menu bar
+- 🧰 **Your layout** — custom toolbar at the top or bottom, status bar top, bottom or off, fonts (and a monospace font for text previews), text size, hideable menu bar
+- 🖥️ **Terminal mode** — the same window dressed like a terminal program: monospace text, Nerd Font icons, plain boxes
 - 🧩 **Modules** — switch Bulk Rename or Convert & Resize off if you don't use them
 - 🧘 **Zen mode** — just your files, edge to edge; the toolbar, sidebar and Peek slide in when you reach for their edge (F12)
 - 🪟 **Title bar your way** — your desktop's, or Rivet's own with window buttons
@@ -133,6 +134,16 @@ toolbar, sidebar or Peek slides in; move away and it's gone again. Pair it with 
     <td><img src="docs/screenshots/quick-open-wide.png" alt="Quick Open jumping to a folder"></td>
   </tr>
 </table>
+
+### 🖥️ Terminal mode
+
+A GUI that feels like a TUI. Switch the look to Terminal (Preferences → Appearance, or Quick
+Actions) and everything turns monospace, the icons become Nerd Font glyphs colored by kind, and the
+panels become plain boxes with their titles in the border. The layout and every feature stay the
+same. It uses your monospace font (Preferences → Appearance → Typography), and any installed Nerd
+Font for the icons.
+
+<img src="docs/screenshots/terminal-wide.png" alt="Rivet in terminal mode: monospace text, Nerd Font icons and boxed panels">
 
 ## 📦 Install
 

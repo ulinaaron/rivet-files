@@ -17,6 +17,7 @@ mod launch;
 mod desktop;
 mod media;
 mod mime;
+mod nerd;
 mod network;
 mod model;
 mod palette;
@@ -179,6 +180,12 @@ fn main() -> eframe::Result {
     }
     if std::env::var_os("RIVET_NO_STATUSBAR").is_some() {
         settings.show_statusbar = false;
+    }
+    if std::env::var_os("RIVET_TERMINAL").is_some() {
+        settings.terminal = true;
+    }
+    if let Ok(f) = std::env::var("RIVET_MONO_FONT") {
+        settings.mono_font = f;
     }
     if std::env::var_os("RIVET_ZEN").is_some() {
         settings.zen = true;

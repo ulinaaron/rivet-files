@@ -2,7 +2,7 @@
 
 use eframe::egui::{self, Color32, Pos2, Rect, Sense, Stroke, Vec2};
 
-use super::{RivetApp, R_MD, R_SM};
+use super::{RivetApp, r_md, r_sm};
 use crate::filters::{DateRange, Filter, NameMode, Scope, TypeGroup};
 
 /// A small funnel, drawn so it looks the same in every icon theme.
@@ -59,7 +59,7 @@ impl RivetApp {
         let pos = Pos2::new(files.right() - width - 14.0, top);
         let max_h = (files.bottom() - pos.y - 12.0).max(200.0);
         let style = ctx.global_style();
-        let frame = egui::Frame::popup(&style).inner_margin(egui::Margin::symmetric(10, 8)).corner_radius(super::R_LG);
+        let frame = egui::Frame::popup(&style).inner_margin(egui::Margin::symmetric(10, 8)).corner_radius(super::r_lg());
         let r = egui::Area::new(egui::Id::unique("filters-panel")).order(egui::Order::Foreground).fixed_pos(pos).show(ctx, |ui| {
             frame.show(ui, |ui| {
                 ui.set_width(width - 20.0);
@@ -82,14 +82,14 @@ impl RivetApp {
         let fill = crate::palette::mix(v.extreme_bg_color, accent, 0.16);
         let mut open = false;
         let mut off = false;
-        egui::Frame::NONE.fill(fill).corner_radius(R_MD).inner_margin(egui::Margin { left: 6, right: 8, top: 3, bottom: 3 }).show(ui, |ui| {
+        egui::Frame::NONE.fill(fill).corner_radius(r_md()).inner_margin(egui::Margin { left: 6, right: 8, top: 3, bottom: 3 }).show(ui, |ui| {
             ui.set_width(ui.available_width() - 6.0);
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 8.0;
                 // The funnel opens the Filters sidebar.
                 let (r, resp) = ui.allocate_exact_size(Vec2::splat(24.0), Sense::click());
                 if resp.hovered() {
-                    ui.painter().rect_filled(r, R_SM, v.widgets.hovered.weak_bg_fill);
+                    ui.painter().rect_filled(r, r_sm(), v.widgets.hovered.weak_bg_fill);
                     ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
                 }
                 paint_funnel(ui.painter(), r.center(), 16.0, accent);
@@ -186,7 +186,7 @@ impl RivetApp {
         // Three icon buttons: global, this folder, this folder & below.
         ui.add_space(8.0);
         let (bar, _) = ui.allocate_exact_size(Vec2::new(w, 44.0), Sense::hover());
-        ui.painter().rect_filled(bar, R_MD, v.widgets.inactive.weak_bg_fill);
+        ui.painter().rect_filled(bar, r_md(), v.widgets.inactive.weak_bg_fill);
         let bw = bar.width() / 3.0;
         for (i, (scope, _)) in rows.iter().take(3).enumerate() {
             let r = Rect::from_min_size(bar.min + Vec2::new(bw * i as f32, 0.0), Vec2::new(bw, bar.height())).shrink(4.0);
@@ -194,10 +194,10 @@ impl RivetApp {
             let sel = *scope == pick;
             if sel {
                 let (fill, stroke) = super::selected_tile(&v, v.widgets.inactive.weak_bg_fill);
-                ui.painter().rect_filled(r, R_SM, fill);
-                ui.painter().rect_stroke(r, R_SM, stroke, egui::StrokeKind::Inside);
+                ui.painter().rect_filled(r, r_sm(), fill);
+                ui.painter().rect_stroke(r, r_sm(), stroke, egui::StrokeKind::Inside);
             } else if resp.hovered() {
-                ui.painter().rect_filled(r, R_SM, v.widgets.hovered.weak_bg_fill);
+                ui.painter().rect_filled(r, r_sm(), v.widgets.hovered.weak_bg_fill);
             }
             let fg = if sel { v.strong_text_color() } else { v.text_color() };
             match i {
@@ -240,7 +240,7 @@ impl RivetApp {
         let mut f = before.clone().unwrap_or_default();
         let mut reset = false;
         let card = v.faint_bg_color;
-        egui::Frame::NONE.fill(card).corner_radius(R_MD).inner_margin(egui::Margin::symmetric(10, 10)).show(ui, |ui| {
+        egui::Frame::NONE.fill(card).corner_radius(r_md()).inner_margin(egui::Margin::symmetric(10, 10)).show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.spacing_mut().item_spacing = Vec2::new(4.0, 4.0);
             ui.spacing_mut().button_padding = Vec2::new(7.0, 2.0);
@@ -268,11 +268,11 @@ impl RivetApp {
                         let (r, resp) = ui.allocate_exact_size(Vec2::new(cw, 26.0), Sense::click());
                         if on {
                             let (fill, stroke) = super::selected_tile(&v, card);
-                            ui.painter().rect_filled(r, R_SM, fill);
-                            ui.painter().rect_stroke(r, R_SM, stroke, egui::StrokeKind::Inside);
+                            ui.painter().rect_filled(r, r_sm(), fill);
+                            ui.painter().rect_stroke(r, r_sm(), stroke, egui::StrokeKind::Inside);
                         } else {
                             let fill = if resp.hovered() { v.widgets.hovered.weak_bg_fill } else { v.widgets.inactive.weak_bg_fill };
-                            ui.painter().rect_filled(r, R_SM, fill);
+                            ui.painter().rect_filled(r, r_sm(), fill);
                         }
                         let fg = if on { v.strong_text_color() } else { v.text_color() };
                         ui.painter().text(r.center(), egui::Align2::CENTER_CENTER, t.label(), crate::fonts::ui_font(12.5), fg);
@@ -293,7 +293,7 @@ impl RivetApp {
             heading(ui, "NAME");
             // A segmented control: three equal parts.
             let (seg, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 26.0), Sense::hover());
-            ui.painter().rect_filled(seg, R_SM, v.widgets.inactive.weak_bg_fill);
+            ui.painter().rect_filled(seg, r_sm(), v.widgets.inactive.weak_bg_fill);
             let parts = [(NameMode::Contains, "Contains"), (NameMode::Excludes, "Excludes"), (NameMode::Includes, "Includes")];
             let pw = seg.width() / parts.len() as f32;
             for (i, (mode, label)) in parts.iter().enumerate() {
@@ -301,10 +301,10 @@ impl RivetApp {
                 let resp = ui.interact(r, ui.scope_id().with(("name-mode", i)), Sense::click());
                 if f.name_mode == *mode {
                     let (fill, stroke) = super::selected_tile(&v, v.widgets.inactive.weak_bg_fill);
-                    ui.painter().rect_filled(r, R_SM - 1, fill);
-                    ui.painter().rect_stroke(r, R_SM - 1, stroke, egui::StrokeKind::Inside);
+                    ui.painter().rect_filled(r, r_sm() - 1, fill);
+                    ui.painter().rect_stroke(r, r_sm() - 1, stroke, egui::StrokeKind::Inside);
                 } else if resp.hovered() {
-                    ui.painter().rect_filled(r, R_SM - 1, v.widgets.hovered.weak_bg_fill);
+                    ui.painter().rect_filled(r, r_sm() - 1, v.widgets.hovered.weak_bg_fill);
                 }
                 let fg = if f.name_mode == *mode { v.strong_text_color() } else { v.text_color() };
                 ui.painter().text(r.center(), egui::Align2::CENTER_CENTER, *label, crate::fonts::ui_font(11.5), fg);
@@ -319,7 +319,7 @@ impl RivetApp {
                 NameMode::Contains => "Show names with…",
             };
             let bg = crate::palette::mix(v.window_fill, v.text_color(), 0.06);
-            egui::Frame::NONE.fill(bg).corner_radius(R_SM).inner_margin(egui::Margin::symmetric(8, 2)).show(ui, |ui| {
+            egui::Frame::NONE.fill(bg).corner_radius(r_sm()).inner_margin(egui::Margin::symmetric(8, 2)).show(ui, |ui| {
                 ui.add(egui::TextEdit::singleline(&mut f.name).frame(egui::Frame::NONE).hint_text(hint).align(egui::Align2::LEFT_CENTER).min_size(Vec2::new(0.0, 22.0)).desired_width(f32::INFINITY));
             });
             heading(ui, "MODIFIED");
@@ -398,7 +398,7 @@ fn info_note(ui: &mut egui::Ui, text: &str) {
     let v = ui.visuals().clone();
     let weak = v.weak_text_color();
     let fill = crate::palette::mix(v.panel_fill, v.text_color(), 0.035);
-    egui::Frame::NONE.fill(fill).corner_radius(R_SM).inner_margin(egui::Margin { left: 12, right: 12, top: 8, bottom: 8 }).show(ui, |ui| {
+    egui::Frame::NONE.fill(fill).corner_radius(r_sm()).inner_margin(egui::Margin { left: 12, right: 12, top: 8, bottom: 8 }).show(ui, |ui| {
         ui.set_width(ui.available_width());
         ui.horizontal_top(|ui| {
             ui.spacing_mut().item_spacing.x = 7.0;
