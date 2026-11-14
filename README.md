@@ -65,6 +65,7 @@ Rivet is powerful all the while being minimal. Make it your own — bloat the in
 **Under the hood**
 - ⚡ **Fast** — opens a 100,000-file folder in under 0.4 s; no CPU use when idle
 - 🦀 **Small** — one 14 MB binary or a 6 MB AppImage; ffmpeg is optional (video previews and conversion)
+- 🩹 **Crash reports** — saved on your computer and shown on the next start; nothing is sent unless you choose to share it
 
 ## 🎨 Follows your colors
 

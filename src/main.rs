@@ -6,6 +6,7 @@
 mod app;
 mod archive;
 mod cli;
+mod crash;
 mod bench;
 mod builtin_icons;
 mod fonts;
@@ -44,6 +45,8 @@ pub static STARTED: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLoc
 
 fn main() -> eframe::Result {
     STARTED.get_or_init(std::time::Instant::now);
+    // A bug that stops Rivet leaves a report on this computer (shown on the next start).
+    crash::install();
     let mut screenshot: Option<PathBuf> = None;
     let mut start: Option<PathBuf> = None;
     let mut decorations: Option<bool> = None;

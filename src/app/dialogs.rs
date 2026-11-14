@@ -439,6 +439,9 @@ impl RivetApp {
             Dialog::Shortcuts => {
                 close = self.keymap_dialog(ctx);
             }
+            Dialog::Crash(..) => {
+                close = self.crash_dialog(ctx);
+            }
         }
         if let Some(n) = next {
             self.dialog = n;
@@ -1055,6 +1058,7 @@ impl RivetApp {
         let tab_now = self.prefs_tab;
         let mut pick_tab: Option<PrefsTab> = None;
         let mut show_shortcuts = false;
+        let mut show_crash: Option<std::path::PathBuf> = None;
         self.app_icon_texture(ctx);
         let about_icon = self.app_icon.clone();
         let tab_icons: Vec<Option<egui::TextureHandle>> = PrefsTab::ALL.iter().map(|t| self.icon(ctx, t.icons(), 16.0)).collect();
@@ -1615,6 +1619,30 @@ impl RivetApp {
                                 });
                             }
                         });
+                        // Reports from crashes, kept on this computer only.
+                        section(ui, "Crash reports", &mut |ui| {
+                            let reports = crate::crash::reports();
+                            let folder = crate::crash::dir();
+                            let shown = match folder.strip_prefix(crate::places::home()) {
+                                Ok(r) => format!("~/{}", r.display()),
+                                Err(_) => folder.display().to_string(),
+                            };
+                            let status = match reports.len() {
+                                0 => "None".to_string(),
+                                1 => "1 saved".to_string(),
+                                n => format!("{n} saved"),
+                            };
+                            row(ui, "Saved on this computer", Some(shown), None, &status, &mut |ui| {
+                                if let Some(newest) = reports.first() {
+                                    if ui.button("Show Latest").clicked() {
+                                        show_crash = Some(newest.clone());
+                                    }
+                                    if ui.button("Open Folder").clicked() {
+                                        let _ = crate::launch::open_url(&folder.to_string_lossy());
+                                    }
+                                }
+                            });
+                        });
                     }
                     PrefsTab::About => {
                         ui.add_space(18.0);
@@ -1650,6 +1678,9 @@ impl RivetApp {
         }
         if show_shortcuts {
             self.dialog = Dialog::Shortcuts;
+        }
+        if let Some(r) = show_crash.and_then(|p| crate::crash::Report::load(&p)) {
+            self.dialog = Dialog::Crash(Box::new(r), false);
         }
         self.prefs_win = win;
         if let Some(r) = shown.rect {

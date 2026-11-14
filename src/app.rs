@@ -29,6 +29,7 @@ mod views;
 mod windows;
 mod zen;
 mod commands;
+mod crashview;
 mod keymap;
 
 #[derive(Clone)]
@@ -142,6 +143,8 @@ enum Dialog {
     RenameBookmark { idx: usize, text: String },
     Message(String, String),
     Shortcuts,
+    /// A crash report from last time (and whether it was copied).
+    Crash(Box<crate::crash::Report>, bool),
     Compress { paths: Vec<PathBuf>, name: String, format: crate::archive::Format, focus: bool },
     BulkRename(Box<bulkrename::BulkState>),
     Convert(Box<mediatools::ConvertState>),
@@ -617,7 +620,18 @@ impl RivetApp {
                 }
             }
         }
+        // Rivet crashed last time: show the report once. (Checks show it only when asked.)
+        if app.screenshot.is_none()
+            && let Some(r) = crate::crash::unseen() {
+                crate::crash::mark_seen(&r);
+                app.dialog = Dialog::Crash(Box::new(r), false);
+            }
         match std::env::var("RIVET_DIALOG").as_deref() {
+            Ok("crash") => {
+                if let Some(r) = crate::crash::reports().first().and_then(|p| crate::crash::Report::load(p)) {
+                    app.dialog = Dialog::Crash(Box::new(r), false);
+                }
+            }
             Ok("about") => app.open_about(),
             Ok("shortcuts") => app.dialog = Dialog::Shortcuts,
             Ok("connect") => app.open_connect_dialog(),
@@ -2283,6 +2297,10 @@ impl eframe::App for RivetApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let frame_start = Instant::now();
         let ctx = ui.ctx().clone();
+        // Test hook: RIVET_CRASH_TEST=1 panics on the third frame (to check crash reports).
+        if self.frames == 3 && std::env::var_os("RIVET_CRASH_TEST").is_some() {
+            panic!("Crash test (RIVET_CRASH_TEST)");
+        }
         set_square(self.s.terminal);
         self.apply_font(&ctx);
         self.apply_visuals(&ctx);

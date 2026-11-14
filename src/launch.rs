@@ -246,6 +246,11 @@ fn spawn_detached(args: &[String], cwd: Option<&Path>) -> Result<(), String> {
     cmd.spawn().map(|_| ()).map_err(|e| format!("Could not start {}: {e}", args[0]))
 }
 
+/// Open a web address or folder with the desktop's default handler.
+pub fn open_url(url: &str) -> Result<(), String> {
+    spawn_detached(&["xdg-open".into(), url.to_string()], None)
+}
+
 /// Open with the desktop's default application.
 pub fn open_default(apps: &[DesktopApp], mime: &str, path: &Path) -> Result<(), String> {
     // Host .desktop files point at binaries outside the sandbox. The runtime's

@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### New
+- **Crash reports**: if Rivet stops because of a bug, it saves a plain-text report on this computer
+  (`~/.local/state/rivet/crashes`) — version, what went wrong and where, the stack, and the system.
+  Nothing is sent anywhere. The next start shows it once, with Copy Report, Open Folder and Report
+  on GitHub (copies the report and opens a new issue to paste it into). Preferences → System lists
+  the saved reports.
+
+### Improved
+- The code passes Rust's linter (clippy) cleanly, and CI now fails on any new clippy warning.
+
 ## 0.5.0
 
 ### New
