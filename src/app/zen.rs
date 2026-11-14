@@ -11,7 +11,9 @@ use crate::model::Location;
 use crate::places;
 
 /// How close to an edge (in points) the pointer must come to slide a panel in.
-const EDGE: f32 = 6.0;
+const EDGE: f32 = ZEN_GUTTER as f32 + 2.0;
+/// The empty border round the files in Zen mode: the files never sit under the reveal zones.
+pub(super) const ZEN_GUTTER: i8 = 18;
 /// Gap between a slid-in panel and the window edge.
 const GAP: f32 = 8.0;
 /// How far the pointer may stray outside a slid-in panel before it slides away.
