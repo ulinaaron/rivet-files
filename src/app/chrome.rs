@@ -318,8 +318,11 @@ impl RivetApp {
             if ui.add(egui::Button::new("Filters").shortcut_text("Ctrl+Shift+F")).clicked() {
                 self.toggle_filters();
             }
-            if ui.add(egui::Button::new("Quick Jump").shortcut_text("Ctrl+Space")).clicked() {
+            if ui.add(egui::Button::new("Quick Open").shortcut_text("Ctrl+P")).clicked() {
                 self.toggle_spotlight();
+            }
+            if ui.add(egui::Button::new("Quick Actions").shortcut_text("Ctrl+Shift+P")).clicked() {
+                self.toggle_actions();
             }
             ui.separator();
             ui.menu_button("Sort Items", |ui| self.sort_menu(ui));
@@ -1549,7 +1552,7 @@ fn folder_suggestions(prefix: &str, word: &str, cache: &mut Option<(PathBuf, Vec
     folder_matches(prefix, word, cache, 12).into_iter().map(|n| egui::Suggestion::new(format!("{n}/"))).collect()
 }
 
-/// The names behind [`folder_suggestions`] (at most `limit`), also used by Quick Jump.
+/// The names behind [`folder_suggestions`] (at most `limit`), also used by Quick Open.
 pub(super) fn folder_matches(prefix: &str, word: &str, cache: &mut Option<(PathBuf, Vec<String>)>, limit: usize) -> Vec<String> {
     if prefix.is_empty() || !(prefix.starts_with('/') || prefix.starts_with('~')) {
         return Vec::new();

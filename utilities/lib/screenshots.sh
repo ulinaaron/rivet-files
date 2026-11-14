@@ -107,11 +107,11 @@ RIVET_ICON_THEME=Papirus RIVET_FILTERS="$T/filters" RIVET_FILTERS_OPEN=1 RIVET_T
     "$BIN" "$H" --screenshot "$OUT/filters-wide.png"
 RIVET_ICON_THEME=Papirus RIVET_SELECT=0,1,2 RIVET_DIALOG=bulkrename RIVET_CLICKS="type:holiday_@20" \
     "$BIN" "$H/Pictures" --screenshot "$OUT/bulk-rename-wide.png"
-# Zen mode with the toolbar and sidebar slid in, and Quick Jump (Ctrl+Space).
+# Zen mode with the toolbar and sidebar slid in, and Quick Open (Ctrl+P).
 RIVET_ICON_THEME=Papirus RIVET_ZEN=1 RIVET_ZEN_SHOW=toolbar,sidebar \
     "$BIN" "$H/Documents" --screenshot "$OUT/zen-wide.png"
 RIVET_ICON_THEME=Papirus RIVET_ZEN=1 RIVET_SPOTLIGHT=p \
-    "$BIN" "$H" --screenshot "$OUT/quick-jump-wide.png"
+    "$BIN" "$H" --screenshot "$OUT/quick-open-wide.png"
 
 # The same window recoloured by different matugen-style schemes (Rivet's own icons).
 # palette NAME ACCENT ACCENT_FG WINDOW_BG WINDOW_FG HEADERBAR VIEW POPOVER SECONDARY TERTIARY [VIEW_OPTS]

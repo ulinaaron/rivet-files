@@ -7,9 +7,12 @@
   to the toolbar's edge, the sidebar's edge or Peek's edge and that panel slides in over the files;
   move away and it slides back out. Peek takes the other side if it shares one with the sidebar.
   The menus live behind the toolbar's menu button while in Zen mode.
-- **Quick Jump** (Ctrl+Space, or View → Quick Jump): a jump-anywhere bar. Type a few letters of
+- **Quick Open** (Ctrl+P, or View → Quick Open): a jump-anywhere bar. Type a few letters of
   any folder — recent ones, places, bookmarks, drives, folders here and under Home — and press
   Enter. Start with `/` or `~` to walk a path; Tab fills in the highlighted folder.
+- **Quick Actions** (Ctrl+Shift+P, or View → Quick Actions): every menu command and view option
+  in one searchable list — views, panels, sorting, layout, theme, going places, file commands.
+  On / off options show their state and keep the list open, so you can flip several in a row.
 
 ## 0.4.0
 

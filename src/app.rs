@@ -28,6 +28,7 @@ mod quickview;
 mod views;
 mod windows;
 mod zen;
+mod commands;
 
 #[derive(Clone)]
 struct DragFiles(Vec<PathBuf>);
@@ -191,9 +192,11 @@ pub struct RivetApp {
     quick: Option<quickview::QuickView>,
     /// Zen mode's slide-in panels.
     zen: zen::ZenState,
-    /// Quick Jump (Ctrl+Space), while open.
+    /// Quick Open (Ctrl+P), while open.
     spotlight: Option<zen::Spotlight>,
-    /// Folders visited this session, newest first (Quick Jump ranks them first).
+    /// Quick Actions (Ctrl+Shift+P), while open.
+    actions: Option<commands::QuickActions>,
+    /// Folders visited this session, newest first (Quick Open ranks them first).
     recent_dirs: Vec<PathBuf>,
     net_scan_rx: Option<std::sync::mpsc::Receiver<netview::NetResult>>,
     connect_ask: Option<netview::ConnectAsk>,
@@ -440,6 +443,7 @@ impl RivetApp {
             quick: None,
             zen: Default::default(),
             spotlight: None,
+            actions: None,
             recent_dirs: Vec::new(),
             net_scan_rx: None,
             connect_ask: None,
@@ -1601,15 +1605,17 @@ impl RivetApp {
         let pressed = |k: Key| events.iter().any(|e| matches!(e, egui::Event::Key { key, pressed: true, .. } if *key == k));
         let cmd = m.command;
 
-        // Quick Jump has the keyboard while it's open; Ctrl+Space again closes it.
-        if self.spotlight.is_some() {
-            if cmd && pressed(Key::Space) {
-                self.spotlight = None;
+        // Quick Open has the keyboard while it's open; Ctrl+P again closes it.
+        // Quick Open and Quick Actions have the keyboard while open; their keys close them
+        // again, and each one's key swaps to the other.
+        if self.spotlight.is_some() || self.actions.is_some() {
+            if cmd && pressed(Key::P) {
+                if m.shift { self.toggle_actions() } else { self.toggle_spotlight() }
             }
             return;
         }
-        if cmd && pressed(Key::Space) && !modal {
-            self.toggle_spotlight();
+        if cmd && pressed(Key::P) && !modal {
+            if m.shift { self.toggle_actions() } else { self.toggle_spotlight() }
             return;
         }
         if pressed(Key::F12) && !modal {
@@ -2069,8 +2075,10 @@ impl eframe::App for RivetApp {
         self.filters_popover(&ctx);
         // Preview draws over everything else and takes the arrow keys while open.
         self.quick_view(&ctx);
-        // Quick Jump: the jump-anywhere bar (Ctrl+Space).
+        // Quick Open: the jump-anywhere bar (Ctrl+P).
         self.spotlight(&ctx);
+        // Quick Actions: every command and option, searchable (Ctrl+Shift+P).
+        self.quick_actions(&ctx);
         // The last click decides whether the keyboard belongs to a window or the file view.
         if let Some(p) = ctx.input(|i| if i.pointer.any_pressed() { i.pointer.interact_pos() } else { None }) {
             self.window_focus = self.window_rects.iter().any(|r| r.contains(p));

@@ -1,5 +1,5 @@
 //! Zen mode (the files fill the window; the toolbar, sidebar and Peek slide in when the
-//! pointer reaches their edge) and Quick Jump (Ctrl+Space: a fuzzy jump-anywhere bar).
+//! pointer reaches their edge) and Quick Open (Ctrl+P: a fuzzy jump-anywhere bar).
 
 use eframe::egui::{self, Align2, Color32, Id, Key, Pos2, Rect, Sense, Stroke, Vec2};
 use std::path::{Path, PathBuf};
@@ -39,7 +39,7 @@ enum Side {
     Bottom,
 }
 
-/// One place Quick Jump can take you.
+/// One place Quick Open can take you.
 #[derive(Clone)]
 struct Spot {
     loc: Location,
@@ -254,7 +254,7 @@ impl RivetApp {
         };
         let sides = self.zen_sides();
         let text = format!(
-            "Zen mode · move to the {} edge for the toolbar{} · Ctrl+Space to jump anywhere · F12 to leave",
+            "Zen mode · move to the {} edge for the toolbar{} · Ctrl+P to open any folder · F12 to leave",
             side(sides[1]),
             if self.s.show_sidebar { format!(", the {} edge for the sidebar", side(sides[0])) } else { String::new() },
         );
@@ -271,9 +271,9 @@ impl RivetApp {
             });
     }
 
-    // ------------------------------------------------------------- Quick Jump
+    // ------------------------------------------------------------- Quick Open
 
-    /// Remember folders as they're visited, newest first (Quick Jump ranks them first).
+    /// Remember folders as they're visited, newest first (Quick Open ranks them first).
     pub(super) fn remember_dir(&mut self, loc: &Location) {
         if let Location::Dir(p) = loc {
             self.recent_dirs.retain(|d| d != p);
@@ -282,7 +282,37 @@ impl RivetApp {
         }
     }
 
+    /// The search field at the top of Quick Open and Quick Actions.
+    pub(super) fn palette_field(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, query: &mut String, focus: &mut bool, hint: &str) {
+        let weak = ui.visuals().weak_text_color();
+        ui.horizontal(|ui| {
+            ui.add_space(6.0);
+            if let Some(t) = self.icon(ctx, &["edit-find-symbolic", "system-search-symbolic"], 18.0) {
+                let (r, _) = ui.allocate_exact_size(Vec2::new(22.0, 36.0), Sense::hover());
+                paint_tex(ui.painter(), &t, Rect::from_center_size(r.center(), Vec2::splat(18.0)), weak);
+            }
+            let edit = egui::TextEdit::singleline(query)
+                .frame(egui::Frame::NONE)
+                .font(egui::FontId::proportional(18.0))
+                .align(Align2::LEFT_CENTER)
+                .min_size(Vec2::new(0.0, 36.0))
+                .desired_width(f32::INFINITY)
+                .hint_text(hint);
+            let out = edit.show(ui);
+            if *focus {
+                out.response.request_focus();
+                // Put the cursor at the end (after Tab fills in a path).
+                let mut state = out.state.clone();
+                let end = egui::text::CCursor::new(query.chars().count());
+                state.cursor.set_char_range(Some(egui::text::CCursorRange::one(end)));
+                state.store(ui.ctx(), out.response.id);
+                *focus = false;
+            }
+        });
+    }
+
     pub(super) fn toggle_spotlight(&mut self) {
+        self.actions = None;
         if self.spotlight.is_some() {
             self.spotlight = None;
             return;
@@ -298,7 +328,7 @@ impl RivetApp {
         });
     }
 
-    /// Everything Quick Jump offers before you type a path: recent folders, places,
+    /// Everything Quick Open offers before you type a path: recent folders, places,
     /// bookmarks, drives, and folders near here and under Home.
     fn spotlight_items(&self) -> Vec<Spot> {
         let mut out: Vec<Spot> = Vec::new();
@@ -454,7 +484,7 @@ impl RivetApp {
                 return;
             }
         }
-        // The keys Quick Jump uses, taken before the text field sees them.
+        // The keys Quick Open uses, taken before the text field sees them.
         let (up, down, enter, tab, esc) = ctx.input_mut(|i| {
             (
                 i.consume_key(egui::Modifiers::NONE, Key::ArrowUp),
@@ -511,31 +541,7 @@ impl RivetApp {
         let r = egui::Modal::new(id).area(area).frame(frame).backdrop_color(backdrop).show(ctx, |ui| {
             ui.set_width(w);
             let v = ui.visuals().clone();
-            // The query field, with a search icon.
-            ui.horizontal(|ui| {
-                ui.add_space(6.0);
-                if let Some(t) = self.icon(ctx, &["edit-find-symbolic", "system-search-symbolic"], 18.0) {
-                    let (r, _) = ui.allocate_exact_size(Vec2::new(22.0, 36.0), Sense::hover());
-                    paint_tex(ui.painter(), &t, Rect::from_center_size(r.center(), Vec2::splat(18.0)), v.weak_text_color());
-                }
-                let edit = egui::TextEdit::singleline(&mut sp.query)
-                    .frame(egui::Frame::NONE)
-                    .font(egui::FontId::proportional(18.0))
-                    .align(Align2::LEFT_CENTER)
-                    .min_size(Vec2::new(0.0, 36.0))
-                    .desired_width(f32::INFINITY)
-                    .hint_text("Go to a folder…  (or type a path: / or ~)");
-                let out = edit.show(ui);
-                if sp.focus {
-                    out.response.request_focus();
-                    // Put the cursor at the end (after Tab fills in a path).
-                    let mut state = out.state.clone();
-                    let end = egui::text::CCursor::new(sp.query.chars().count());
-                    state.cursor.set_char_range(Some(egui::text::CCursorRange::one(end)));
-                    state.store(ui.ctx(), out.response.id);
-                    sp.focus = false;
-                }
-            });
+            self.palette_field(ui, ctx, &mut sp.query, &mut sp.focus, "Go to a folder…  (or type a path: / or ~)");
             if !sp.shown.is_empty() {
                 ui.add_space(4.0);
                 let (sep, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 1.0), Sense::hover());
@@ -581,7 +587,10 @@ impl RivetApp {
             });
             if sp.shown.is_empty() && !sp.query.trim().is_empty() {
                 ui.add_space(6.0);
-                ui.label(egui::RichText::new("No matching folders").color(v.weak_text_color()));
+                ui.horizontal(|ui| {
+                    ui.add_space(10.0);
+                    ui.label(egui::RichText::new("No matching folders").color(v.weak_text_color()));
+                });
                 ui.add_space(4.0);
             }
             // A quiet key legend.
