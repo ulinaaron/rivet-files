@@ -102,13 +102,14 @@ impl RivetApp {
             }
         };
         // View options first: they're what this list is mostly for.
-        add(Cmd::Icons, "View", "Icon View", "Ctrl+1", Some(s.view == ViewMode::Icons), true);
-        add(Cmd::List, "View", "List View", "Ctrl+2", Some(s.view == ViewMode::List), true);
-        add(Cmd::Compact, "View", "Compact View", "Ctrl+3", Some(s.view == ViewMode::Compact), true);
+        // Options for a hidden panel are left out, and pick-one choices (view, sort key, theme) list only the ones you can switch to.
+        add(Cmd::Icons, "View", "Icon View", "Ctrl+1", None, s.view != ViewMode::Icons);
+        add(Cmd::List, "View", "List View", "Ctrl+2", None, s.view != ViewMode::List);
+        add(Cmd::Compact, "View", "Compact View", "Ctrl+3", None, s.view != ViewMode::Compact);
         add(Cmd::Hidden, "View", "Show Hidden Files", "Ctrl+H", Some(s.show_hidden), true);
         add(Cmd::Thumbnails, "View", "Picture Thumbnails", "", Some(s.show_thumbnails), true);
         add(Cmd::Sidebar, "View", "Sidebar", "F9", Some(s.show_sidebar), true);
-        add(Cmd::FolderTree, "View", "Folder Tree in the Sidebar", "", Some(s.sidebar_tree), true);
+        add(Cmd::FolderTree, "View", "Folder Tree in the Sidebar", "", Some(s.sidebar_tree), s.show_sidebar);
         add(Cmd::Peek, "View", "Peek", "F11", Some(s.show_peek), true);
         add(Cmd::Statusbar, "View", "Statusbar", "F8", Some(s.show_statusbar), true);
         add(Cmd::Menubar, "View", "Menubar", "Ctrl+M", Some(s.show_menubar), true);
@@ -119,18 +120,18 @@ impl RivetApp {
         add(Cmd::ZoomIn, "View", "Zoom In", "Ctrl++", None, true);
         add(Cmd::ZoomOut, "View", "Zoom Out", "Ctrl+-", None, true);
         for (k, l) in [(SortKey::Name, "Sort by Name"), (SortKey::Size, "Sort by Size"), (SortKey::Type, "Sort by Type"), (SortKey::Modified, "Sort by Modification Date")] {
-            add(Cmd::Sort(k), "Sort", l, "", Some(s.sort == k), true);
+            add(Cmd::Sort(k), "Sort", l, "", None, s.sort != k);
         }
         add(Cmd::Reversed, "Sort", "Reversed Order", "", Some(s.sort_desc), true);
         add(Cmd::FoldersFirst, "Sort", "Folders First", "", Some(s.folders_first), true);
-        add(Cmd::SidebarRight, "Layout", "Sidebar on the Right", "", Some(s.sidebar_right), true);
-        add(Cmd::PeekLeft, "Layout", "Peek on the Left", "", Some(s.peek_left), true);
+        add(Cmd::SidebarRight, "Layout", "Sidebar on the Right", "", Some(s.sidebar_right), s.show_sidebar);
+        add(Cmd::PeekLeft, "Layout", "Peek on the Left", "", Some(s.peek_left), s.show_peek);
         add(Cmd::ToolbarBottom, "Layout", "Toolbar at the Bottom", "", Some(s.toolbar_bottom), true);
-        add(Cmd::StatusTop, "Layout", "Statusbar at the Top", "", Some(s.statusbar_top), true);
-        add(Cmd::AppTitleBar, "Layout", "Rivet's Own Title Bar", "", Some(!s.decorations), true);
-        add(Cmd::Theme(ThemeChoice::System), "Theme", "Follow System", "", Some(s.theme == ThemeChoice::System), true);
-        add(Cmd::Theme(ThemeChoice::Light), "Theme", "Light", "", Some(s.theme == ThemeChoice::Light), true);
-        add(Cmd::Theme(ThemeChoice::Dark), "Theme", "Dark", "", Some(s.theme == ThemeChoice::Dark), true);
+        add(Cmd::StatusTop, "Layout", "Statusbar at the Top", "", Some(s.statusbar_top), s.show_statusbar);
+        add(Cmd::AppTitleBar, "Layout", "App Title Bar", "", Some(!s.decorations), true);
+        add(Cmd::Theme(ThemeChoice::System), "Theme", "Follow System", "", None, s.theme != ThemeChoice::System);
+        add(Cmd::Theme(ThemeChoice::Light), "Theme", "Light", "", None, s.theme != ThemeChoice::Light);
+        add(Cmd::Theme(ThemeChoice::Dark), "Theme", "Dark", "", None, s.theme != ThemeChoice::Dark);
         add(Cmd::Preferences, "Rivet", "Preferences", "Ctrl+,", None, true);
         add(Cmd::QuickOpen, "Go", "Quick Open", "Ctrl+P", None, true);
         add(Cmd::Back, "Go", "Back", "Alt+Left", None, !self.tab().back.is_empty());

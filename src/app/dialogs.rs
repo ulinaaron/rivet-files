@@ -1246,16 +1246,15 @@ impl RivetApp {
                         });
                         ui.end_row();
                         // Terminal mode: the same layout, dressed like a terminal program.
-                        ui.label("Look");
+                        ui.label("Mode");
                         ui.vertical(|ui| {
                             ui.horizontal(|ui| {
                                 changed |= ui.selectable_value(&mut self.s.terminal, false, "Standard").changed();
                                 changed |= ui.selectable_value(&mut self.s.terminal, true, "Terminal").changed();
                             });
+                            // Only when something's missing: without a Nerd Font the icons stay as they are.
                             if self.s.terminal && self.nerd_font.is_none() {
-                                hint(ui, "No Nerd Font found, so icons stay as they are. Install one (or pick one as the monospace font) for terminal-style icons.");
-                            } else {
-                                hint(ui, "Monospace text, Nerd Font icons and plain boxes");
+                                hint(ui, "No Nerd Font found, so icons stay as they are. Install one (or pick one as the Monospace Font) for terminal-style icons.");
                             }
                         });
                         ui.end_row();
@@ -1346,12 +1345,9 @@ impl RivetApp {
                         changed |= font_picker(ui, "uifont", &mut self.s.ui_font, &self.font_families, &mut self.font_filter, &format!("System ({system_name})"));
                         ui.end_row();
                         // The monospace font: text previews, and everything in terminal mode.
-                        ui.label("Monospace font");
-                        ui.vertical(|ui| {
-                            let mono_system = format!("System ({})", crate::fonts::resolve_mono("").map(|(f, _)| f).unwrap_or_else(|| "Monospace".into()));
-                            changed |= font_picker(ui, "monofont", &mut self.s.mono_font, &self.mono_families, &mut self.mono_filter, &mono_system);
-                            hint(ui, "Used for text previews, and for everything in terminal mode");
-                        });
+                        ui.label("Monospace Font");
+                        let mono_system = format!("System ({})", crate::fonts::resolve_mono("").map(|(f, _)| f).unwrap_or_else(|| "Monospace".into()));
+                        changed |= font_picker(ui, "monofont", &mut self.s.mono_font, &self.mono_families, &mut self.mono_filter, &mono_system);
                         ui.end_row();
                         ui.label("Text size");
                         ui.horizontal(|ui| {
