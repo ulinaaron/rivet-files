@@ -314,7 +314,7 @@ impl RivetApp {
             if Self::menu_toggle(ui, &mut zen, "Zen Mode", "F12") {
                 self.toggle_zen();
             }
-            if Self::menu_toggle(ui, &mut self.s.terminal, "Terminal Mode", "") {
+            if Self::menu_toggle(ui, &mut self.s.terminal, "Terminal Mode", "F7") {
                 self.dirty_settings = true;
             }
             ui.separator();

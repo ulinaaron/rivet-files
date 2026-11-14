@@ -472,6 +472,7 @@ impl RivetApp {
                         ("F9", "Show or hide the sidebar"),
                         ("F11", "Show or hide the Peek panel"),
                         ("F12", "Zen mode"),
+                        ("F7", "Terminal mode"),
                         ("Ctrl+P", "Quick Open: go to any folder"),
                         ("Ctrl+Shift+P", "Quick Actions: every command and option"),
                         ("Ctrl+Shift+F", "Filters"),

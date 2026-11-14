@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### New
-- **Terminal mode** (Preferences → Appearance → Look, View → Terminal Mode, or Quick Actions): a
+- **Terminal mode** (F7, Preferences → Appearance → Mode, View → Terminal Mode, or Quick Actions): a
   GUI that feels like a TUI. Everything is monospace, icons are Nerd Font glyphs colored by kind
   (drawn from any installed Nerd Font, your monospace font first), corners are square, shadows are
   gone and the sidebar, files and Peek sit in plain boxes with their titles in the border. Picture

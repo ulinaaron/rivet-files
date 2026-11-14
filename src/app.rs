@@ -1717,6 +1717,10 @@ impl RivetApp {
         if pressed(Key::F12) && !modal {
             self.toggle_zen();
         }
+        if pressed(Key::F7) && !modal {
+            self.s.terminal = !self.s.terminal;
+            self.dirty_settings = true;
+        }
 
         if pressed(Key::Escape) {
             if self.path_editing {

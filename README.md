@@ -137,8 +137,7 @@ toolbar, sidebar or Peek slides in; move away and it's gone again. Pair it with 
 
 ### 🖥️ Terminal mode
 
-A GUI that feels like a TUI. Switch the look to Terminal (Preferences → Appearance, or Quick
-Actions) and everything turns monospace, the icons become Nerd Font glyphs colored by kind, and the
+A GUI that feels like a TUI. Press F7 (or set Mode to Terminal in Preferences → Appearance) and everything turns monospace, the icons become Nerd Font glyphs colored by kind, and the
 panels become plain boxes with their titles in the border. The layout and every feature stay the
 same. It uses your monospace font (Preferences → Appearance → Typography), and any installed Nerd
 Font for the icons.
@@ -184,7 +183,7 @@ Rivet talks to X11 or Wayland directly. It does not use GTK or Qt. A normal desk
 | `F2` · `Delete` | Rename (Bulk Rename with several selected) · move to Trash |
 | `Ctrl+M` | Show or hide the menu bar |
 | `Ctrl+P` · `Ctrl+Shift+P` | Quick Open: go to any folder · Quick Actions: any command or option |
-| `F8` · `F9` · `F11` · `F12` | Status bar · sidebar · Peek panel · Zen mode |
+| `F7` · `F8` · `F9` · `F11` · `F12` | Terminal mode · status bar · sidebar · Peek panel · Zen mode |
 | `Ctrl+Shift+F` | Filters |
 | `Space` · `←` `→` · `Return` | Preview the selection · previous / next file · open it |
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / redo |

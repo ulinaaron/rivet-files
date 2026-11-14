@@ -114,7 +114,7 @@ impl RivetApp {
         add(Cmd::Statusbar, "View", "Statusbar", "F8", Some(s.show_statusbar), true);
         add(Cmd::Menubar, "View", "Menubar", "Ctrl+M", Some(s.show_menubar), true);
         add(Cmd::Zen, "View", "Zen Mode", "F12", Some(s.zen), true);
-        add(Cmd::TerminalMode, "View", "Terminal Mode", "", Some(s.terminal), true);
+        add(Cmd::TerminalMode, "View", "Terminal Mode", "F7", Some(s.terminal), true);
         add(Cmd::Filters, "View", "Filters", "Ctrl+Shift+F", None, true);
         add(Cmd::Reload, "View", "Reload", "F5", None, true);
         add(Cmd::ZoomIn, "View", "Zoom In", "Ctrl++", None, true);
