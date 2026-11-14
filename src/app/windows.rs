@@ -140,7 +140,9 @@ pub(super) fn show<R>(ctx: &egui::Context, st: &mut WinState, chrome: &Chrome, a
     let rect = r.as_ref().map(|r| r.response.rect);
     if let Some(rect) = rect {
         if !st.maximized && !st.shaded {
-            st.size = rect.size();
+            // Store the inside size: the outline (terminal mode has one) sits outside it, and
+            // counting it would make the window grow by its width on every repaint.
+            st.size = rect.size() - Vec2::splat(2.0 * frame.stroke.width);
         }
         // Clicking anywhere on a window brings it to the front.
         if r.as_ref().is_some_and(|r| r.response.contains_pointer()) && ctx.input(|i| i.pointer.any_pressed()) {
