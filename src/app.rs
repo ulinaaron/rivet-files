@@ -199,6 +199,14 @@ pub struct RivetApp {
     actions: Option<commands::QuickActions>,
     /// Vim keys: the first key of a two-key command (gg, yy, dd).
     vim_pending: Option<char>,
+    /// Vim keys: a count typed before a motion (5j, 10G); 0 when none.
+    vim_count: usize,
+    /// Vim keys: how far the next movement goes (set from the count).
+    vim_mult: usize,
+    /// Vim keys: "go to item N" (a count before G).
+    vim_goto: Option<usize>,
+    /// Vim keys: visual mode (V) — movement extends the selection.
+    vim_visual: bool,
     /// What's typed in the keyboard map's search field.
     keymap_filter: String,
     /// Folders visited this session, newest first (Quick Open ranks them first).
@@ -501,6 +509,10 @@ impl RivetApp {
             spotlight: None,
             actions: None,
             vim_pending: None,
+            vim_count: 0,
+            vim_mult: 1,
+            vim_goto: None,
+            vim_visual: false,
             keymap_filter: String::new(),
             recent_dirs: Vec::new(),
             net_scan_rx: None,
@@ -1038,6 +1050,9 @@ impl RivetApp {
     }
 
     fn after_location_change(&mut self, select: Option<PathBuf>) {
+        self.vim_pending = None;
+        self.vim_count = 0;
+        self.vim_visual = false;
         let t = &mut self.tabs[self.active];
         t.selected.clear();
         t.anchor = None;
@@ -1702,24 +1717,83 @@ impl RivetApp {
         let grid = self.s.view != ViewMode::List;
         let key = |k: Key| egui::Event::Key { key: k, physical_key: None, pressed: true, repeat: false, modifiers: Default::default() };
         let mut out = Vec::new();
+        self.vim_mult = 1;
         for e in events {
             match e {
                 egui::Event::Text(t) => {
                     for c in t.chars() {
-                        match (self.vim_pending.take(), c) {
-                            (Some('g'), 'g') => out.push(key(Key::Home)),
+                        // A count: 5j moves five, 10G goes to the tenth item (a leading 0 isn't one).
+                        if c.is_ascii_digit() && (c != '0' || self.vim_count > 0) {
+                            self.vim_count = (self.vim_count * 10 + c.to_digit(10).unwrap() as usize).min(9999);
+                            continue;
+                        }
+                        let count = std::mem::take(&mut self.vim_count);
+                        let pending = self.vim_pending.take();
+                        // In visual mode y / d act on the selection at once, then leave it.
+                        if self.vim_visual && matches!(c, 'y' | 'd' | 'x') {
+                            self.pending.push(if c == 'y' { Action::Copy } else { Action::Cut });
+                            self.vim_visual = false;
+                            continue;
+                        }
+                        match (pending, c) {
+                            (Some('g'), 'g') => match count {
+                                0 => out.push(key(Key::Home)),
+                                n => self.vim_goto = Some(n),
+                            },
                             (Some('y'), 'y') => self.pending.push(Action::Copy),
                             (Some('d'), 'd') => self.pending.push(Action::Cut),
-                            (_, 'g' | 'y' | 'd') => self.vim_pending = Some(c),
-                            (_, 'j') => out.push(key(Key::ArrowDown)),
-                            (_, 'k') => out.push(key(Key::ArrowUp)),
-                            // In the grid views h / l move sideways; in the list (one column)
-                            // they go to the parent folder / open, like a terminal file manager.
-                            (_, 'h') if grid => out.push(key(Key::ArrowLeft)),
-                            (_, 'l') if grid => out.push(key(Key::ArrowRight)),
+                            (Some('c'), 'w') => {
+                                let sel = self.tab().selected_paths();
+                                if sel.len() > 1 && self.s.bulk_rename {
+                                    self.pending.push(Action::BulkRename(sel));
+                                } else if let Some(p) = sel.into_iter().next() {
+                                    self.pending.push(Action::Rename(p));
+                                }
+                            }
+                            (Some('z'), 'h') | (_, '.') => {
+                                self.s.show_hidden = !self.s.show_hidden;
+                                self.resort_all();
+                                self.dirty_settings = true;
+                            }
+                            (_, 'g' | 'y' | 'd' | 'c' | 'z') => {
+                                self.vim_pending = Some(c);
+                                // Keep the count for gg (10gg is the same as 10G).
+                                self.vim_count = count;
+                            }
+                            (_, 'j' | 'k' | 'h' | 'l') if c == 'j' || c == 'k' || grid => {
+                                let k = match c {
+                                    'j' => Key::ArrowDown,
+                                    'k' => Key::ArrowUp,
+                                    'h' => Key::ArrowLeft,
+                                    _ => Key::ArrowRight,
+                                };
+                                // Several presses in one frame (fast typing) add up instead of
+                                // counting once.
+                                let n = count.max(1);
+                                if out.iter().any(|e| matches!(e, egui::Event::Key { key, .. } if *key == k)) {
+                                    self.vim_mult += n;
+                                } else {
+                                    out.push(key(k));
+                                    self.vim_mult = n;
+                                }
+                            }
+                            // In the list (one column) h / l go to the parent folder / open,
+                            // like a terminal file manager; - and o do that in every view.
                             (_, 'h' | '-') => self.go_up(),
                             (_, 'l' | 'o') => out.push(key(Key::Enter)),
-                            (_, 'G') => out.push(key(Key::End)),
+                            (_, 'G') => match count {
+                                0 => out.push(key(Key::End)),
+                                n => self.vim_goto = Some(n),
+                            },
+                            (_, 'V' | 'v') => {
+                                self.vim_visual = !self.vim_visual;
+                                if self.vim_visual {
+                                    let t = self.tab_mut();
+                                    t.anchor = t.cursor;
+                                }
+                            }
+                            (_, 'x') => self.pending.push(Action::Cut),
+                            (_, 'D') => self.pending.push(Action::AskDelete),
                             (_, 'H') => self.go_back(),
                             (_, 'L') => self.go_forward(),
                             (_, 'p') => self.pending.push(Action::Paste(None)),
@@ -1733,16 +1807,42 @@ impl RivetApp {
                         }
                     }
                 }
-                // The letter keys themselves are spent (shortcuts with Ctrl or Alt still work).
-                egui::Event::Key { key: k, modifiers: md, .. } if !md.command && !md.alt && k.name().len() == 1 && k.name().chars().all(|c| c.is_ascii_alphabetic()) => {}
+                // The letter and digit keys themselves are spent (shortcuts with Ctrl or Alt still work).
+                egui::Event::Key { key: k, modifiers: md, .. } if !md.command && !md.alt && k.name().len() == 1 && k.name().chars().all(|c| c.is_ascii_alphanumeric()) => {}
                 egui::Event::Key { key: Key::Escape, .. } => {
+                    // Esc leaves visual mode and drops a half-typed command first.
+                    let busy = self.vim_visual || self.vim_pending.is_some() || self.vim_count > 0;
                     self.vim_pending = None;
-                    out.push(e.clone());
+                    self.vim_count = 0;
+                    self.vim_visual = false;
+                    if !busy {
+                        out.push(e.clone());
+                    }
                 }
                 _ => out.push(e.clone()),
             }
         }
         out
+    }
+
+    /// What the status bar shows for Vim keys: "-- VISUAL --" and a half-typed command ("5", "g").
+    pub(super) fn vim_status(&self) -> Option<String> {
+        if !self.s.vim_keys {
+            return None;
+        }
+        let mut parts = Vec::new();
+        if self.vim_visual {
+            parts.push("-- VISUAL --".to_string());
+        }
+        let typed = format!(
+            "{}{}",
+            if self.vim_count > 0 { self.vim_count.to_string() } else { String::new() },
+            self.vim_pending.map(String::from).unwrap_or_default()
+        );
+        if !typed.is_empty() {
+            parts.push(typed);
+        }
+        (!parts.is_empty()).then(|| parts.join("  "))
     }
 
     fn keyboard(&mut self, ctx: &egui::Context, cols: usize) {
@@ -1990,8 +2090,13 @@ impl RivetApp {
         if pressed(Key::ArrowUp) {
             delta = -step_ud;
         }
+        // Vim keys: a count moves that many steps (5j).
+        delta *= std::mem::replace(&mut self.vim_mult, 1) as isize;
         let cur = self.tab().cursor.filter(|&c| c < n);
         let mut target: Option<usize> = None;
+        if let Some(g) = self.vim_goto.take() {
+            target = Some(g.clamp(1, n) - 1);
+        }
         if delta != 0 {
             target = Some(match cur {
                 Some(c) => (c as isize + delta).clamp(0, n as isize - 1) as usize,
@@ -2004,10 +2109,11 @@ impl RivetApp {
         if pressed(Key::End) {
             target = Some(n - 1);
         }
+        let extend = m.shift || self.vim_visual;
         if let Some(ti) = target {
             let t = self.tab_mut();
             let p = t.entries[t.visible[ti]].path.clone();
-            if m.shift {
+            if extend {
                 let a = t.anchor.unwrap_or(ti);
                 let (lo, hi) = if a < ti { (a, ti) } else { (ti, a) };
                 t.selected = (lo..=hi).map(|i| t.entries[t.visible[i]].path.clone()).collect();

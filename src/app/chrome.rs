@@ -1021,6 +1021,10 @@ impl RivetApp {
                         }
                         ui.add_space(6.0);
                         let text = self.status_text();
+                        let text = match self.vim_status() {
+                            Some(v) => format!("{v}     {text}"),
+                            None => text,
+                        };
                         ui.allocate_ui_with_layout(Vec2::new(ui.available_width().max(50.0), 24.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
                             ui.set_min_width(ui.available_width());
                             if let Some(op) = self.ops.first().cloned() {

@@ -11,7 +11,10 @@
   move (in the list view `h` goes to the parent folder and `l` opens), `-` goes to the parent
   folder and `o` opens in any view, `gg` `G` jump to the first / last item, `H` `L` go
   back / forward, `yy` `dd` `p` copy, cut and paste, `/` searches, `:` opens Quick Actions and `~`
-  goes Home. Typing letters no longer filters the folder while it's on (`/` does).
+  goes Home. Also counts (`5j`, `10G`), `V` visual mode (movement extends the selection, `y` / `d`
+  act on it), `x` cut, `cw` rename, `D` move to Trash and `.` or `zh` for hidden files; the status
+  bar shows `-- VISUAL --` and any half-typed command. Typing letters no longer filters the folder
+  while it's on (`/` does).
 - **Terminal mode** (F7, Preferences → Appearance → Mode, View → Terminal Mode, or Quick Actions): a
   GUI that feels like a TUI. Everything is monospace, icons are Nerd Font glyphs colored by kind
   (drawn from any installed Nerd Font, your monospace font first), corners are square, shadows are
