@@ -7,7 +7,7 @@
   to the toolbar's edge, the sidebar's edge or Peek's edge and that panel slides in over the files;
   move away and it slides back out. Peek takes the other side if it shares one with the sidebar.
   The menus live behind the toolbar's menu button while in Zen mode.
-- **Spotlight** (Ctrl+Space, or View → Go to Folder…): a jump-anywhere bar. Type a few letters of
+- **Quick Jump** (Ctrl+Space, or View → Quick Jump): a jump-anywhere bar. Type a few letters of
   any folder — recent ones, places, bookmarks, drives, folders here and under Home — and press
   Enter. Start with `/` or `~` to walk a path; Tab fills in the highlighted folder.
 

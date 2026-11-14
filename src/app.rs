@@ -191,9 +191,9 @@ pub struct RivetApp {
     quick: Option<quickview::QuickView>,
     /// Zen mode's slide-in panels.
     zen: zen::ZenState,
-    /// Spotlight (Ctrl+Space), while open.
+    /// Quick Jump (Ctrl+Space), while open.
     spotlight: Option<zen::Spotlight>,
-    /// Folders visited this session, newest first (Spotlight ranks them first).
+    /// Folders visited this session, newest first (Quick Jump ranks them first).
     recent_dirs: Vec<PathBuf>,
     net_scan_rx: Option<std::sync::mpsc::Receiver<netview::NetResult>>,
     connect_ask: Option<netview::ConnectAsk>,
@@ -1601,7 +1601,7 @@ impl RivetApp {
         let pressed = |k: Key| events.iter().any(|e| matches!(e, egui::Event::Key { key, pressed: true, .. } if *key == k));
         let cmd = m.command;
 
-        // Spotlight has the keyboard while it's open; Ctrl+Space again closes it.
+        // Quick Jump has the keyboard while it's open; Ctrl+Space again closes it.
         if self.spotlight.is_some() {
             if cmd && pressed(Key::Space) {
                 self.spotlight = None;
@@ -2069,7 +2069,7 @@ impl eframe::App for RivetApp {
         self.filters_popover(&ctx);
         // Preview draws over everything else and takes the arrow keys while open.
         self.quick_view(&ctx);
-        // Spotlight: the jump-anywhere bar (Ctrl+Space).
+        // Quick Jump: the jump-anywhere bar (Ctrl+Space).
         self.spotlight(&ctx);
         // The last click decides whether the keyboard belongs to a window or the file view.
         if let Some(p) = ctx.input(|i| if i.pointer.any_pressed() { i.pointer.interact_pos() } else { None }) {

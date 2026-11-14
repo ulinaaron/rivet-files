@@ -1,5 +1,5 @@
 //! Zen mode (the files fill the window; the toolbar, sidebar and Peek slide in when the
-//! pointer reaches their edge) and Spotlight (Ctrl+Space: a fuzzy jump-anywhere bar).
+//! pointer reaches their edge) and Quick Jump (Ctrl+Space: a fuzzy jump-anywhere bar).
 
 use eframe::egui::{self, Align2, Color32, Id, Key, Pos2, Rect, Sense, Stroke, Vec2};
 use std::path::{Path, PathBuf};
@@ -39,7 +39,7 @@ enum Side {
     Bottom,
 }
 
-/// One place Spotlight can take you.
+/// One place Quick Jump can take you.
 #[derive(Clone)]
 struct Spot {
     loc: Location,
@@ -271,9 +271,9 @@ impl RivetApp {
             });
     }
 
-    // ------------------------------------------------------------- Spotlight
+    // ------------------------------------------------------------- Quick Jump
 
-    /// Remember folders as they're visited, newest first (Spotlight ranks them first).
+    /// Remember folders as they're visited, newest first (Quick Jump ranks them first).
     pub(super) fn remember_dir(&mut self, loc: &Location) {
         if let Location::Dir(p) = loc {
             self.recent_dirs.retain(|d| d != p);
@@ -298,7 +298,7 @@ impl RivetApp {
         });
     }
 
-    /// Everything Spotlight offers before you type a path: recent folders, places,
+    /// Everything Quick Jump offers before you type a path: recent folders, places,
     /// bookmarks, drives, and folders near here and under Home.
     fn spotlight_items(&self) -> Vec<Spot> {
         let mut out: Vec<Spot> = Vec::new();
@@ -454,7 +454,7 @@ impl RivetApp {
                 return;
             }
         }
-        // The keys Spotlight uses, taken before the text field sees them.
+        // The keys Quick Jump uses, taken before the text field sees them.
         let (up, down, enter, tab, esc) = ctx.input_mut(|i| {
             (
                 i.consume_key(egui::Modifiers::NONE, Key::ArrowUp),

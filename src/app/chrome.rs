@@ -300,15 +300,13 @@ impl RivetApp {
             if Self::menu_toggle(ui, &mut self.s.show_hidden, "Show Hidden Files", "Ctrl+H") {
                 self.resort_all();
             }
+            // The on / off items, together.
             let mut c = false;
+            c |= Self::menu_toggle(ui, &mut self.s.show_thumbnails, "Picture Thumbnails", "");
             c |= Self::menu_toggle(ui, &mut self.s.show_sidebar, "Sidebar", "F9");
             c |= Self::menu_toggle(ui, &mut self.s.show_peek, "Peek", "F11");
-            if ui.add(egui::Button::new("Filters…").shortcut_text("Ctrl+Shift+F")).clicked() {
-                self.toggle_filters();
-            }
             c |= Self::menu_toggle(ui, &mut self.s.show_statusbar, "Statusbar", "F8");
             c |= Self::menu_toggle(ui, &mut self.s.show_menubar, "Menubar", "Ctrl+M");
-            c |= Self::menu_toggle(ui, &mut self.s.show_thumbnails, "Picture Thumbnails", "");
             if c {
                 self.dirty_settings = true;
             }
@@ -316,7 +314,11 @@ impl RivetApp {
             if Self::menu_toggle(ui, &mut zen, "Zen Mode", "F12") {
                 self.toggle_zen();
             }
-            if ui.add(egui::Button::new("Go to Folder…").shortcut_text("Ctrl+Space")).clicked() {
+            ui.separator();
+            if ui.add(egui::Button::new("Filters").shortcut_text("Ctrl+Shift+F")).clicked() {
+                self.toggle_filters();
+            }
+            if ui.add(egui::Button::new("Quick Jump").shortcut_text("Ctrl+Space")).clicked() {
                 self.toggle_spotlight();
             }
             ui.separator();
@@ -1547,7 +1549,7 @@ fn folder_suggestions(prefix: &str, word: &str, cache: &mut Option<(PathBuf, Vec
     folder_matches(prefix, word, cache, 12).into_iter().map(|n| egui::Suggestion::new(format!("{n}/"))).collect()
 }
 
-/// The names behind [`folder_suggestions`] (at most `limit`), also used by Spotlight.
+/// The names behind [`folder_suggestions`] (at most `limit`), also used by Quick Jump.
 pub(super) fn folder_matches(prefix: &str, word: &str, cache: &mut Option<(PathBuf, Vec<String>)>, limit: usize) -> Vec<String> {
     if prefix.is_empty() || !(prefix.starts_with('/') || prefix.starts_with('~')) {
         return Vec::new();
