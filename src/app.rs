@@ -292,6 +292,8 @@ pub struct RivetApp {
     font_families: Vec<String>,
     mono_families: Vec<String>,
     mono_filter: String,
+    /// Font lists fetched (once per Preferences opening).
+    fonts_listed: bool,
     toolbar_drawing: bool,
     /// Menus opened from the hamburger button get roomier items.
     roomy_menus: bool,
@@ -575,6 +577,7 @@ impl RivetApp {
             font_families: Vec::new(),
             mono_families: Vec::new(),
             mono_filter: String::new(),
+            fonts_listed: false,
             toolbar_drawing: false,
             roomy_menus: false,
             flat_buttons: false,
@@ -1569,6 +1572,8 @@ impl RivetApp {
     }
 
     fn open_prefs(&mut self) {
+        // Fresh font lists each time (fonts may have been installed meanwhile).
+        self.fonts_listed = false;
         if !self.prefs_open {
             self.popup_serial += 1; // a fresh window id re-centres it
         }
@@ -2091,7 +2096,9 @@ impl RivetApp {
             delta = -step_ud;
         }
         // Vim keys: a count moves that many steps (5j).
-        delta *= std::mem::replace(&mut self.vim_mult, 1) as isize;
+        let mult = std::mem::replace(&mut self.vim_mult, 1).max(1) as isize;
+        let unit = delta;
+        delta *= mult;
         let cur = self.tab().cursor.filter(|&c| c < n);
         let mut target: Option<usize> = None;
         if let Some(g) = self.vim_goto.take() {
@@ -2100,7 +2107,8 @@ impl RivetApp {
         if delta != 0 {
             target = Some(match cur {
                 Some(c) => (c as isize + delta).clamp(0, n as isize - 1) as usize,
-                None => 0,
+                // Nothing chosen yet: the first step lands on the first item, the rest go on from there.
+                None => (unit * (mult - 1)).clamp(0, n as isize - 1) as usize,
             });
         }
         if pressed(Key::Home) {

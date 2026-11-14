@@ -115,6 +115,12 @@ pub fn mono_families() -> Vec<String> {
     v
 }
 
+/// The system's monospace family name, looked up once (for the "System (…)" entry).
+pub fn system_mono_name() -> String {
+    static NAME: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    NAME.get_or_init(|| resolve_mono("").map(|(f, _)| f).unwrap_or_else(|| "Monospace".into())).clone()
+}
+
 /// The monospace font file: the chosen family, else the system's "monospace".
 pub fn resolve_mono(choice: &str) -> Option<(String, PathBuf)> {
     if !choice.is_empty() {

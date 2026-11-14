@@ -1034,10 +1034,9 @@ impl RivetApp {
                 open = false;
             }
         }
-        if self.font_families.is_empty() {
+        if !self.fonts_listed {
+            self.fonts_listed = true;
             self.font_families = crate::fonts::families();
-        }
-        if self.mono_families.is_empty() {
             self.mono_families = crate::fonts::mono_families();
         }
         if self.installed_themes.is_empty() {
@@ -1281,7 +1280,7 @@ impl RivetApp {
                         ui.end_row();
                         // The monospace font: text previews, and everything in terminal mode.
                         ui.label("Monospace Font");
-                        let mono_system = format!("System ({})", crate::fonts::resolve_mono("").map(|(f, _)| f).unwrap_or_else(|| "Monospace".into()));
+                        let mono_system = format!("System ({})", crate::fonts::system_mono_name());
                         changed |= font_picker(ui, "monofont", &mut self.s.mono_font, &self.mono_families, &mut self.mono_filter, &mono_system);
                         ui.end_row();
                         ui.label("Text size");

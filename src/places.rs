@@ -272,6 +272,24 @@ pub fn network_places() -> Vec<PathBuf> {
 
 /// (total bytes, free bytes) of the filesystem holding `path`.
 pub fn disk_space(path: &Path) -> Option<(u64, u64)> {
+    use std::collections::HashMap;
+    use std::sync::Mutex;
+    use std::time::{Duration, Instant};
+    static CACHE: Mutex<Option<HashMap<PathBuf, (Instant, Option<(u64, u64)>)>>> = Mutex::new(None);
+    let mut guard = CACHE.lock().unwrap_or_else(|e| e.into_inner());
+    let cache = guard.get_or_insert_with(HashMap::new);
+    if let Some((t, v)) = cache.get(path) {
+        if t.elapsed() < Duration::from_secs(5) {
+            return *v;
+        }
+    }
+    let v = disk_space_now(path);
+    cache.insert(path.to_path_buf(), (Instant::now(), v));
+    v
+}
+
+/// Total and free bytes, read now.
+fn disk_space_now(path: &Path) -> Option<(u64, u64)> {
     use std::ffi::CString;
     use std::os::unix::ffi::OsStrExt;
     let c = CString::new(path.as_os_str().as_bytes()).ok()?;
