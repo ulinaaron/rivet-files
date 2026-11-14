@@ -164,13 +164,11 @@ impl RivetApp {
 
         // Muted inline video: pick up decoded frames.
         if let Some(player) = &mut q.player {
-            if let Some(frame) = player.frame() {
-                if let Some(l) = q.cache.get_mut(&e.path).and_then(|l| l.as_mut()) {
-                    if let Some(t) = &mut l.tex {
+            if let Some(frame) = player.frame()
+                && let Some(l) = q.cache.get_mut(&e.path).and_then(|l| l.as_mut())
+                    && let Some(t) = &mut l.tex {
                         t.set(frame, egui::TextureOptions::LINEAR);
                     }
-                }
-            }
             q.video_pos = player.position().min(duration.max(0.0));
             if player.ended {
                 q.player = None;
@@ -344,8 +342,8 @@ impl RivetApp {
             }
             ctx.request_repaint();
         }
-        if toggle_play {
-            if let Some(q) = &mut self.quick {
+        if toggle_play
+            && let Some(q) = &mut self.quick {
                 if q.player.is_some() {
                     if let Some(p) = q.player.take() {
                         q.video_pos = p.position();
@@ -354,7 +352,6 @@ impl RivetApp {
                     q.player = Player::start(&e.path, q.video_pos, (w & !1).max(2), (h & !1).max(2), ctx);
                 }
             }
-        }
         if left && idx > 0 {
             go = Some(idx - 1);
         }

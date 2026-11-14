@@ -11,6 +11,10 @@ use crate::launch;
 use crate::model::{Entry, Location};
 use crate::settings::{SortKey, ViewMode};
 
+/// The one selected item drawn on top with its full name: (cell, icon, icon rect, tile fill,
+/// name, name position, name color, cut, entry).
+type Expanded = (Rect, Option<egui::TextureHandle>, Rect, Color32, Arc<egui::Galley>, Pos2, Color32, bool, Entry);
+
 impl RivetApp {
     pub(super) fn file_area(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) -> usize {
         let bg = ctx.global_style().visuals.extreme_bg_color;
@@ -92,11 +96,10 @@ impl RivetApp {
                 let resp = ui.allocate_rect(rect, Sense::click());
                 ui.painter().text(rect.center(), Align2::CENTER_CENTER, msg, crate::fonts::ui_font(15.0), ui.visuals().weak_text_color());
                 resp.context_menu(|ui| self.background_menu(ui));
-                if let Some(p) = resp.dnd_release_payload::<DragFiles>() {
-                    if let Some(d) = self.current_dir() {
+                if let Some(p) = resp.dnd_release_payload::<DragFiles>()
+                    && let Some(d) = self.current_dir() {
                         self.pending.push(Action::Transfer(p.0.clone(), d, ctx.input(|i| i.modifiers.ctrl)));
                     }
-                }
                 return;
             }
             cols = match self.s.view {
@@ -135,16 +138,15 @@ impl RivetApp {
         if resp.clicked() && !(mods.command || mods.shift) {
             self.tab_mut().selected.clear();
         }
-        if resp.drag_started_by(egui::PointerButton::Primary) {
-            if let Some(p) = resp.interact_pointer_pos() {
+        if resp.drag_started_by(egui::PointerButton::Primary)
+            && let Some(p) = resp.interact_pointer_pos() {
                 self.tab_mut().rubber = Some((p - rect.min).to_pos2());
                 if !(mods.command || mods.shift) {
                     self.tab_mut().selected.clear();
                 }
             }
-        }
-        if let (Some(start), true) = (self.tab().rubber, resp.dragged_by(egui::PointerButton::Primary)) {
-            if let Some(cur) = ctx.input(|i| i.pointer.latest_pos()) {
+        if let (Some(start), true) = (self.tab().rubber, resp.dragged_by(egui::PointerButton::Primary))
+            && let Some(cur) = ctx.input(|i| i.pointer.latest_pos()) {
                 let a = rect.min + start.to_vec2();
                 let band = Rect::from_two_pos(a, cur);
                 let accent = accent_color(&self.s);
@@ -160,16 +162,14 @@ impl RivetApp {
                     ui.scroll_with_delta(Vec2::new(0.0, 12.0));
                 }
             }
-        }
         if resp.drag_stopped() {
             self.tab_mut().rubber = None;
         }
         resp.context_menu(|ui| self.background_menu(ui));
-        if let Some(p) = resp.dnd_release_payload::<DragFiles>() {
-            if let Some(d) = self.current_dir() {
+        if let Some(p) = resp.dnd_release_payload::<DragFiles>()
+            && let Some(d) = self.current_dir() {
                 self.pending.push(Action::Transfer(p.0.clone(), d, ctx.input(|i| i.modifiers.ctrl)));
             }
-        }
     }
 
     fn name_galley(&self, ui: &egui::Ui, name: &str, width: f32, rows: usize, color: Color32) -> Arc<egui::Galley> {
@@ -228,7 +228,7 @@ impl RivetApp {
             // One tile style for hover and selection: a rounded box around icon + name.
             // Only a single selected item grows to show its full name (drawn on top).
             let single = self.tab().selected.len() == 1;
-            let mut expanded: Option<(Rect, Option<egui::TextureHandle>, Rect, Color32, Arc<egui::Galley>, Pos2, Color32, bool, Entry)> = None;
+            let mut expanded: Option<Expanded> = None;
             for (vi, item) in item_rects {
                 let e = {
                     let t = self.tab();
@@ -353,8 +353,8 @@ impl RivetApp {
                 };
                 ui.painter().add(egui::Shape::convex_polygon(pts, v.strong_text_color(), Stroke::NONE));
             }
-            if resp.clicked() {
-                if let Some(k) = key {
+            if resp.clicked()
+                && let Some(k) = key {
                     if self.s.sort == *k {
                         self.s.sort_desc = !self.s.sort_desc;
                     } else {
@@ -363,7 +363,6 @@ impl RivetApp {
                     }
                     self.resort_all();
                 }
-            }
             x += w;
         }
 
@@ -665,13 +664,11 @@ impl RivetApp {
                 self.pending.push(Action::AddBookmark(e.path.clone()));
             }
         }
-        if matches!(self.tab().loc, Location::Search { .. } | Location::Recent) {
-            if let Some(parent) = e.path.parent() {
-                if ui.button("Open Containing Folder").clicked() {
+        if matches!(self.tab().loc, Location::Search { .. } | Location::Recent)
+            && let Some(parent) = e.path.parent()
+                && ui.button("Open Containing Folder").clicked() {
                     self.pending.push(Action::Navigate(Location::Dir(parent.to_path_buf())));
                 }
-            }
-        }
         ui.separator();
         if ui.button("Properties").clicked() {
             self.pending.push(Action::Properties(Some(e.path.clone())));
@@ -695,8 +692,8 @@ impl RivetApp {
             if ui.button("Empty Document").clicked() {
                 self.pending.push(Action::NewFile(None));
             }
-            if let Some(tdir) = self.user_dirs.templates.clone() {
-                if let Ok(rd) = std::fs::read_dir(&tdir) {
+            if let Some(tdir) = self.user_dirs.templates.clone()
+                && let Ok(rd) = std::fs::read_dir(&tdir) {
                     let mut items: Vec<PathBuf> = rd.flatten().map(|e| e.path()).filter(|p| p.is_file()).collect();
                     items.sort();
                     if !items.is_empty() {
@@ -709,7 +706,6 @@ impl RivetApp {
                         }
                     }
                 }
-            }
         });
         if ui.button("Open in Terminal").clicked() {
             self.pending.push(Action::Terminal(dir.clone()));

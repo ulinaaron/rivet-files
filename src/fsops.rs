@@ -105,11 +105,10 @@ pub fn spawn_op_role(kind: OpKind, sources: Vec<PathBuf>, dest: Option<PathBuf>,
     let p = Arc::new(Progress::blank(kind, sources.len(), role));
     let pp = p.clone();
     std::thread::spawn(move || {
-        if kind == OpKind::EmptyTrash {
-            if let Err(e) = empty_trash() {
+        if kind == OpKind::EmptyTrash
+            && let Err(e) = empty_trash() {
                 pp.errors.lock().unwrap().push(e.to_string());
             }
-        }
         for src in sources {
             if pp.cancel.load(Ordering::Relaxed) {
                 break;

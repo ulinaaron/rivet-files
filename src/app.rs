@@ -664,13 +664,12 @@ impl RivetApp {
         }
         // RIVET_FILTERS=FILE loads filters from that file (for checks; the real ones live in
         // ~/.config/rivet/filters). Folder names may use $START for the start folder.
-        if let Ok(f) = std::env::var("RIVET_FILTERS") {
-            if let Ok(text) = std::fs::read_to_string(f) {
+        if let Ok(f) = std::env::var("RIVET_FILTERS")
+            && let Ok(text) = std::fs::read_to_string(f) {
                 let start = app.tab().loc.dir().map(|d| d.display().to_string()).unwrap_or_default();
                 app.s.filters = crate::filters::FilterSet::parse(&text.replace("$START", &start));
                 app.resort_all();
             }
-        }
         // RIVET_FILTERS_OPEN opens the Filters panel (for checks).
         if std::env::var_os("RIVET_FILTERS_OPEN").is_some() {
             app.filters_open = true;
@@ -741,17 +740,16 @@ impl RivetApp {
         }
         self.applied_font = Some(key);
         let mut defs = egui::FontDefinitions::default();
-        if let Some((name, path)) = crate::fonts::resolve(&self.s.ui_font) {
-            if let Ok(bytes) = std::fs::read(&path) {
+        if let Some((name, path)) = crate::fonts::resolve(&self.s.ui_font)
+            && let Ok(bytes) = std::fs::read(&path) {
                 defs.font_data.insert("ui-font".into(), Arc::new(egui::FontData::from_owned(bytes)));
                 defs.families.entry(egui::FontFamily::Proportional).or_default().insert(0, "ui-font".into());
                 self.font_name = name;
             }
-        }
         // The monospace font: text previews, and every label in terminal mode.
         let mono = crate::fonts::resolve_mono(&self.s.mono_font);
-        if let Some((name, path)) = &mono {
-            if let Ok(bytes) = std::fs::read(path) {
+        if let Some((name, path)) = &mono
+            && let Ok(bytes) = std::fs::read(path) {
                 defs.font_data.insert("mono-font".into(), Arc::new(egui::FontData::from_owned(bytes)));
                 defs.families.entry(egui::FontFamily::Monospace).or_default().insert(0, "mono-font".into());
                 if self.s.terminal {
@@ -759,7 +757,6 @@ impl RivetApp {
                 }
                 self.mono_name = name.clone();
             }
-        }
         // Nerd Font glyphs for terminal mode's icons: from the monospace font if it has them.
         if self.s.terminal && self.nerd_font.as_ref().is_none_or(|f| mono.as_ref().is_some_and(|(_, p)| *p != f.path)) {
             self.nerd_font = crate::nerd::find(mono.as_ref().map(|(_, p)| p.as_path())).map(Arc::new);
@@ -957,11 +954,10 @@ impl RivetApp {
 
     fn entry_texture(&mut self, ctx: &egui::Context, e: &Entry, px: f32) -> Option<egui::TextureHandle> {
         // Terminal mode shows glyphs in the file list; pictures are seen in Peek and Preview.
-        if self.s.show_thumbnails && !self.s.terminal && px >= 32.0 && thumbs::can_thumbnail(&e.mime) {
-            if let Some(t) = self.thumbs.get(&e.path, e.size) {
+        if self.s.show_thumbnails && !self.s.terminal && px >= 32.0 && thumbs::can_thumbnail(&e.mime)
+            && let Some(t) = self.thumbs.get(&e.path, e.size) {
                 return Some(t);
             }
-        }
         self.entry_icon(ctx, e, px, false)
     }
 
@@ -1016,8 +1012,8 @@ impl RivetApp {
         if e.broken_link {
             return self.icon_or_mask(ctx, &["emblem-unreadable", "text-x-generic"], px, mask);
         }
-        if e.mime == "application/x-desktop" || e.name.ends_with(".desktop") {
-            if let Some(icon) = desktop_icon(&e.path) {
+        if (e.mime == "application/x-desktop" || e.name.ends_with(".desktop"))
+            && let Some(icon) = desktop_icon(&e.path) {
                 if icon.starts_with('/') {
                     let ppp = ctx.pixels_per_point();
                     let size = (px * ppp) as u32;
@@ -1029,7 +1025,6 @@ impl RivetApp {
                     return Some(t);
                 }
             }
-        }
         let names = self.mime.icon_names(&e.mime);
         let mut refs: Vec<&str> = names.iter().map(|s| s.as_str()).collect();
         if e.is_executable() && !e.mime.starts_with("text/") && !e.mime.contains("script") {
@@ -1221,11 +1216,10 @@ impl RivetApp {
                     self.dialog = Dialog::OpenWith { paths, mime, show_all: false, filter: String::new(), chosen, remember: false, focus: true };
                 }
                 Action::Launch(i, paths) => {
-                    if let Some(app) = self.apps.get(i).cloned() {
-                        if let Err(e) = launch::launch_app(&app, &paths) {
+                    if let Some(app) = self.apps.get(i).cloned()
+                        && let Err(e) = launch::launch_app(&app, &paths) {
                             self.message("Could not open", &e);
                         }
-                    }
                 }
                 Action::Cut | Action::Copy => {
                     let cut = matches!(a, Action::Cut);
@@ -1696,11 +1690,10 @@ impl RivetApp {
         // files dropped from other applications: copy into the current folder
         let dropped: Vec<PathBuf> = ctx.input(|i| i.raw.dropped_files.iter().map(|f| f.path().to_path_buf()).collect());
         let dropped: Vec<PathBuf> = dropped.into_iter().filter(|p| !p.as_os_str().is_empty()).collect();
-        if !dropped.is_empty() {
-            if let Some(d) = self.current_dir() {
+        if !dropped.is_empty()
+            && let Some(d) = self.current_dir() {
                 self.start_op(OpKind::Copy, dropped, Some(d));
             }
-        }
         let title = self.tab().loc.title();
         if title != self.last_title {
             ctx.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
@@ -2038,11 +2031,10 @@ impl RivetApp {
         if cmd && m.shift && pressed(Key::N) {
             self.pending.push(Action::NewFolder);
         }
-        if cmd && pressed(Key::D) {
-            if let Some(d) = self.current_dir() {
+        if cmd && pressed(Key::D)
+            && let Some(d) = self.current_dir() {
                 self.pending.push(Action::AddBookmark(d));
             }
-        }
         if cmd && (pressed(Key::Plus) || pressed(Key::Equals)) {
             self.zoom(1);
         }
@@ -2174,14 +2166,12 @@ impl RivetApp {
             let payload = if t.selected.contains(&e.path) { t.selected_paths() } else { vec![e.path.clone()] };
             resp.dnd_set_drag_payload(DragFiles(payload));
         }
-        if e.is_dir {
-            if let Some(p) = resp.dnd_release_payload::<DragFiles>() {
-                if !p.0.contains(&e.path) {
+        if e.is_dir
+            && let Some(p) = resp.dnd_release_payload::<DragFiles>()
+                && !p.0.contains(&e.path) {
                     let copy = ctx.input(|i| i.modifiers.ctrl);
                     self.pending.push(Action::Transfer(p.0.clone(), e.path.clone(), copy));
                 }
-            }
-        }
     }
 
     fn drop_highlight(&self, ui: &egui::Ui, rect: Rect, resp: &egui::Response, is_dir: bool) {
@@ -2400,19 +2390,17 @@ impl eframe::App for RivetApp {
             let Some((xy, f)) = item.split_once('@') else { continue };
             // "hX,Y@N" only moves the pointer there (hover) from frame N on.
             if let Some(rest) = xy.trim().strip_prefix('h') {
-                if let (Some((x, y)), Ok(f)) = (rest.split_once(','), f.trim().parse::<u32>()) {
-                    if let (Ok(x), Ok(y)) = (x.parse::<f32>(), y.parse::<f32>()) {
-                        if self.frames + 1 >= f {
+                if let (Some((x, y)), Ok(f)) = (rest.split_once(','), f.trim().parse::<u32>())
+                    && let (Ok(x), Ok(y)) = (x.parse::<f32>(), y.parse::<f32>())
+                        && self.frames + 1 >= f {
                             raw.events.push(egui::Event::PointerMoved(Pos2::new(x, y)));
                         }
-                    }
-                }
                 continue;
             }
             // "left@N" / "right@N" / "up@N" / "down@N" / "enter@N" / "tab@N" press that key at frame N.
             if matches!(xy.trim(), "left" | "right" | "up" | "down" | "enter" | "tab" | "esc") {
-                if let Ok(f) = f.trim().parse::<u32>() {
-                    if self.frames + 1 == f {
+                if let Ok(f) = f.trim().parse::<u32>()
+                    && self.frames + 1 == f {
                         let key = match xy.trim() {
                             "left" => egui::Key::ArrowLeft,
                             "right" => egui::Key::ArrowRight,
@@ -2424,27 +2412,24 @@ impl eframe::App for RivetApp {
                         };
                         raw.events.push(egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers: Default::default() });
                     }
-                }
                 continue;
             }
             // "type:TEXT@N" types TEXT at frame N.
             if let Some(text) = xy.trim().strip_prefix("type:") {
-                if let Ok(f) = f.trim().parse::<u32>() {
-                    if self.frames + 1 == f {
+                if let Ok(f) = f.trim().parse::<u32>()
+                    && self.frames + 1 == f {
                         raw.events.push(egui::Event::Text(text.to_string()));
                     }
-                }
                 continue;
             }
             // "copy@N" sends Ctrl+C at frame N.
             if xy.trim() == "copy" {
-                if let Ok(f) = f.trim().parse::<u32>() {
-                    if self.frames + 1 == f {
+                if let Ok(f) = f.trim().parse::<u32>()
+                    && self.frames + 1 == f {
                         let m = egui::Modifiers::COMMAND;
                         raw.events.push(egui::Event::Key { key: egui::Key::C, physical_key: None, pressed: true, repeat: false, modifiers: m });
                         raw.events.push(egui::Event::Copy);
                     }
-                }
                 continue;
             }
             // "r" in front means a right click: "r400,300@5".

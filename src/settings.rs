@@ -153,8 +153,7 @@ fn path() -> std::path::PathBuf {
 
 impl Settings {
     pub fn load() -> Self {
-        let mut s = Settings::default();
-        s.filters = crate::filters::FilterSet::load();
+        let mut s = Settings { filters: crate::filters::FilterSet::load(), ..Default::default() };
         let Ok(text) = std::fs::read_to_string(path()) else { return s };
         for line in text.lines() {
             let Some((k, v)) = line.split_once('=') else { continue };
@@ -188,11 +187,10 @@ impl Settings {
                 "follow_desktop_colors" => s.follow_desktop_colors = b,
                 "accent" => {
                     let h = v.trim_start_matches('#');
-                    if h.len() == 6 {
-                        if let Ok(n) = u32::from_str_radix(h, 16) {
+                    if h.len() == 6
+                        && let Ok(n) = u32::from_str_radix(h, 16) {
                             s.accent = [(n >> 16) as u8, (n >> 8) as u8, n as u8];
                         }
-                    }
                 }
                 "window_w" => s.window_w = f.unwrap_or(s.window_w).max(400.0),
                 "window_h" => s.window_h = f.unwrap_or(s.window_h).max(300.0),

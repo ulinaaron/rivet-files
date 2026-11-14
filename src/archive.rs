@@ -135,7 +135,7 @@ fn run(mut cmd: Command, progress: &Progress) -> Result<(), String> {
             if status.success() {
                 return Ok(());
             }
-            let line = msg.lines().map(str::trim).filter(|l| !l.is_empty()).last().unwrap_or("The archive tool failed").to_string();
+            let line = msg.lines().map(str::trim).rfind(|l| !l.is_empty()).unwrap_or("The archive tool failed").to_string();
             return Err(line);
         }
         if progress.cancel.load(Ordering::Relaxed) {

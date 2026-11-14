@@ -131,15 +131,14 @@ impl RivetApp {
             self.zen.open[i] = (near && !modal) || keep;
         }
         // Test hook: RIVET_ZEN_SHOW=sidebar,toolbar,peek keeps those slid in.
-        if self.screenshot.is_some() {
-            if let Ok(v) = std::env::var("RIVET_ZEN_SHOW") {
+        if self.screenshot.is_some()
+            && let Ok(v) = std::env::var("RIVET_ZEN_SHOW") {
                 for (i, name) in ["sidebar", "toolbar", "peek"].iter().enumerate() {
                     if v.split(',').any(|s| s.trim() == *name) {
                         self.zen.open[i] = true;
                     }
                 }
             }
-        }
 
         let fill = ctx.global_style().visuals.panel_fill;
         let dark = ctx.global_style().visuals.dark_mode;
@@ -476,14 +475,13 @@ impl RivetApp {
     pub(super) fn spotlight(&mut self, ctx: &egui::Context) {
         if self.spotlight.is_none() {
             // Test hook: RIVET_SPOTLIGHT=1 (or a query) opens it on the first frame.
-            if self.screenshot.is_some() && self.frames == 1 {
-                if let Ok(q) = std::env::var("RIVET_SPOTLIGHT") {
+            if self.screenshot.is_some() && self.frames == 1
+                && let Ok(q) = std::env::var("RIVET_SPOTLIGHT") {
                     self.toggle_spotlight();
                     if let Some(sp) = &mut self.spotlight {
                         sp.query = if q == "1" { String::new() } else { q };
                     }
                 }
-            }
             if self.spotlight.is_none() {
                 return;
             }
@@ -523,8 +521,8 @@ impl RivetApp {
             }
         }
         // Tab fills in the highlighted folder, to keep typing below it.
-        if tab {
-            if let Some(Location::Dir(p)) = sp.shown.get(sp.sel).map(|s| s.loc.clone()) {
+        if tab
+            && let Some(Location::Dir(p)) = sp.shown.get(sp.sel).map(|s| s.loc.clone()) {
                 let mut t = tilde(&p);
                 if !t.ends_with('/') {
                     t.push('/');
@@ -533,7 +531,6 @@ impl RivetApp {
                 sp.focus = true;
                 Self::spotlight_rank(&mut sp);
             }
-        }
 
         let screen = ctx.content_rect();
         let w = 600f32.min(screen.width() - 40.0);

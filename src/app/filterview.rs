@@ -171,12 +171,11 @@ impl RivetApp {
             (Scope::Folder(dir.clone()), "This folder".into()),
             (Scope::Tree(dir.clone()), "This folder & below".into()),
         ];
-        if let Some(Scope::Tree(p)) = &active {
-            if *p != dir {
+        if let Some(Scope::Tree(p)) = &active
+            && *p != dir {
                 let name = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "/".into());
                 rows.push((Scope::Tree(p.clone()), format!("“{name}” & below")));
             }
-        }
         let mut pick = self
             .filter_scope
             .clone()

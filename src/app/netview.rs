@@ -105,14 +105,13 @@ impl RivetApp {
 
     /// Collect finished background work.
     pub(super) fn net_poll(&mut self) {
-        if let Some(rx) = &self.net_scan_rx {
-            if let Ok(NetResult::Found(list)) = rx.try_recv() {
+        if let Some(rx) = &self.net_scan_rx
+            && let Ok(NetResult::Found(list)) = rx.try_recv() {
                 self.net.servers = list;
                 self.net.scanned = true;
                 self.net.scanning = false;
                 self.net_scan_rx = None;
             }
-        }
         let Some(rx) = &self.net.rx else { return };
         let Ok(res) = rx.try_recv() else { return };
         self.net.rx = None;

@@ -39,11 +39,10 @@ pub fn ffmpeg_version() -> Option<String> {
 pub fn recheck() -> Option<String> {
     {
         let c = CHECKED.lock().unwrap();
-        if let Some((at, v)) = c.as_ref() {
-            if at.elapsed() < Duration::from_secs(4) {
+        if let Some((at, v)) = c.as_ref()
+            && at.elapsed() < Duration::from_secs(4) {
                 return v.clone();
             }
-        }
     }
     let v = probe();
     *CHECKED.lock().unwrap() = Some((Instant::now(), v.clone()));
@@ -148,7 +147,7 @@ fn run_ffmpeg(args: &[String], progress: &Progress) -> Result<(), String> {
             return if status.success() {
                 Ok(())
             } else {
-                Err(msg.lines().map(str::trim).filter(|l| !l.is_empty()).last().unwrap_or("ffmpeg failed").to_string())
+                Err(msg.lines().map(str::trim).rfind(|l| !l.is_empty()).unwrap_or("ffmpeg failed").to_string())
             };
         }
         if progress.cancel.load(Ordering::Relaxed) {

@@ -24,6 +24,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends shared-mime-info
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
 
       - uses: Swatinem/rust-cache@v2
 
@@ -32,6 +34,10 @@ jobs:
 
       - name: Test
         run: cargo test --locked
+
+      # Common mistakes Rust's linter knows about; any warning fails the check.
+      - name: Lint (clippy)
+        run: cargo clippy --all-targets --locked -- -D warnings
 
       - name: Release build
         run: cargo build --release --locked

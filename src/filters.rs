@@ -5,6 +5,7 @@
 //!   1. a filter on this exact folder,
 //!   2. else the nearest parent folder's "& subfolders" filter,
 //!   3. else the global filter.
+//!
 //! Each filter can be switched off without losing its settings.
 
 use std::path::{Path, PathBuf};
@@ -462,8 +463,7 @@ mod tests {
         let images = Filter { types: vec![TypeGroup::Images], ..Default::default() };
         let docs = Filter { types: vec![TypeGroup::Documents], ..Default::default() };
         let audio = Filter { types: vec![TypeGroup::Audio], ..Default::default() };
-        let mut set = FilterSet::default();
-        set.global = Some(images.clone());
+        let mut set = FilterSet { global: Some(images.clone()), ..Default::default() };
         *set.get_mut(&Scope::Tree("/home/me".into())) = docs.clone();
         *set.get_mut(&Scope::Folder("/home/me/Music".into())) = audio.clone();
         // Folder beats the parent's subfolder filter, which beats global.

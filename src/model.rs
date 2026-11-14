@@ -221,7 +221,7 @@ impl Tab {
         let f = self.filter.to_lowercase();
         let show_hidden = s.show_hidden || matches!(self.loc, Location::Search { .. });
         // The filter (global / folder / folder & subfolders) that applies here, if any.
-        let rule = self.loc.dir().and_then(|d| s.filters.active_for(&d)).map(|(_, r)| r.clone());
+        let rule = self.loc.dir().and_then(|d| s.filters.active_for(d)).map(|(_, r)| r.clone());
         let now = std::time::SystemTime::now();
         let mut hidden_by_rule = 0;
         let mut vis: Vec<usize> = (0..self.entries.len())
@@ -230,12 +230,11 @@ impl Tab {
                 if !((show_hidden || !e.hidden) && (f.is_empty() || e.name.to_lowercase().contains(&f))) {
                     return false;
                 }
-                if let Some(r) = &rule {
-                    if !r.matches(e, now) {
+                if let Some(r) = &rule
+                    && !r.matches(e, now) {
                         hidden_by_rule += 1;
                         return false;
                     }
-                }
                 true
             })
             .collect();

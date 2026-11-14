@@ -121,13 +121,12 @@ fn font_picker(ui: &mut egui::Ui, id: &str, value: &mut String, families: &[Stri
             matches.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(b.1)));
         }
         let show_system = typed.is_empty() || super::chrome::fuzzy_score(system_label, &typed).is_some();
-        if pick_best && !typed.is_empty() {
-            if let Some((_, best)) = matches.first() {
+        if pick_best && !typed.is_empty()
+            && let Some((_, best)) = matches.first() {
                 *value = (*best).clone();
                 changed = true;
                 ui.close();
             }
-        }
         if show_system && ui.selectable_label(value.is_empty(), system_label).clicked() {
             value.clear();
             changed = true;
@@ -590,11 +589,10 @@ impl RivetApp {
             .filter_map(|a| self.apps.iter().position(|x| x.id == a.id))
             .collect();
         // The current default app is always offered, even when it doesn't list this type.
-        if let Some(d) = default_id.as_ref().and_then(|id| self.apps.iter().position(|x| &x.id == id)) {
-            if !recommended.contains(&d) {
+        if let Some(d) = default_id.as_ref().and_then(|id| self.apps.iter().position(|x| &x.id == id))
+            && !recommended.contains(&d) {
                 recommended.insert(0, d);
             }
-        }
         let matches = |i: &usize| filter.is_empty() || self.apps[*i].name.to_lowercase().contains(&filter);
         let mut rec: Vec<usize> = recommended.iter().copied().filter(matches).collect();
         // The current default goes first.
@@ -737,8 +735,8 @@ impl RivetApp {
         if ctx.input(|i| i.key_pressed(Key::Enter)) && chosen.is_some() {
             launch_now = true;
         }
-        if launch_now {
-            if let Some(i) = *chosen {
+        if launch_now
+            && let Some(i) = *chosen {
                 if *remember {
                     let id = self.apps[i].id.clone();
                     match launch::set_default_app(&id, &mime) {
@@ -749,7 +747,6 @@ impl RivetApp {
                 self.pending.push(Action::Launch(i, paths));
                 return true;
             }
-        }
         cancel || r.should_close()
     }
 
@@ -1438,12 +1435,10 @@ impl RivetApp {
                                     // A fixed-width slot keeps the arrows lined up in every row.
                                     ui.allocate_ui_with_layout(Vec2::new(28.0, 22.0), egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                         ui.set_min_width(28.0);
-                                        if !fixed {
-                                            if trash_button(ui).on_hover_text("Remove from the toolbar").clicked() {
+                                        if !fixed
+                                            && trash_button(ui).on_hover_text("Remove from the toolbar").clicked() {
                                                 op = Some((i, 0));
-                                            }
-                                        } else {
-                                        }
+                                            } 
                                     });
                                     if arrow_button(ui, false, i + 1 < n).on_hover_text("Move down").clicked() {
                                         op = Some((i, 1));

@@ -52,7 +52,7 @@ fn group_digits(n: u64) -> String {
     let s = n.to_string();
     let mut out = String::new();
     for (i, c) in s.chars().enumerate() {
-        if i > 0 && (s.len() - i) % 3 == 0 {
+        if i > 0 && (s.len() - i).is_multiple_of(3) {
             out.push(',');
         }
         out.push(c);
@@ -318,8 +318,8 @@ impl RivetApp {
         }
         self.peek_section(ui, "General", general, card_fill, width);
 
-        if let Some(p) = &self.peek.preview {
-            if !p.facts.is_empty() {
+        if let Some(p) = &self.peek.preview
+            && !p.facts.is_empty() {
                 let title = match kind {
                     Kind::Image => "Picture",
                     Kind::Video => "Video",
@@ -330,7 +330,6 @@ impl RivetApp {
                 let facts = p.facts.clone();
                 self.peek_section(ui, title, facts, card_fill, width);
             }
-        }
 
         let mut dates = vec![("Modified".to_string(), fmt_full(e.modified))];
         if let Some(m) = &meta {
@@ -363,8 +362,8 @@ impl RivetApp {
         access.push(("Mode".into(), format!("{} ({:04o}){exec}", mode_string(e.mode), e.mode & 0o7777)));
         self.peek_section(ui, "Access", access, card_fill, width);
 
-        if here {
-            if let Some((total, free)) = crate::places::disk_space(&e.path) {
+        if here
+            && let Some((total, free)) = crate::places::disk_space(&e.path) {
                 ui.add_space(8.0);
                 ui.label(egui::RichText::new("DISK").size(10.5).strong().color(weak));
                 egui::Frame::NONE.fill(card_fill).corner_radius(r_md()).inner_margin(egui::Margin::symmetric(10, 9)).show(ui, |ui| {
@@ -378,7 +377,6 @@ impl RivetApp {
                     ui.label(format!("{} free of {}", fsops::human_size(free), fsops::human_size(total)));
                 });
             }
-        }
         ui.add_space(8.0);
     }
 
@@ -393,11 +391,10 @@ impl RivetApp {
         text.len().hash(&mut h);
         colors.hash(&mut h);
         let key = h.finish();
-        if let Some((k, job)) = &self.peek.highlighted {
-            if *k == key {
+        if let Some((k, job)) = &self.peek.highlighted
+            && *k == key {
                 return job.clone();
             }
-        }
         let job = crate::highlight::layout(text, &e.name, &colors, egui::FontId::monospace(11.0));
         self.peek.highlighted = Some((key, job.clone()));
         job
@@ -579,11 +576,10 @@ impl RivetApp {
         let duration = self.peek.preview.as_ref().and_then(|p| p.duration).unwrap_or(0.0);
         // Pick up decoded frames.
         if let Some(player) = &mut self.peek.player {
-            if let Some(frame) = player.frame() {
-                if let Some(t) = &mut self.peek.tex {
+            if let Some(frame) = player.frame()
+                && let Some(t) = &mut self.peek.tex {
                     t.set(frame, egui::TextureOptions::LINEAR);
                 }
-            }
             self.peek.video_pos = player.position().min(duration.max(0.0));
             if player.ended {
                 self.peek.player = None;
@@ -633,11 +629,10 @@ impl RivetApp {
             if bar_resp.hovered() || bar_resp.dragged() {
                 ui.painter().circle_filled(Pos2::new(done.right(), track.center().y), 6.0, v.selection.bg_fill);
             }
-            if bar_resp.clicked() || bar_resp.drag_stopped() {
-                if let Some(p) = bar_resp.interact_pointer_pos() {
+            if (bar_resp.clicked() || bar_resp.drag_stopped())
+                && let Some(p) = bar_resp.interact_pointer_pos() {
                     seek = Some((((p.x - track.left()) / track.width()).clamp(0.0, 1.0) as f64) * duration);
                 }
-            }
             ui.label(egui::RichText::new(time).size(11.5).color(v.weak_text_color()));
         });
         if let Some(pos) = seek {
@@ -704,7 +699,7 @@ impl RivetApp {
                 None => kinds.push((d, 1)),
             }
         }
-        kinds.sort_by(|a, b| b.1.cmp(&a.1));
+        kinds.sort_by_key(|k| std::cmp::Reverse(k.1));
         let kind_text: Vec<String> = kinds.iter().take(4).map(|(k, n)| format!("{n} × {k}")).collect();
         rows.push(("Kinds".into(), kind_text.join(", ")));
         let newest = sel.iter().filter_map(|e| e.modified).max();

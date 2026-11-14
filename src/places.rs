@@ -128,13 +128,12 @@ pub fn percent_decode(s: &str) -> String {
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;
     while i < bytes.len() {
-        if bytes[i] == b'%' && i + 2 < bytes.len() {
-            if let Some(v) = std::str::from_utf8(&bytes[i + 1..i + 3]).ok().and_then(|x| u8::from_str_radix(x, 16).ok()) {
+        if bytes[i] == b'%' && i + 2 < bytes.len()
+            && let Some(v) = std::str::from_utf8(&bytes[i + 1..i + 3]).ok().and_then(|x| u8::from_str_radix(x, 16).ok()) {
                 out.push(v);
                 i += 3;
                 continue;
             }
-        }
         out.push(bytes[i]);
         i += 1;
     }
@@ -208,13 +207,12 @@ fn unescape_mount(s: &str) -> String {
     let b = s.as_bytes();
     let mut i = 0;
     while i < b.len() {
-        if b[i] == b'\\' && i + 3 < b.len() {
-            if let Some(v) = std::str::from_utf8(&b[i + 1..i + 4]).ok().and_then(|x| u8::from_str_radix(x, 8).ok()) {
+        if b[i] == b'\\' && i + 3 < b.len()
+            && let Some(v) = std::str::from_utf8(&b[i + 1..i + 4]).ok().and_then(|x| u8::from_str_radix(x, 8).ok()) {
                 out.push(v);
                 i += 4;
                 continue;
             }
-        }
         out.push(b[i]);
         i += 1;
     }
@@ -275,14 +273,14 @@ pub fn disk_space(path: &Path) -> Option<(u64, u64)> {
     use std::collections::HashMap;
     use std::sync::Mutex;
     use std::time::{Duration, Instant};
-    static CACHE: Mutex<Option<HashMap<PathBuf, (Instant, Option<(u64, u64)>)>>> = Mutex::new(None);
+    type Readings = HashMap<PathBuf, (Instant, Option<(u64, u64)>)>;
+    static CACHE: Mutex<Option<Readings>> = Mutex::new(None);
     let mut guard = CACHE.lock().unwrap_or_else(|e| e.into_inner());
     let cache = guard.get_or_insert_with(HashMap::new);
-    if let Some((t, v)) = cache.get(path) {
-        if t.elapsed() < Duration::from_secs(5) {
+    if let Some((t, v)) = cache.get(path)
+        && t.elapsed() < Duration::from_secs(5) {
             return *v;
         }
-    }
     let v = disk_space_now(path);
     cache.insert(path.to_path_buf(), (Instant::now(), v));
     v
@@ -352,6 +350,10 @@ pub fn trash_dir() -> PathBuf {
     data_home().join("Trash")
 }
 
+pub fn trash_is_empty() -> bool {
+    std::fs::read_dir(trash_dir().join("files")).map(|mut r| r.next().is_none()).unwrap_or(true)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -364,8 +366,4 @@ mod tests {
         assert_eq!(xdg_base(home, Some(redirected), false, ".config"), redirected);
         assert_eq!(xdg_base(home, None, false, ".local/share"), home.join(".local/share"));
     }
-}
-
-pub fn trash_is_empty() -> bool {
-    std::fs::read_dir(trash_dir().join("files")).map(|mut r| r.next().is_none()).unwrap_or(true)
 }

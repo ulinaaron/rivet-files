@@ -24,6 +24,9 @@ enum DirKind {
     Threshold,
 }
 
+/// Icon name → where it exists (dir index, root index, extension index).
+type IconIndex = HashMap<String, Vec<(u16, u8, u8)>>;
+
 #[derive(Clone, Debug)]
 struct Theme {
     roots: Vec<PathBuf>,
@@ -32,7 +35,7 @@ struct Theme {
     /// icon name -> where it exists (dir index, root index, extension index).
     /// Built on first use by listing each theme folder once, so lookups never
     /// probe the disk file by file.
-    index: Option<HashMap<String, Vec<(u16, u8, u8)>>>,
+    index: Option<IconIndex>,
 }
 
 pub struct IconTheme {
@@ -95,24 +98,21 @@ fn read_ini_value(path: &Path, section: &str, key: &str) -> Option<String> {
             in_section = line.trim_matches(|c| c == '[' || c == ']') == section;
             continue;
         }
-        if in_section {
-            if let Some((k, v)) = line.split_once('=') {
-                if k.trim() == key {
+        if in_section
+            && let Some((k, v)) = line.split_once('=')
+                && k.trim() == key {
                     return Some(v.trim().trim_matches('"').to_string());
                 }
-            }
-        }
     }
     None
 }
 
 /// Work out which icon theme the desktop is using, without linking any toolkit.
 pub fn detect_system_theme() -> String {
-    if let Ok(t) = std::env::var("RIVET_ICON_THEME") {
-        if !t.is_empty() {
+    if let Ok(t) = std::env::var("RIVET_ICON_THEME")
+        && !t.is_empty() {
             return t;
         }
-    }
     let home = std::env::var_os("HOME").map(PathBuf::from).unwrap_or_default();
     let config = std::env::var_os("XDG_CONFIG_HOME")
         .map(PathBuf::from)
@@ -133,22 +133,19 @@ pub fn detect_system_theme() -> String {
         if s.is_empty() { None } else { Some(s) }
     };
 
-    if desktop.contains("kde") {
-        if let Some(t) = read_ini_value(&config.join("kdeglobals"), "Icons", "Theme") {
+    if desktop.contains("kde")
+        && let Some(t) = read_ini_value(&config.join("kdeglobals"), "Icons", "Theme") {
             return t;
         }
-    }
-    if desktop.contains("cinnamon") || desktop.contains("x-cinnamon") {
-        if let Some(t) = try_gsettings("org.cinnamon.desktop.interface") {
+    if (desktop.contains("cinnamon") || desktop.contains("x-cinnamon"))
+        && let Some(t) = try_gsettings("org.cinnamon.desktop.interface") {
             return t;
         }
-    }
     for f in ["gtk-3.0/settings.ini", "gtk-4.0/settings.ini"] {
-        if let Some(t) = read_ini_value(&config.join(f), "Settings", "gtk-icon-theme-name") {
-            if !t.is_empty() {
+        if let Some(t) = read_ini_value(&config.join(f), "Settings", "gtk-icon-theme-name")
+            && !t.is_empty() {
                 return t;
             }
-        }
     }
     if let Some(t) = read_ini_value(&config.join("kdeglobals"), "Icons", "Theme") {
         return t;
@@ -172,11 +169,10 @@ pub fn installed_themes() -> Vec<String> {
                     if dirs.is_empty() {
                         continue; // cursor-only theme
                     }
-                    if let Some(n) = p.file_name().and_then(|n| n.to_str()) {
-                        if !names.iter().any(|x: &String| x == n) {
+                    if let Some(n) = p.file_name().and_then(|n| n.to_str())
+                        && !names.iter().any(|x: &String| x == n) {
                             names.push(n.to_string());
                         }
-                    }
                 }
             }
         }

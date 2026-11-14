@@ -267,14 +267,13 @@ impl RivetApp {
     pub(super) fn quick_actions(&mut self, ctx: &egui::Context) {
         if self.actions.is_none() {
             // Test hook: RIVET_ACTIONS=1 (or a query) opens it on the first frame.
-            if self.screenshot.is_some() && self.frames == 1 {
-                if let Ok(q) = std::env::var("RIVET_ACTIONS") {
+            if self.screenshot.is_some() && self.frames == 1
+                && let Ok(q) = std::env::var("RIVET_ACTIONS") {
                     self.toggle_actions();
                     if let Some(a) = &mut self.actions {
                         a.query = if q == "1" { String::new() } else { q };
                     }
                 }
-            }
             if self.actions.is_none() {
                 return;
             }
@@ -302,7 +301,7 @@ impl RivetApp {
                     by_label.max(by_both).map(|v| (v, r))
                 })
                 .collect();
-            scored.sort_by(|a, b| b.0.cmp(&a.0));
+            scored.sort_by_key(|s| std::cmp::Reverse(s.0));
             scored.into_iter().map(|(_, r)| r).collect()
         };
         let n = rows.len();

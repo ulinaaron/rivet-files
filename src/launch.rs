@@ -110,15 +110,12 @@ pub(crate) fn mimeapps_default(mime: &str) -> Option<String> {
                 in_default = line == "[Default Applications]";
                 continue;
             }
-            if in_default {
-                if let Some((k, v)) = line.split_once('=') {
-                    if k.trim() == mime {
-                        if let Some(first) = v.split(';').find(|s| !s.is_empty()) {
+            if in_default
+                && let Some((k, v)) = line.split_once('=')
+                    && k.trim() == mime
+                        && let Some(first) = v.split(';').find(|s| !s.is_empty()) {
                             return Some(first.trim().to_string());
                         }
-                    }
-                }
-            }
         }
     }
     None
@@ -137,11 +134,10 @@ pub fn set_default_app(app_id: &str, mime: &str) -> Result<(), String> {
 }
 
 pub fn default_app<'a>(apps: &'a [DesktopApp], mime: &str) -> Option<&'a DesktopApp> {
-    if let Some(id) = mimeapps_default(mime) {
-        if let Some(a) = apps.iter().find(|a| a.id == id) {
+    if let Some(id) = mimeapps_default(mime)
+        && let Some(a) = apps.iter().find(|a| a.id == id) {
             return Some(a);
         }
-    }
     apps.iter().find(|a| a.mimes.iter().any(|m| m == mime))
 }
 
@@ -243,11 +239,10 @@ pub fn exec_args(app: &DesktopApp, files: &[PathBuf]) -> Vec<String> {
 fn spawn_detached(args: &[String], cwd: Option<&Path>) -> Result<(), String> {
     let mut cmd = Command::new(&args[0]);
     cmd.args(&args[1..]).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
-    if let Some(d) = cwd {
-        if d.is_dir() {
+    if let Some(d) = cwd
+        && d.is_dir() {
             cmd.current_dir(d);
         }
-    }
     cmd.spawn().map(|_| ()).map_err(|e| format!("Could not start {}: {e}", args[0]))
 }
 
@@ -271,11 +266,10 @@ fn which(bin: &str) -> bool {
 }
 
 fn terminal_command() -> Vec<String> {
-    if let Ok(t) = std::env::var("TERMINAL") {
-        if !t.is_empty() && which(&t) {
+    if let Ok(t) = std::env::var("TERMINAL")
+        && !t.is_empty() && which(&t) {
             return vec![t];
         }
-    }
     for t in [
         "x-terminal-emulator", "kitty", "alacritty", "foot", "wezterm", "ghostty", "gnome-terminal",
         "kgx", "ptyxis", "konsole", "xfce4-terminal", "tilix", "terminator", "xterm",

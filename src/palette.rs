@@ -144,7 +144,7 @@ fn parse_color(v: &str, defs: &HashMap<String, String>, depth: usize) -> Option<
     if lower.starts_with("rgb") {
         let inner = &v[v.find('(')? + 1..v.rfind(')')?];
         let parts: Vec<f32> = inner
-            .split(|c| c == ',' || c == ' ' || c == '/')
+            .split([',', ' ', '/'])
             .filter(|s| !s.is_empty())
             .take(3)
             .filter_map(|s| {
@@ -351,7 +351,7 @@ fn matugen_palette(watched: &mut Vec<PathBuf>) -> Option<(Palette, SystemTime)> 
             Some((i, o, t))
         })
         .collect();
-    pairs.sort_by(|a, b| b.2.cmp(&a.2));
+    pairs.sort_by_key(|p| std::cmp::Reverse(p.2));
     let newest = pairs.first()?.2;
     let mut found: HashMap<(String, String), Color32> = HashMap::new();
     for (i, o, _) in &pairs {

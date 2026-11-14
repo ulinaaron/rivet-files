@@ -114,8 +114,8 @@ fn code(text: &str, out: &mut Out, line: &[&str], block: Option<(&str, &str)>, j
     while i < b.len() {
         let rest = &text[i..];
         // block comment
-        if let Some((open, close)) = block {
-            if rest.starts_with(open) {
+        if let Some((open, close)) = block
+            && rest.starts_with(open) {
                 flush(out, plain_start, i);
                 let end = rest[open.len()..].find(close).map(|p| i + open.len() + p + close.len()).unwrap_or(b.len());
                 out.push(&text[i..end], c.comment, true);
@@ -123,7 +123,6 @@ fn code(text: &str, out: &mut Out, line: &[&str], block: Option<(&str, &str)>, j
                 plain_start = i;
                 continue;
             }
-        }
         // line comment (for "#", only at a word boundary so "a#b" or "#[attr]" in Rust aren't comments)
         if let Some(m) = line.iter().find(|m| rest.starts_with(**m)) {
             let ok = *m != "#" || i == 0 || b[i - 1].is_ascii_whitespace();
@@ -262,8 +261,8 @@ fn inline_md(s: &str, out: &mut Out) {
                 }
             }
             b'[' => {
-                if let Some(p) = s[i..].find("](") {
-                    if let Some(q) = s[i + p..].find(')') {
+                if let Some(p) = s[i..].find("](")
+                    && let Some(q) = s[i + p..].find(')') {
                         out.push(&s[start..i], c.text, false);
                         let end = i + p + q + 1;
                         out.push(&s[i..end], c.function, false);
@@ -271,7 +270,6 @@ fn inline_md(s: &str, out: &mut Out) {
                         start = i;
                         continue;
                     }
-                }
             }
             b'*' | b'_' if i + 1 < b.len() && b[i + 1] == b[i] => {
                 let mark = &s[i..i + 2];

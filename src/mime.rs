@@ -63,15 +63,14 @@ impl MimeDb {
                     let (Some(w), Some(mime), Some(glob)) = (parts.next(), parts.next(), parts.next()) else { continue };
                     let w: u32 = w.parse().unwrap_or(50);
                     let glob_l = glob.to_lowercase();
-                    if let Some(e) = glob_l.strip_prefix("*.") {
-                        if !e.contains(['*', '?', '[']) {
+                    if let Some(e) = glob_l.strip_prefix("*.")
+                        && !e.contains(['*', '?', '[']) {
                             let entry = db.ext.entry(e.to_string()).or_insert((w, mime.to_string()));
                             if w > entry.0 {
                                 *entry = (w, mime.to_string());
                             }
                             continue;
                         }
-                    }
                     if !glob_l.contains(['*', '?', '[']) {
                         db.literal.insert(glob_l, mime.to_string());
                     } else {
@@ -247,14 +246,12 @@ impl MimeDb {
         let mut desc = None;
         for r in &self.roots {
             let p = r.join(format!("{mime}.xml"));
-            if let Ok(t) = std::fs::read_to_string(&p) {
-                if let Some(start) = t.find("<comment>") {
-                    if let Some(end) = t[start..].find("</comment>") {
+            if let Ok(t) = std::fs::read_to_string(&p)
+                && let Some(start) = t.find("<comment>")
+                    && let Some(end) = t[start..].find("</comment>") {
                         desc = Some(decode_xml(&t[start + 9..start + end]));
                         break;
                     }
-                }
-            }
         }
         let d = desc.unwrap_or_else(|| match mime {
             "inode/directory" => "Folder".into(),

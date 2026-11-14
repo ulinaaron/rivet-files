@@ -45,20 +45,18 @@ pub fn desktop_font() -> Option<(String, f32)> {
     for f in ["gtk-4.0/settings.ini", "gtk-3.0/settings.ini"] {
         if let Ok(t) = std::fs::read_to_string(c.join(f)) {
             for l in t.lines() {
-                if let Some(v) = l.trim().strip_prefix("gtk-font-name") {
-                    if let Some(r) = parse(v.trim_start_matches([' ', '='])) {
+                if let Some(v) = l.trim().strip_prefix("gtk-font-name")
+                    && let Some(r) = parse(v.trim_start_matches([' ', '='])) {
                         return Some(r);
                     }
-                }
             }
         }
     }
     for schema in ["org.cinnamon.desktop.interface", "org.gnome.desktop.interface"] {
-        if let Some(v) = run("gsettings", &["get", schema, "font-name"]) {
-            if let Some(r) = parse(&v) {
+        if let Some(v) = run("gsettings", &["get", schema, "font-name"])
+            && let Some(r) = parse(&v) {
                 return Some(r);
             }
-        }
     }
     None
 }
@@ -67,13 +65,13 @@ pub fn desktop_font() -> Option<(String, f32)> {
 pub fn desktop_font_cached() -> Option<(String, f32)> {
     use std::sync::Mutex;
     use std::time::Instant;
-    static CACHE: Mutex<Option<(Instant, Option<(String, f32)>)>> = Mutex::new(None);
+    type Cached = Option<(Instant, Option<(String, f32)>)>;
+    static CACHE: Mutex<Cached> = Mutex::new(None);
     let mut g = CACHE.lock().unwrap();
-    if let Some((t, v)) = g.as_ref() {
-        if t.elapsed().as_secs() < 5 {
+    if let Some((t, v)) = g.as_ref()
+        && t.elapsed().as_secs() < 5 {
             return v.clone();
         }
-    }
     let v = desktop_font();
     *g = Some((Instant::now(), v.clone()));
     v
@@ -123,11 +121,10 @@ pub fn system_mono_name() -> String {
 
 /// The monospace font file: the chosen family, else the system's "monospace".
 pub fn resolve_mono(choice: &str) -> Option<(String, PathBuf)> {
-    if !choice.is_empty() {
-        if let Some(p) = file_for(choice) {
+    if !choice.is_empty()
+        && let Some(p) = file_for(choice) {
             return Some((choice.to_string(), p));
         }
-    }
     let out = run("fc-match", &["-f", "%{family[0]}|%{file}", "monospace:style=Regular"])?;
     let (fam, file) = out.split_once('|')?;
     let p = PathBuf::from(file.trim());
@@ -156,16 +153,14 @@ fn common_sans() -> Option<PathBuf> {
 
 /// Resolve the font file to use: the chosen family, else the desktop's, else a common sans.
 pub fn resolve(choice: &str) -> Option<(String, PathBuf)> {
-    if !choice.is_empty() {
-        if let Some(p) = file_for(choice) {
+    if !choice.is_empty()
+        && let Some(p) = file_for(choice) {
             return Some((choice.to_string(), p));
         }
-    }
-    if let Some((fam, _)) = desktop_font() {
-        if let Some(p) = file_for(&fam) {
+    if let Some((fam, _)) = desktop_font()
+        && let Some(p) = file_for(&fam) {
             return Some((fam, p));
         }
-    }
     if let Some(p) = file_for("sans-serif").or_else(common_sans) {
         let name = p.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| "Sans".into());
         return Some((name, p));

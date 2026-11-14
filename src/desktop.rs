@@ -196,11 +196,10 @@ fn this_build() -> Option<PathBuf> {
     // APPIMAGE / APPDIR are inherited by every program an AppImage starts, so only trust them
     // when this program really runs from that mount (not when another AppImage app launched us).
     let appdir = std::env::var_os("APPDIR").map(PathBuf::from).map(|d| std::fs::canonicalize(&d).unwrap_or(d));
-    if let (Some(a), Some(dir)) = (std::env::var_os("APPIMAGE").map(PathBuf::from).filter(|p| p.is_file()), appdir) {
-        if exe.starts_with(&dir) {
+    if let (Some(a), Some(dir)) = (std::env::var_os("APPIMAGE").map(PathBuf::from).filter(|p| p.is_file()), appdir)
+        && exe.starts_with(&dir) {
             return Some(a);
         }
-    }
     Some(exe)
 }
 

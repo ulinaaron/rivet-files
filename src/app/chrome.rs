@@ -100,11 +100,10 @@ impl RivetApp {
             .frame(egui::Frame::NONE.fill(fill).inner_margin(egui::Margin::symmetric(6, if csd { 4 } else { 2 })))
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
-                    if csd {
-                        if let Some(t) = self.app_icon_texture(ctx) {
+                    if csd
+                        && let Some(t) = self.app_icon_texture(ctx) {
                             ui.add(egui::Image::from_texture(&t).fit_to_exact_size(Vec2::splat(18.0)));
                         }
-                    }
                     if show_menu {
                         if csd {
                             // The menu bar takes all the width it is given, so give it just enough.
@@ -213,11 +212,10 @@ impl RivetApp {
             if ui.add(egui::Button::new("New Tab").shortcut_text("Ctrl+T")).clicked() {
                 self.pending.push(Action::NewTab);
             }
-            if ui.add_enabled(in_dir.is_some(), egui::Button::new("Open in Terminal")).clicked() {
-                if let Some(d) = in_dir.clone() {
+            if ui.add_enabled(in_dir.is_some(), egui::Button::new("Open in Terminal")).clicked()
+                && let Some(d) = in_dir.clone() {
                     self.pending.push(Action::Terminal(d));
                 }
-            }
             ui.separator();
             if ui.add(egui::Button::new("Properties").shortcut_text("Ctrl+I")).clicked() {
                 self.pending.push(Action::Properties(sel.first().cloned()));
@@ -380,11 +378,10 @@ impl RivetApp {
         });
         ui.menu_button("Bookmarks", |ui| {
             self.roomy_menu(ui);
-            if ui.add_enabled(in_dir.is_some(), egui::Button::new("Add to Bookmarks").shortcut_text("Ctrl+D")).clicked() {
-                if let Some(d) = in_dir.clone() {
+            if ui.add_enabled(in_dir.is_some(), egui::Button::new("Add to Bookmarks").shortcut_text("Ctrl+D")).clicked()
+                && let Some(d) = in_dir.clone() {
                     self.pending.push(Action::AddBookmark(d));
                 }
-            }
             if !self.bookmarks.is_empty() {
                 ui.separator();
             }
@@ -423,6 +420,7 @@ impl RivetApp {
 
     // -------------------------------------------------------------- toolbar
 
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn tool_button(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, icons: &[&str], fallback: &str, tip: &str, enabled: bool, selected: bool) -> bool {
         self.tool_button_resp(ui, ctx, icons, fallback, tip, enabled, selected).clicked()
     }
@@ -860,12 +858,11 @@ impl RivetApp {
         let here = self.current_dir();
         bg.context_menu(|ui| {
             Self::comfy_menu(ui);
-            if let Some(d) = &here {
-                if ui.button("Copy Location").clicked() {
+            if let Some(d) = &here
+                && ui.button("Copy Location").clicked() {
                     ui.ctx().copy_text(d.display().to_string());
                     self.flash("Location copied");
                 }
-            }
             if ui.add(egui::Button::new("Edit Location").shortcut_text("Ctrl+L")).clicked() {
                 self.start_path_editing();
             }
@@ -891,11 +888,10 @@ impl RivetApp {
                         if resp.hovered() && target.is_some() {
                             ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
                         }
-                        if resp.clicked() {
-                            if let Some(t) = target.clone() {
+                        if resp.clicked()
+                            && let Some(t) = target.clone() {
                                 self.pending.push(Action::Navigate(t));
                             }
-                        }
                         // Right-click a folder button: copy its location or open it in a tab.
                         let crumb_dir = match &target {
                             Some(Location::Dir(d)) => Some(d.clone()),
@@ -917,11 +913,10 @@ impl RivetApp {
                                 }
                             });
                         }
-                        if let Some(Location::Dir(d)) = &target {
-                            if let Some(p) = resp.dnd_release_payload::<DragFiles>() {
+                        if let Some(Location::Dir(d)) = &target
+                            && let Some(p) = resp.dnd_release_payload::<DragFiles>() {
                                 self.pending.push(Action::Transfer(p.0.clone(), d.clone(), ctx.input(|i| i.modifiers.ctrl)));
                             }
-                        }
                     }
                 });
             });
@@ -962,11 +957,10 @@ impl RivetApp {
                     } else if resp.clicked() {
                         self.active = i;
                     }
-                    if let Some(p) = resp.dnd_release_payload::<DragFiles>() {
-                        if let Some(d) = self.tabs[i].loc.dir() {
+                    if let Some(p) = resp.dnd_release_payload::<DragFiles>()
+                        && let Some(d) = self.tabs[i].loc.dir() {
                             self.pending.push(Action::Transfer(p.0.clone(), d.to_path_buf(), ctx.input(|i| i.modifiers.ctrl)));
                         }
-                    }
                 }
                 if ui.button("+").on_hover_text("New tab (Ctrl+T)").clicked() {
                     self.pending.push(Action::NewTab);
@@ -1249,11 +1243,10 @@ impl RivetApp {
                     None => {}
                 }
             }
-        } else if isz > 0.0 {
-            if let Some(t) = self.icon(ctx, icon, isz) {
+        } else if isz > 0.0
+            && let Some(t) = self.icon(ctx, icon, isz) {
                 paint_tex(ui.painter(), &t, icon_rect, Color32::WHITE);
             }
-        }
         let text_right = rect.right() - if eject { 30.0 } else { 10.0 };
         let mut job = egui::text::LayoutJob::simple_singleline(label.to_string(), crate::fonts::ui_font(13.5), fg);
         job.wrap = egui::text::TextWrapping::truncate_at_width(text_right - icon_rect.right() - 12.0);
@@ -1285,11 +1278,10 @@ impl RivetApp {
             if resp.clicked() && !eject_clicked {
                 self.pending.push(Action::Navigate(l.clone()));
             }
-            if resp.clicked_by(egui::PointerButton::Middle) {
-                if let Some(d) = l.dir() {
+            if resp.clicked_by(egui::PointerButton::Middle)
+                && let Some(d) = l.dir() {
                     self.pending.push(Action::OpenInNewTab(d.to_path_buf()));
                 }
-            }
             if let Some(p) = resp.dnd_release_payload::<DragFiles>() {
                 match l {
                     Location::Dir(d) => self.pending.push(Action::Transfer(p.0.clone(), d.clone(), ctx.input(|i| i.modifiers.ctrl))),
@@ -1475,11 +1467,10 @@ impl RivetApp {
                         None => {}
                     }
                 }
-            } else if isz > 0.0 {
-                if let Some(t) = self.icon(ctx, &icon, isz) {
+            } else if isz > 0.0
+                && let Some(t) = self.icon(ctx, &icon, isz) {
                     paint_tex(ui.painter(), &t, ir, Color32::WHITE);
                 }
-            }
             let name = if p == Path::new("/") {
                 "File System".to_string()
             } else if p == places::home() {
