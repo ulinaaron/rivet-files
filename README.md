@@ -34,6 +34,7 @@ Rivet is powerful all the while being minimal. Make it your own — bloat the in
 - 🧪 **Filters** — show a folder with only pictures, recent files or names you choose; global, per folder, or for a folder and everything below it
 - 🔦 **Quick Open** — Ctrl+P, type a few letters of any folder, press Enter and you're there
 - ⚙️ **Quick Actions** — Ctrl+Shift+P, every command and view option in one searchable list
+- ⌨️ **Vim keys** — an option: `hjkl`, `gg` `G`, counts, visual mode, `yy` `dd` `p` and more
 - 🔍 **Instant filter** as you type, plus search through subfolders
 - 🌐 **Network** — find servers, open SMB shares, log in, or connect to any address
 
@@ -54,7 +55,7 @@ Rivet is powerful all the while being minimal. Make it your own — bloat the in
 - 🎨 **Follows your colors** — Matugen, Noctalia, Dux Shell, and GTK themes, live, no restart
 - 💜 **Built-in icon set** recolored from your palette (primary, secondary or tertiary)
 - 🧰 **Your layout** — custom toolbar at the top or bottom, status bar top, bottom or off, fonts (and a monospace font for text previews), text size, hideable menu bar
-- 🖥️ **Terminal mode** — the same window dressed like a terminal program: monospace text, Nerd Font icons, plain boxes
+- 🖥️ **Terminal mode** — the same window dressed like a terminal program: monospace text, Nerd Font icons, plain boxes (F7)
 - 🧩 **Modules** — switch Bulk Rename or Convert & Resize off if you don't use them
 - 🧘 **Zen mode** — just your files, edge to edge; the toolbar, sidebar and Peek slide in when you reach for their edge (F12)
 - 🪟 **Title bar your way** — your desktop's, or Rivet's own with window buttons

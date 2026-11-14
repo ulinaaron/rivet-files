@@ -3,35 +3,42 @@
 ## Unreleased
 
 ### New
-- **Keyboard shortcuts window** (F1) redone: keys drawn as key caps, cards in two columns
-  (getting around, files, search and filter, view, panels and modes, tabs and window), a search
-  field ("rename", "ctrl d"), and a few missing shortcuts added. With Vim keys on they get their
-  own card at the top; Preferences → Behavior has a button to show them.
-- **Vim keys** (an option, off unless you turn it on in Preferences → Behavior): `h` `j` `k` `l`
-  move (in the list view `h` goes to the parent folder and `l` opens), `-` goes to the parent
-  folder and `o` opens in any view, `gg` `G` jump to the first / last item, `H` `L` go
-  back / forward, `yy` `dd` `p` copy, cut and paste, `/` searches, `:` opens Quick Actions and `~`
-  goes Home. Also counts (`5j`, `10G`), `V` visual mode (movement extends the selection, `y` / `d`
-  act on it), `x` cut, `cw` rename, `D` move to Trash and `.` or `zh` for hidden files; the status
-  bar shows `-- VISUAL --` and any half-typed command. Typing letters no longer filters the folder
-  while it's on (`/` does).
-- **Terminal mode** (F7, Preferences → Appearance → Mode, View → Terminal Mode, or Quick Actions): a
-  GUI that feels like a TUI. Everything is monospace, icons are Nerd Font glyphs colored by kind
+- **Zen mode** (F12, or View → Zen Mode): the files fill the window, with an empty border round
+  them. Move the pointer into the border on the toolbar's, sidebar's or Peek's side and that panel
+  slides in over the files; move away and it slides back out. Peek takes the other side if it
+  shares one with the sidebar, and the menus live behind the toolbar's menu button.
+- **Quick Open** (Ctrl+P, or View → Quick Open): a jump-anywhere bar. Type a few letters of any
+  folder — recent ones, places, bookmarks, drives, folders here and under Home — and press Enter.
+  Start with `/` or `~` to walk a path; Tab fills in the highlighted folder.
+- **Quick Actions** (Ctrl+Shift+P, or View → Quick Actions): every menu command and view option in
+  one searchable list — views, panels, sorting, layout, theme, going places, file commands. On /
+  off options show their state and keep the list open, so you can flip several in a row; pick-one
+  choices list only what you can switch to.
+- **Terminal mode** (F7, Preferences → Appearance → Mode, View → Terminal Mode, or Quick Actions):
+  a GUI that feels like a TUI. Everything is monospace, icons are Nerd Font glyphs colored by kind
   (drawn from any installed Nerd Font, your monospace font first), corners are square, shadows are
   gone and the sidebar, files and Peek sit in plain boxes with their titles in the border. Picture
-  thumbnails give way to glyphs in the file list (Peek and Preview still show pictures).
-- **Monospace font** (Preferences → Appearance → Typography): used for text and code previews,
-  and for everything in terminal mode. Type to find a font, like the interface font.
-- **Zen mode** (F12, or View → Zen Mode): the files fill the window, edge to edge. Move the pointer
-  to the toolbar's edge, the sidebar's edge or Peek's edge and that panel slides in over the files;
-  move away and it slides back out. Peek takes the other side if it shares one with the sidebar.
-  The menus live behind the toolbar's menu button while in Zen mode.
-- **Quick Open** (Ctrl+P, or View → Quick Open): a jump-anywhere bar. Type a few letters of
-  any folder — recent ones, places, bookmarks, drives, folders here and under Home — and press
-  Enter. Start with `/` or `~` to walk a path; Tab fills in the highlighted folder.
-- **Quick Actions** (Ctrl+Shift+P, or View → Quick Actions): every menu command and view option
-  in one searchable list — views, panels, sorting, layout, theme, going places, file commands.
-  On / off options show their state and keep the list open, so you can flip several in a row.
+  thumbnails give way to glyphs in the file list (Peek and Preview still show pictures). Without a
+  Nerd Font the icons stay as they are.
+- **Monospace Font** (Preferences → Appearance → Typography): used for text and code previews, and
+  for everything in terminal mode. Type to find a font, like the interface font.
+- **Vim keys** (an option, off unless you turn it on in Preferences → Behavior): `h` `j` `k` `l`
+  move (in the list view `h` goes to the parent folder and `l` opens), `-` parent folder and `o`
+  open in any view, `gg` `G` first / last item, counts (`5j`, `10G`), `V` visual mode (movement
+  extends the selection; `y` / `d` act on it), `yy` copy, `dd` or `x` cut, `p` paste, `cw` rename,
+  `D` move to Trash, `.` or `zh` hidden files, `H` `L` back / forward, `/` search, `:` Quick
+  Actions and `~` Home. The status bar shows `-- VISUAL --` and any half-typed command. Typing
+  letters no longer filters the folder while it's on (`/` does).
+
+### Improved
+- **Keyboard shortcuts** (F1) redone: keys drawn as key caps, cards in two columns, a search field
+  ("rename", "ctrl d") and the missing shortcuts added. With Vim keys on they get their own card
+  at the top.
+- **View menu** tidied: the on / off items sit together, then Filters, Quick Open and Quick Actions.
+- Sidebar drive usage is read every few seconds instead of on every redraw, so a slow or sleeping
+  drive can't hold up the window.
+- Preferences no longer looks fonts up again on every redraw (it did when fontconfig's tools were
+  missing).
 
 ## 0.4.0
 
