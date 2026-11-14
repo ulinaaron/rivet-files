@@ -194,14 +194,14 @@ impl RivetApp {
                 let title_color = if accent { super::accent_color(&self.s) } else { v.strong_text_color() };
                 ui.label(egui::RichText::new(g.0).strong().size(14.0).color(title_color));
                 ui.add_space(4.0);
-                egui::Frame::NONE.fill(card_fill).corner_radius(super::r_md()).inner_margin(egui::Margin::symmetric(14, 10)).show(ui, |ui| {
+                egui::Frame::NONE.fill(card_fill).corner_radius(super::r_md()).inner_margin(egui::Margin::symmetric(16, 12)).show(ui, |ui| {
                     ui.set_width(ui.available_width());
                     let list = |ui: &mut egui::Ui, rows: &[&(&str, &str)]| {
                         let keys_w = (ui.available_width() * 0.5).min(230.0);
                         for (k, d) in rows {
                             ui.horizontal(|ui| {
-                                ui.set_min_height(28.0);
-                                ui.allocate_ui_with_layout(Vec2::new(keys_w, 28.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                                ui.set_min_height(34.0);
+                                ui.allocate_ui_with_layout(Vec2::new(keys_w, 34.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
                                     ui.set_min_width(keys_w);
                                     key_caps(ui, k);
                                 });
