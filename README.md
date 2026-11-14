@@ -29,40 +29,42 @@ Rivet is powerful all the while being minimal. Make it your own — bloat the in
 ## ✨ Features
 
 **Getting around**
-- 🗂️ **Icon, list and compact views** with tabs and a clickable path bar that suggests folders as you type
-- 🧭 **Sidebar** — places, bookmarks, drives with usage bars, network, or a folder tree, on the left or right
-- 🧪 **Filters** — show a folder with only pictures, recent files or names you choose; global, per folder, or for a folder and everything below it
-- 🔦 **Quick Open** — Ctrl+P, type a few letters of any folder, press Enter and you're there
-- ⚙️ **Quick Actions** — Ctrl+Shift+P, every command and view option in one searchable list
-- ⌨️ **Vim keys** — an option: `hjkl`, `gg` `G`, counts, visual mode, `yy` `dd` `p` and more
-- 🔍 **Instant filter** as you type, plus search through subfolders
-- 🌐 **Network** — find servers, open SMB shares, log in, or connect to any address
+- 🪜 **Stepped path bar** — each folder in the path is its own button; click one to jump straight to it
+- 🔮 **Fuzzy suggestions** — type a path and matching folders appear as you go, even from a few scattered letters; Tab completes
+- 🗂️ **Three views** — icons, list and compact, with tabs
+- 🧭 **Sidebar** — places, bookmarks, drives with usage bars and network shares, or a folder tree; left or right
+- 🔦 **Quick Open** (Ctrl+P) — fuzzy-find any folder and open it
+- ⚙️ **Quick Actions** (Ctrl+Shift+P) — every command and setting in one searchable list
+- 🧪 **Filters** — limit a folder to certain types, names or dates; globally, per folder, or for a folder and its subfolders
+- 🔍 **Search** — type to filter the folder; Enter searches subfolders too
+- ⌨️ **Vim keys** (optional) — `hjkl`, `gg` `G`, counts, visual mode, `yy` `dd` `p`
+- 🌐 **Network** — browse servers, open SMB shares, or connect to an address
 
 **Working with files**
-- 📋 **Everything you expect** — copy, cut, paste, drag and drop, rename, Trash with restore
+- 📋 **The basics** — copy, cut, paste, drag and drop, rename, Trash with restore
 - ↩️ **Undo and redo** — copies, moves, renames, Trash, new items, compress and extract
-- ✏️ **Bulk Rename** — insert, date / time, numbering, remove, search & replace and case changes, with a live preview
-- 🔄 **Convert and resize** — pictures, videos and audio to another format, one file or many; resize pictures (uses ffmpeg)
-- 🗜️ **Compress and extract** — zip, tar.gz, tar.xz, tar.zst and 7z
-- 🚀 **Open With** — pick any app from a searchable list, or set a new default
+- ✏️ **Bulk Rename** — insert text, dates or numbers, remove, replace, change case; every new name previewed first
+- 🔄 **Convert and resize** — pictures, video and audio to other formats; resize pictures (needs ffmpeg)
+- 🗜️ **Compress and extract** — zip, tar.gz, tar.xz, tar.zst, 7z
+- 🚀 **Open With** — a searchable list of apps; set a new default
 
-**Seeing inside**
-- 🖼️ **Picture thumbnails** and your system icon theme
-- 👀 **Peek panel** — big previews, videos that play right there, code colored by your theme, and full file details, on either side
-- 🔎 **Preview** — a full-window light box (Space); ← → step through the folder's pictures, videos and text
+**Previews**
+- 🖼️ **Thumbnails** for pictures, alongside your system icon theme
+- 👀 **Peek panel** (F11) — large previews, video playback, syntax-highlighted code and file details; left or right
+- 🔎 **Preview** (Space) — full-window view; ← → step through the folder's pictures, videos and text
 
-**Making it yours**
-- 🎨 **Follows your colors** — Matugen, Noctalia, Dux Shell, and GTK themes, live, no restart
-- 💜 **Built-in icon set** recolored from your palette (primary, secondary or tertiary)
-- 🧰 **Your layout** — custom toolbar at the top or bottom, status bar top, bottom or off, fonts (and a monospace font for text previews), text size, hideable menu bar
-- 🖥️ **Terminal mode** — the same window dressed like a terminal program: monospace text, Nerd Font icons, plain boxes (F7)
-- 🧩 **Modules** — switch Bulk Rename or Convert & Resize off if you don't use them
-- 🧘 **Zen mode** — just your files, edge to edge; the toolbar, sidebar and Peek slide in when you reach for their edge (F12)
-- 🪟 **Title bar your way** — your desktop's, or Rivet's own with window buttons
+**Customizing**
+- 🎨 **Desktop colors** — follows Matugen, Noctalia, Dux Shell and GTK themes as they change
+- 💜 **Built-in icons** recolored from your palette (primary, secondary or tertiary)
+- 🧰 **Layout** — toolbar top or bottom, status bar top, bottom or off, your own toolbar buttons, fonts and text size, optional menu bar
+- 🧘 **Zen mode** (F12) — the files fill the window; the toolbar, sidebar and Peek slide in at the edges
+- 🖥️ **Terminal mode** (F7) — monospace text, Nerd Font icons and boxed panels
+- 🧩 **Modules** — turn off Bulk Rename or Convert & Resize
+- 🪟 **Title bar** — your desktop's, or Rivet's own
 
 **Under the hood**
-- ⚡ **Fast** — 100,000 files open in under 0.4 s, and an idle Rivet uses no CPU
-- 🦀 **Light** — one 14 MB program (a 6 MB AppImage download); video previews and conversion use ffmpeg when it's installed
+- ⚡ **Fast** — opens a 100,000-file folder in under 0.4 s; no CPU use when idle
+- 🦀 **Small** — one 14 MB binary or a 6 MB AppImage; ffmpeg is optional (video previews and conversion)
 
 ## 🎨 Follows your colors
 
@@ -94,9 +96,9 @@ Change your wallpaper or scheme and Rivet restyles itself within a second.
 
 ### 👀 Peek
 
-Select something and the Peek panel (F11) shows it big: pictures, videos that play right in the panel,
-music covers, and text with syntax highlighting in your theme's colors — plus everything about the file.
-Drag the grip under the preview to make it taller or shorter.
+The Peek panel (F11) previews the selected item: pictures, video playback, album art, and text with
+syntax highlighting in your theme's colors, followed by the file's details. Drag the grip under the
+preview to change its height.
 
 <table>
   <tr>
@@ -124,10 +126,10 @@ Drag the grip under the preview to make it taller or shorter.
 
 ### 🧘 Zen mode, Quick Open and Quick Actions
 
-Press F12 and the bars step aside so your files get the whole window. Reach for an edge and the
-toolbar, sidebar or Peek slides in; move away and it's gone again. Pair it with Quick Open
-(Ctrl+P): type a few letters of any folder and press Enter. Everything else is in Quick Actions
-(Ctrl+Shift+P): type "tree", "theme dark" or "zen" and press Enter.
+Zen mode (F12) hides the bars and lets the files fill the window. Move the pointer to an edge to
+slide in the toolbar, sidebar or Peek; move away to hide it. Quick Open (Ctrl+P) finds any folder
+from a few letters. Quick Actions (Ctrl+Shift+P) runs any command or setting by name, such as
+"tree", "theme dark" or "zen".
 
 <table>
   <tr>
@@ -138,10 +140,10 @@ toolbar, sidebar or Peek slides in; move away and it's gone again. Pair it with 
 
 ### 🖥️ Terminal mode
 
-A GUI that feels like a TUI. Press F7 (or set Mode to Terminal in Preferences → Appearance) and everything turns monospace, the icons become Nerd Font glyphs colored by kind, and the
-panels become plain boxes with their titles in the border. The layout and every feature stay the
-same. It uses your monospace font (Preferences → Appearance → Typography), and any installed Nerd
-Font for the icons.
+Terminal mode (F7, or Mode in Preferences → Appearance) styles Rivet like a terminal program:
+monospace text, Nerd Font icons colored by file type, and panels drawn as boxes with their titles in
+the border. The layout and features don't change. It uses your Monospace Font (Preferences →
+Appearance → Typography) and any installed Nerd Font.
 
 <img src="docs/screenshots/terminal-wide.png" alt="Rivet in terminal mode: monospace text, Nerd Font icons and boxed panels">
 
